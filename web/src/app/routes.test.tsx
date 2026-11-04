@@ -118,6 +118,31 @@ describe('routes and layouts', () => {
     await i18n.changeLanguage('mk');
   });
 
+  it('ignores a late language answer that arrives after signing out', async () => {
+    const user = userEvent.setup();
+    let answer!: (response: Response) => void;
+    const late = new Promise<Response>((resolve) => {
+      answer = resolve;
+    });
+    const api = fakeApi({ me: teacher(), extra: [(call) => (call.method === 'PATCH' && call.path === '/api/auth/me' ? late : undefined)] });
+    const { router } = await renderRoute('/student');
+    await screen.findByRole('heading', { level: 1, name: 'Мои часови' });
+
+    await user.selectOptions(screen.getByRole('combobox', { name: 'Јазик' }), 'en');
+    await user.click(await screen.findByRole('button', { name: 'Sign out' }));
+    await screen.findByRole('heading', { level: 1, name: 'Sign in' });
+
+    answer(new Response(JSON.stringify(teacher({ locale: 'en' })), { status: 200, headers: { 'content-type': 'application/json' } }));
+    await expect.poll(() => api.to('/api/auth/me', 'PATCH').length).toBe(1);
+    await new Promise((done) => setTimeout(done, 50));
+
+    expect(router.state.location.pathname).toBe('/login');
+    expect(screen.getByRole('heading', { level: 1, name: 'Sign in' })).toBeInTheDocument();
+    // The ended session is never brought back (no bounce into the teacher area).
+    expect(api.to('/api/me/workspaces')).toHaveLength(0);
+    await i18n.changeLanguage('mk');
+  });
+
   it('adopts the account language after loading the session', async () => {
     fakeApi({ me: teacher({ locale: 'en' }) });
     await renderRoute('/app');

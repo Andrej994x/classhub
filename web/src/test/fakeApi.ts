@@ -17,7 +17,7 @@ export interface FakeCall {
   xsrf: string | null;
 }
 
-type Handler = (call: FakeCall) => Response | undefined;
+type Handler = (call: FakeCall) => Response | Promise<Response> | undefined;
 
 export const WORKSPACE_ID = '11111111-1111-4111-8111-111111111111';
 
@@ -59,7 +59,7 @@ export function fakeApi({ me = null as FakeMe | null, extra = [] as Handler[] } 
     calls.push(call);
 
     for (const handler of extra) {
-      const answer = handler(call);
+      const answer = await handler(call);
       if (answer) return answer;
     }
 
