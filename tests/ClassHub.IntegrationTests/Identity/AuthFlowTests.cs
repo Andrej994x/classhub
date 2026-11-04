@@ -368,6 +368,64 @@ public sealed class AuthFlowTests(ClassHubApiFixture fixture)
     }
 
     [Fact]
+    public async Task Reset_with_a_forged_token_answers_the_same_for_known_and_unknown_emails()
+    {
+        using var client = await ApiClient.CreateAsync(fixture);
+        var known = ApiTestExtensions.UniqueEmail();
+        await RegisterAsync(client, known);
+
+        foreach (var email in new[] { known, ApiTestExtensions.UniqueEmail() })
+        {
+            // A weak password would trip account-dependent password rules if they ran before the token check.
+            using var response = await client.PostAsync("/api/auth/reset-password", new { email, token = "forged", newPassword = "password123" });
+            response.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
+            (await response.ErrorCodeAsync()).ShouldBe(ErrorCodes.InvalidToken);
+        }
+    }
+
+    [Fact]
+    public async Task Parallel_dispatchers_deliver_every_email_exactly_once()
+    {
+        var email = ApiTestExtensions.UniqueEmail("outbox");
+        var since = DateTime.UtcNow.AddSeconds(-1);
+        await using (var db = fixture.CreateDbContext())
+        {
+            for (var i = 0; i < 25; i++)
+            {
+                db.EmailOutbox.Add(new EmailOutboxMessage
+                {
+                    ToAddress = email, Subject = $"m{i}", HtmlBody = "<p>x</p>", TextBody = "x", Template = "test.parallel",
+                    CreatedAtUtc = DateTime.UtcNow, NextAttemptAtUtc = DateTime.UtcNow,
+                });
+            }
+
+            await db.SaveChangesAsync(Ct);
+        }
+
+        // Four extra dispatchers race the hosted one.
+        var services = fixture.Factory.Services;
+        var dispatchers = Enumerable.Range(0, 4)
+            .Select(_ => ActivatorUtilities.CreateInstance<EmailOutboxDispatcher>(services))
+            .ToList();
+        await Task.WhenAll(dispatchers.Select(d => d.DispatchBatchAsync(Ct)));
+
+        var deadline = DateTime.UtcNow.AddSeconds(15);
+        int delivered;
+        do
+        {
+            await Task.Delay(200, Ct);
+            await using var db = fixture.CreateDbContext();
+            delivered = await db.DevMailbox.CountAsync(m => m.ToAddress == email && m.ReceivedAtUtc >= since, Ct);
+        }
+        while (delivered < 25 && DateTime.UtcNow < deadline);
+
+        await using var check = fixture.CreateDbContext();
+        (await check.DevMailbox.CountAsync(m => m.ToAddress == email, Ct)).ShouldBe(25);
+        (await check.DevMailbox.Where(m => m.ToAddress == email).Select(m => m.Subject).Distinct().CountAsync(Ct)).ShouldBe(25);
+        (await check.EmailOutbox.CountAsync(m => m.ToAddress == email && m.SentAtUtc == null, Ct)).ShouldBe(0);
+    }
+
+    [Fact]
     public async Task Forgot_password_for_an_unknown_email_answers_202_and_sends_nothing()
     {
         using var client = await ApiClient.CreateAsync(fixture);

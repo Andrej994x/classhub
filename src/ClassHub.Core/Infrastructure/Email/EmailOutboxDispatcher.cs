@@ -9,8 +9,10 @@ namespace ClassHub.Core.Infrastructure.Email;
 
 /// <summary>
 /// Delivers queued emails. Several instances may run: rows are claimed with
-/// <c>UPDATE TOP (n) … WITH (UPDLOCK, READPAST, ROWLOCK)</c> and a lease, so a message is delivered by
-/// one worker at a time. Failed deliveries are retried with backoff up to <see cref="EmailOptions.MaxAttempts"/>.
+/// <c>UPDATE TOP (n) … WITH (UPDLOCK, READPAST, ROWLOCK, READCOMMITTEDLOCK)</c> and a lease, so a message is
+/// delivered by one worker at a time. READCOMMITTEDLOCK keeps locking (not row versioning) semantics for
+/// READPAST although the database uses READ_COMMITTED_SNAPSHOT. Failed deliveries are retried with backoff
+/// up to <see cref="EmailOptions.MaxAttempts"/>.
 /// </summary>
 internal sealed partial class EmailOutboxDispatcher(
     IServiceScopeFactory scopeFactory,
@@ -66,7 +68,7 @@ internal sealed partial class EmailOutboxDispatcher(
             UPDATE TOP ({settings.BatchSize}) o
             SET o.LockedUntilUtc = {leaseUntil}, o.Attempts = o.Attempts + 1
             OUTPUT inserted.Id AS [Value]
-            FROM EmailOutbox AS o WITH (UPDLOCK, READPAST, ROWLOCK)
+            FROM EmailOutbox AS o WITH (UPDLOCK, READPAST, ROWLOCK, READCOMMITTEDLOCK)
             WHERE o.SentAtUtc IS NULL
               AND o.NextAttemptAtUtc <= {now}
               AND (o.LockedUntilUtc IS NULL OR o.LockedUntilUtc < {now})

@@ -200,6 +200,15 @@ internal sealed partial class AccountService(
             throw InvalidToken();
         }
 
+        // Check the token before any account-dependent password rules, so callers without a valid link get
+        // the same INVALID_TOKEN answer for known and unknown emails (no account enumeration).
+        var tokenValid = await users.VerifyUserTokenAsync(
+            user, users.Options.Tokens.PasswordResetTokenProvider, UserManager<AppUser>.ResetPasswordTokenPurpose, request.Token!);
+        if (!tokenValid)
+        {
+            throw InvalidToken();
+        }
+
         await ThrowIfPasswordInvalidAsync(user, request.NewPassword!, "newPassword");
 
         // Identity rotates the security stamp: every existing session ends at the next validation.
