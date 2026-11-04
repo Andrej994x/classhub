@@ -5,8 +5,10 @@ using ClassHub.Core.Modules.Identity;
 using ClassHub.Core.Modules.Identity.Contracts;
 using ClassHub.Core.SharedKernel.Errors;
 using ClassHub.IntegrationTests.Infrastructure;
+using Microsoft.AspNetCore.TestHost;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace ClassHub.IntegrationTests.Identity;
 
@@ -48,6 +50,62 @@ public sealed class AuthFlowTests(ClassHubApiFixture fixture)
         me.TimeZone.ShouldBe("Europe/Skopje");
 
         (await client.GetJsonAsync<MeResponse>("/api/auth/me")).Id.ShouldBe(me.Id);
+    }
+
+    [Fact]
+    public async Task Confirmation_links_cannot_be_reused_or_forged_after_confirmation()
+    {
+        using var client = await ApiClient.CreateAsync(fixture);
+        var email = ApiTestExtensions.UniqueEmail();
+        var since = DateTime.UtcNow.AddSeconds(-1);
+        using (var _ = await client.PostAsync("/api/auth/register", new { email, password = Password })) { }
+        var mail = await fixture.WaitForEmailAsync(email, "account.confirm-email", since);
+        var userId = Guid.Parse(mail.FragmentValue("userId"));
+        var token = mail.FragmentValue("token");
+
+        using (var first = await client.PostAsync("/api/auth/confirm-email", new { userId, token }))
+        {
+            first.StatusCode.ShouldBe(HttpStatusCode.NoContent);
+        }
+
+        using var reused = await client.PostAsync("/api/auth/confirm-email", new { userId, token });
+        reused.StatusCode.ShouldBe(HttpStatusCode.Conflict);
+        (await reused.ErrorCodeAsync()).ShouldBe(ErrorCodes.EmailAlreadyConfirmed);
+
+        using var forged = await client.PostAsync("/api/auth/confirm-email", new { userId, token = "forged" });
+        forged.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
+        (await forged.ErrorCodeAsync()).ShouldBe(ErrorCodes.InvalidToken);
+    }
+
+    [Fact]
+    public async Task Registration_is_atomic_when_the_confirmation_email_cannot_be_queued()
+    {
+        using var failingFactory = fixture.Factory.WithWebHostBuilder(builder =>
+            builder.ConfigureTestServices(services =>
+            {
+                services.RemoveAll<IEmailOutbox>();
+                services.AddScoped<IEmailOutbox, FailingOutbox>();
+            }));
+        using var http = failingFactory.CreateClient();
+        using var tokenResponse = await http.GetAsync(new Uri("/api/auth/antiforgery", UriKind.Relative), Ct);
+        var xsrf = tokenResponse.Headers.GetValues("X-XSRF-TOKEN").Single();
+        var email = ApiTestExtensions.UniqueEmail();
+
+        using var request = new HttpRequestMessage(HttpMethod.Post, new Uri("/api/auth/register", UriKind.Relative))
+        {
+            Content = JsonContent.Create(new { email, password = Password }),
+        };
+        request.Headers.Add("X-XSRF-TOKEN", xsrf);
+        using var response = await http.SendAsync(request, Ct);
+
+        response.StatusCode.ShouldBe(HttpStatusCode.InternalServerError);
+        await using var db = fixture.CreateDbContext();
+        (await db.Users.AnyAsync(u => u.NormalizedEmail == email.ToUpperInvariant(), Ct)).ShouldBeFalse();
+    }
+
+    private sealed class FailingOutbox : IEmailOutbox
+    {
+        public void Enqueue(EmailMessage message) => throw new InvalidOperationException("Outbox unavailable (test).");
     }
 
     [Fact]

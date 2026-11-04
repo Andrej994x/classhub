@@ -62,6 +62,10 @@ internal sealed partial class AccountService(
             CreatedAtUtc = clock.GetUtcNow().UtcDateTime,
         };
 
+        // The account and its confirmation email commit together or not at all (UserManager and the
+        // outbox share this scoped DbContext, so both run inside the transaction).
+        await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
+
         IdentityResult created;
         try
         {
@@ -86,6 +90,7 @@ internal sealed partial class AccountService(
         }
 
         await QueueConfirmationEmailAsync(user, cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
         LogRegistered(logger, user.Id);
     }
 
@@ -99,7 +104,13 @@ internal sealed partial class AccountService(
 
         if (user.EmailConfirmed)
         {
-            return;
+            // Never accept a token without validating it. A valid but reused link gets a clear answer;
+            // anything else is an invalid token.
+            var stillValid = await users.VerifyUserTokenAsync(
+                user, users.Options.Tokens.EmailConfirmationTokenProvider, UserManager<AppUser>.ConfirmEmailTokenPurpose, request.Token!);
+            throw stillValid
+                ? new ConflictException("This email address is already confirmed.", ErrorCodes.EmailAlreadyConfirmed)
+                : InvalidToken();
         }
 
         var result = await users.ConfirmEmailAsync(user, request.Token!);
