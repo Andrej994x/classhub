@@ -7,10 +7,10 @@ This is the live status of the autonomous implementation loop ([ROADMAP.md](ROAD
 | Field | Value |
 |---|---|
 | Release | R0 — Foundation |
-| Current phase | R0-P4 — Authentication (Identity) |
-| Branch | `feature/r0-p4-authentication` (rebased onto `main` @ `293ae76`) |
-| Workflow step | 5 — implementation and local checks done (149/149); Codex review next |
-| Next action | Codex review → PR → auto-merge → R0-P5 |
+| Current phase | R0-P5 — Workspaces, roles & tenancy |
+| Branch | `feature/r0-p5-workspace-tenancy` (rebased on `main` after the PR-gate fix, PR #7) |
+| Workflow step | 5 — commit-bound Codex review (`node scripts/codex-review.mjs review`), then PR |
+| Next action | Open the R0-P5 PR with generated evidence; first real Actions run of the corrected `pr-gate`. Then R0-P6 (committed locally on `feature/r0-p6-web-foundation`, to be rebased) |
 | Open blockers | None |
 
 ## Phase status
@@ -23,9 +23,9 @@ Status values: `not started`, `in progress`, `in review` (PR open), `merged`, `b
 | R0-P1 | Repository foundation & CI | merged | `chore/r0-p1-repository-foundation` | [#1](https://github.com/Andrej994x/classhub/pull/1) | `2e3c225` | 2 rounds: 1 × P2 (i18n check ignored a missing locale) fixed; round 2 clean | 8/8 green | Ruleset `main protection` created and verified |
 | R0-P2 | EF Core & SQL Server foundation | merged | `chore/r0-p2-database-foundation` | [#4](https://github.com/Andrej994x/classhub/pull/4) | `63d189d` | 1 round: no actionable defects | 9/9 green | Windows-auth gate passed (Shared memory, NTLM); `migrations` added to the ruleset |
 | R0-P3 | API platform baseline | merged | `chore/r0-p3-api-platform-baseline` | [#5](https://github.com/Andrej994x/classhub/pull/5) | `293ae76` | 5 rounds: 3 × P2 (forwarded headers fail-open, missing default rate limit, limiter after authorization) fixed; rounds 4–5 clean; CodeQL HttpOnly finding fixed | 9/9 green | Blocked once by an outdated CodeQL review thread (resolved after the fix) |
-| R0-P4 | Authentication (Identity) | in progress | `feature/r0-p4-authentication` | | | | | |
-| R0-P5 | Workspaces, roles & tenancy | not started | | | | | | |
-| R0-P6 | Web foundation & localization | not started | | | | | | |
+| R0-P4 | Authentication (Identity) | merged | `feature/r0-p4-authentication` | [#6](https://github.com/Andrej994x/classhub/pull/6) | `5203a72` | 3 rounds: 4 findings fixed (atomic registration, confirmation token check, reset enumeration, READCOMMITTEDLOCK), 1 P1 rejected with evidence | 9/9 green | |
+| R0-P5 | Workspaces, roles & tenancy | in progress | `feature/r0-p5-workspace-tenancy` | | | Pre-review: 3 × P2 (non-atomic owner grant, slash-only time zones, shape-only currency) fixed | | 211/211 backend tests locally |
+| R0-P6 | Web foundation & localization | in progress (committed locally) | `feature/r0-p6-web-foundation` | | | | | Stacked on R0-P5 |
 | R0-P7 | Auth UI & first E2E | not started | | | | | | |
 | R0-P8 | Foundation hardening & closeout | not started | | | | | | |
 
@@ -52,6 +52,13 @@ Releases 1–3 and Beta are listed in [ROADMAP.md](ROADMAP.md) section D. They a
 - **Gate passed:** `dotnet ef database update` created `ClassHubDb` on `.\SQLEXPRESS` via Windows authentication. The running API connects as `EFCore/10.0.14` over **Shared memory**, `NTLM`. Collation `Macedonian_FYROM_100_CI_AS_SC`, RCSI on, migrations `InitialTechnical` + `EnableReadCommittedSnapshot` applied. No SQL Server configuration was changed.
 - Local tests: 49/49 green (unit 5, architecture 1, integration 43 on Testcontainers SQL Server 2022).
 - CI `migrations` job sequence verified locally against a throwaway container.
+
+### PR-gate evidence fix (merged, PR #7, `56a5523`)
+
+- **Root cause** (same failure on #1, #4, #5, #6): PRs were opened, and fixes pushed, while the body still said "Codex review: in progress"; evidence was assembled by hand and not tied to a commit (the gate accepted any PR commit); re-runs of `pr-gate` reuse the event payload, so a corrected body was never seen; no concurrency group.
+- **Fix:** `scripts/codex-review.mjs` runs the real review on a clean tree and writes commit-bound evidence (`review.json`: commit, base, CLI version, transcript SHA-256; raw final message). `pr-gate` reads the body from the API, requires reviewed commit = PR head SHA, recounts severities from the raw output, requires 0 unresolved P0/P1 and a `### Rejected findings` section for rejected ones; per-PR concurrency. 14 node tests run in the `frontend` job.
+- **Merged PRs #1, #4, #5, #6:** bodies regenerated from their real final-round transcripts (no new results invented); all pass the new gate script against the live API. #6 records its 1 rejected P1 with the evidence.
+- **Incident 2026-11-04 ~15:51 UTC:** GitHub Actions "degraded performance"; all runs for PR #7 stayed queued (no runner assigned) for over 25 minutes, then completed: 8/8 green, auto-merged. The `pr-gate` re-runs on the corrected bodies of #1, #4, #5 and #6 all passed.
 
 ## R0-P0 prerequisite results (2026-11-04)
 
@@ -87,5 +94,6 @@ Releases 1–3 and Beta are listed in [ROADMAP.md](ROADMAP.md) section D. They a
 | 2026-11-04 | Tests run on Microsoft.Testing.Platform (no VSTest) | xunit.v3 4.x on the .NET 10 SDK requires it |
 | 2026-11-04 | `codex review --base origin/main` without a custom prompt | codex-cli 0.164 rejects a prompt combined with `--base`; guidelines come from AGENTS.md |
 | 2026-11-04 | PR gate evidence = Codex section + Codex's final review message in the PR body; full transcript stays in `.codex-review/` | GitHub PR body size limit; transcripts include local paths |
+| 2026-11-04 | PR evidence is generated by `scripts/codex-review.mjs` and bound to the PR head commit (superseding hand-written sections) | Self-reported review summaries are not evidence (PR #7) |
 | 2026-11-04 | App's CI auto-fix monitor not enabled (auto-mode permission check denied it) | PR status is read when needed; auto-merge runs on GitHub |
 | 2026-11-04 | `System.Security.Cryptography.Pkcs` pinned to 10.0.14 (transitive) | Vulnerable 9.0.11 via Microsoft.Data.SqlClient 6.1.7 |

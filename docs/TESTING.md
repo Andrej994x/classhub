@@ -82,6 +82,21 @@ Platform tests use `Platform/PlatformApiFactory`: the real pipeline in the `Test
 
 The Testing host validates security stamps on every request (`Identity:SecurityStampValidationIntervalSeconds=0`) and dispatches email every 100 ms.
 
+## What is covered (R0-P5)
+
+| Area | Tests |
+|---|---|
+| Provisioning | registration creates exactly one Owner workspace (localized name, MKD, Europe/Skopje) and an audit entry; a failing provisioning rolls back the account and its email |
+| Settings | owner reads and updates name/time zone/currency/locale (audited with before/after); invalid IANA zones, currencies, locales and empty names are rejected |
+| Isolation | another teacher gets 404 on GET and PATCH and changes nothing; a platform admin without membership gets 404; unknown and malformed ids 404; anonymous 401; tenant rows are invisible to a context without a tenant |
+| Machinery (probe model) | filter shows only the current workspace and nothing without one; inserts stamped; foreign-workspace writes refused; WorkspaceId cannot change; orphan rows refused; **the database rejects cross-workspace references** (composite FK) |
+| CLI | `grant-platform-owner`: unknown email → 1, first owner → 0, second owner needs `--force-add` (2 otherwise), audited, role change ends the old session, not reachable over HTTP; a failure before the audit entry grants nothing; a concurrent bootstrap waits for the lock and is refused once an owner exists |
+| Migrations | `WorkspaceBackfillMigrationTests`: upgrading a populated R0-P4 database gives every existing account an owned workspace (account language and time zone), audited, once |
+| Architecture | tenant-filter bypasses and raw SQL only in allow-listed files |
+| Unit | role permissions, policy names, tenant context binding, unknown permissions |
+
+`Infrastructure/TenantIsolationKit` provides `CreateTeacherAsync` (register, sign in, workspace id) and `AssertCrossTenantDeniedAsync` for every later phase.
+
 ## CI
 
 See [DEVELOPMENT.md](DEVELOPMENT.md#required-checks-github-actions). `integration` runs these tests on the runner's Docker. `migrations` applies all migrations to an empty SQL Server 2022 container, re-runs the idempotent script, and checks collation and RCSI.

@@ -1,6 +1,9 @@
+using ClassHub.Core.Infrastructure.Audit;
+using ClassHub.Core.Infrastructure.Tenancy;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace ClassHub.Core.Infrastructure.Persistence;
 
@@ -30,6 +33,10 @@ public static class PersistenceServiceCollectionExtensions
         }
 
         services.AddDbContext<ClassHubDbContext>(options => options.UseSqlServer(connectionString));
+        services.AddClassHubTenancy();
+        services.AddHttpContextAccessor();
+        services.TryAddSingleton(TimeProvider.System);
+        services.AddScoped<IAuditLog, AuditLog>();
 
         services.AddHealthChecks()
             .AddDbContextCheck<ClassHubDbContext>("database", tags: [ReadinessTag]);

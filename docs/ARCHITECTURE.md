@@ -59,6 +59,17 @@ Persistence details: [DATABASE.md](DATABASE.md). Test infrastructure: [TESTING.m
 - **Email outbox:** `IEmailOutbox.Enqueue` adds an `EmailOutbox` row in the same unit of work; `EmailOutboxDispatcher` (`BackgroundService`) claims rows with `UPDATE TOP (n) … WITH (UPDLOCK, READPAST, ROWLOCK)` and a lease, delivers through `IEmailSender`, retries with exponential backoff (max 8 attempts), and clears bodies after delivery. Provider `DevMailbox` (Development/Testing/E2E) stores messages in `DevMailbox`, visible at `GET /api/dev/mailbox` (mapped only in those environments); provider `None` only queues. Resend comes with hosting.
 - Emails are localized (mk default, en) in `AccountEmails`; user values are HTML-encoded.
 
+## Workspaces and tenancy (R0-P5)
+
+- `Modules/Workspaces`: `Workspace` (the tenant: name, IANA time zone, ISO 4217 currency, locale, rowversion) and `WorkspaceMember` (`ITenantOwned`; role, revocation; one active membership per user and workspace). `IWorkspaceProvisioning` (Contracts) is called by registration inside its transaction.
+- Endpoints: `GET /api/me/workspaces` (`Authenticated`), `GET|PATCH /api/w/{workspaceId}` (`ws:workspace.read` / `ws:workspace.manage`, antiforgery on PATCH).
+- `Infrastructure/Tenancy`: `TenantContext`, `WorkspacePermissionHandler` + `WorkspacePolicyProvider` + `WorkspaceAuthorizationResultHandler` (non-member → 404), `TenancyModelConventions` (named `Tenant`/`Archived` filters, `HasTenantReference`), `TenantSaveChangesInterceptor` (added in `ClassHubDbContext.OnConfiguring`). The DbContext receives `ITenantContext` through DI; a context created without one sees no tenant rows.
+- `Infrastructure/Audit`: `IAuditLog.Record(...)` adds an `AuditLogEntry` to the caller's unit of work.
+- `SharedKernel`: `ITenantOwned`, `IArchivable`, `ITenantContext`, `WorkspaceRole`, `WorkspacePermissions`, `WorkspacePolicies`, `PlatformRoles` (roles seeded with fixed ids).
+- `TenancyModelConventions` only touches entities that implement `ITenantOwned`/`IArchivable` (configuring every entity type re-included Identity's passkey data type and broke the model).
+
+Details and tests: [SECURITY.md](SECURITY.md#tenant-isolation-r0-p5).
+
 ## API contract → TypeScript
 
 `OpenApiContractTests` requires `web/src/api/openapi.json` to equal the API's `/openapi/v1.json` (server URLs removed). `npm run api:types` generates `web/src/api/schema.d.ts` from it; CI fails if either is stale. Update flow after an API change:

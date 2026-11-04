@@ -32,9 +32,15 @@ builder.Services.AddClassHubRateLimiting(builder.Configuration);
 builder.Services.AddClassHubPersistence(builder.Configuration);
 builder.Services.AddClassHubEmail(builder.Configuration);
 builder.Services.AddClassHubModules(builder.Configuration);
-builder.Services.AddOpenApi("v1");
+builder.Services.AddOpenApi("v1", options => options.AddOperationTransformer<RouteParameterOperationTransformer>());
 
 var app = builder.Build();
+
+// Local administrative commands (never exposed over HTTP), e.g. `-- grant-platform-owner <email>`.
+if (await PlatformCommands.TryRunAsync(app, args))
+{
+    return;
+}
 
 if (app.Services.GetRequiredService<ForwardedHeadersSettings>().Enabled)
 {

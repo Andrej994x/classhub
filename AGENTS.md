@@ -31,6 +31,8 @@ If code and documents disagree, the documents win, unless `PROGRESS.md` records 
 | Web checks | `cd web && npm run lint && npm run i18n:check && npm test && npm run build` |
 | Update API contract | `CLASSHUB_UPDATE_OPENAPI=1` + `dotnet test --project tests/ClassHub.IntegrationTests`, then `cd web && npm run api:types` (see docs/ARCHITECTURE.md) |
 
+Every tenant-owned entity implements `ITenantOwned`, references other tenant entities with `HasTenantReference` (composite FK), and gets cross-tenant tests via `TenantIsolationKit`. Workspace endpoints live under `/api/w/{workspaceId:guid}` with a `ws:<permission>` policy. `IgnoreQueryFilters` and raw SQL are allowed only in the files listed in `TenantBypassTests`.
+
 Every new endpoint must declare `.AllowAnonymous()` or `.RequireAuthorization(<named ClassHub policy>)`; cookie-authenticated unsafe endpoints also use `.RequireAntiforgeryHeader()`; expected errors are thrown as `ClassHubException` subtypes with a stable code.
 
 ## Codex review guidelines
