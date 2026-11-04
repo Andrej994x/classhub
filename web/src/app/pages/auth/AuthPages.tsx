@@ -285,11 +285,11 @@ export function ResetPasswordPage() {
       if (!link.email || !link.token) throw new ApiError(400, 'INVALID_TOKEN', 'missing link data');
       await api.client.POST('/api/auth/reset-password', { body: { email: link.email, token: link.token, newPassword: values.password } });
     },
-    // The reset ended every session of the account (security stamp), including one in this tab.
+    // The reset ended every session of the reset account (security stamp). This tab may be signed in as that
+    // account or as another one, so nothing cached is trusted: the next screen asks the API who is signed in.
     onSuccess: () => {
       api.resetToken();
       queryClient.clear();
-      queryClient.setQueryData(meQueryKey, null);
     },
     onError: (error) => applyServerFieldErrors(error, form.setError, { newPassword: { field: 'password', message: 'auth.validation.passwordRejected' } }),
   });

@@ -7,12 +7,14 @@ import { meQueryKey } from '../auth/session.ts';
 import { i18n } from '../i18n/index.ts';
 
 export function createQueryClient() {
-  // A 401 from any protected request means the session ended (expired, revoked, signed out elsewhere):
-  // drop the cached account so the guards send the user to sign in instead of showing a dead dashboard.
+  // A 401 from a protected request usually means the session ended (expired, revoked, signed out
+  // elsewhere). The cached account is not trusted any more: ask the API who is signed in. If the session
+  // ended, the guards send the user to sign in; if the 401 was a late answer for an earlier identity, the
+  // current account simply stays.
   const onAuthFailure = (error: unknown) => {
     if (error instanceof ApiError && error.status === 401 && client.getQueryData(meQueryKey)) {
       api.resetToken();
-      client.setQueryData(meQueryKey, null);
+      void client.invalidateQueries({ queryKey: meQueryKey });
     }
   };
   const client: QueryClient = new QueryClient({

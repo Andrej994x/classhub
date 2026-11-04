@@ -54,9 +54,10 @@ describe('routes and layouts', () => {
   });
 
   it('sends the user to sign in when the session ends while the app is open', async () => {
-    fakeApi({
+    const api = fakeApi({
       me: teacher(),
-      extra: [(call) => (call.path === `/api/w/${WORKSPACE_ID}` ? new Response(JSON.stringify({ status: 401, code: 'UNAUTHORIZED' }), { status: 401, headers: { 'content-type': 'application/json' } }) : undefined)],
+      // The session is revoked on the server just before the workspace is loaded.
+      extra: [(call) => (call.path === `/api/w/${WORKSPACE_ID}` ? ((api.state.me = null), new Response(JSON.stringify({ status: 401, code: 'UNAUTHORIZED' }), { status: 401, headers: { 'content-type': 'application/json' } })) : undefined)],
     });
     const { router } = await renderRoute(`/app/w/${WORKSPACE_ID}`);
 
@@ -116,6 +117,18 @@ describe('routes and layouts', () => {
     await expect.poll(() => api.to('/api/auth/me', 'PATCH').length).toBe(1);
     expect(api.to('/api/auth/me', 'PATCH')[0]).toMatchObject({ body: { locale: 'en' }, xsrf: 'xsrf' });
     await i18n.changeLanguage('mk');
+  });
+
+  it('keeps the account when a 401 belongs to an earlier identity (the API still knows the session)', async () => {
+    fakeApi({
+      me: teacher(),
+      extra: [(call) => (call.path === `/api/w/${WORKSPACE_ID}` ? new Response(JSON.stringify({ status: 401, code: 'UNAUTHORIZED' }), { status: 401, headers: { 'content-type': 'application/json' } }) : undefined)],
+    });
+    const { router } = await renderRoute(`/app/w/${WORKSPACE_ID}`);
+
+    await expect.poll(() => screen.queryByRole('alert')?.textContent ?? '').toContain('Најавете се за да продолжите');
+    expect(router.state.location.pathname).toBe(`/app/w/${WORKSPACE_ID}`);
+    expect(screen.getByRole('navigation', { name: 'Главна навигација' })).toBeInTheDocument();
   });
 
   it('ignores a late language answer that arrives after signing out', async () => {

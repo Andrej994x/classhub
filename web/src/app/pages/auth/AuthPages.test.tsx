@@ -177,6 +177,24 @@ describe('email confirmation and password reset links', () => {
     expect(api.to('/api/me/workspaces')).toHaveLength(0);
   });
 
+  it('keeps a session of another account that resets a password in this tab', async () => {
+    const user = userEvent.setup();
+    const api = fakeApi({ me: teacher(), extra: [(call) => (call.path === '/api/auth/reset-password' ? new Response(null, { status: 204 }) : undefined)] });
+    const { router } = await renderRoute('/student');
+    await screen.findByRole('heading', { level: 1, name: 'Мои часови' });
+    window.history.replaceState(null, '', '/reset-password#email=other%40example.com&token=t1');
+    await act(() => router.navigate('/reset-password'));
+
+    await user.type(await screen.findByLabelText('Нова лозинка'), PASSWORD);
+    await user.type(screen.getByLabelText('Повторете ја лозинката'), PASSWORD);
+    await user.click(screen.getByRole('button', { name: 'Зачувај ја новата лозинка' }));
+    await user.click(await screen.findByRole('link', { name: 'Најави се' }));
+
+    // The API still knows the signed-in account (another one was reset): it stays signed in.
+    expect(await screen.findByRole('heading', { level: 1, name: 'Математика со Ана' })).toBeInTheDocument();
+    expect(api.to('/api/auth/me', 'GET').length).toBeGreaterThan(1); // asked the API again after the reset
+  });
+
   it('answers the forgot-password request the same way for every address', async () => {
     const user = userEvent.setup();
     fakeApi({ extra: [(call) => (call.path === '/api/auth/forgot-password' ? json(202, { message: 'x' }) : undefined)] });
