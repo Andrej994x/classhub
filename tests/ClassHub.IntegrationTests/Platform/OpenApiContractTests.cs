@@ -41,6 +41,30 @@ public sealed class OpenApiContractTests
             $"web/src/api/openapi.json is out of date. Run the tests with {UpdateVariable}=1, then `npm run api:types` in web/, and commit both files.");
     }
 
+    [Fact]
+    public async Task Every_path_template_parameter_is_declared_on_its_operations()
+    {
+        using var factory = new PlatformApiFactory(includeProbeModule: false);
+        using var client = factory.CreateClient();
+        var document = JsonNode.Parse(await client.GetStringAsync(new Uri("/openapi/v1.json", UriKind.Relative), TestContext.Current.CancellationToken))!;
+
+        var missing = new List<string>();
+        foreach (var (template, item) in document["paths"]!.AsObject())
+        {
+            var names = System.Text.RegularExpressions.Regex.Matches(template, @"\{([^}]+)\}").Select(m => m.Groups[1].Value).ToList();
+            foreach (var (method, operation) in item!.AsObject())
+            {
+                var declared = operation?["parameters"]?.AsArray()
+                    .Where(p => (string?)p?["in"] == "path")
+                    .Select(p => (string?)p?["name"])
+                    .ToHashSet(StringComparer.Ordinal) ?? [];
+                missing.AddRange(names.Where(n => !declared.Contains(n)).Select(n => $"{method.ToUpperInvariant()} {template}: {n}"));
+            }
+        }
+
+        missing.ShouldBeEmpty("Generated clients cannot fill undeclared path parameters: " + string.Join(", ", missing));
+    }
+
     private static string Normalize(string json)
     {
         var node = JsonNode.Parse(json) ?? throw new InvalidOperationException("Empty OpenAPI document.");

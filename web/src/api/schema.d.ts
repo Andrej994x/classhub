@@ -543,7 +543,9 @@ export interface operations {
         parameters: {
             query?: never;
             header?: never;
-            path?: never;
+            path: {
+                workspaceId: string;
+            };
             cookie?: never;
         };
         requestBody?: never;
@@ -563,7 +565,9 @@ export interface operations {
         parameters: {
             query?: never;
             header?: never;
-            path?: never;
+            path: {
+                workspaceId: string;
+            };
             cookie?: never;
         };
         requestBody: {

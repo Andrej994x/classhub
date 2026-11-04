@@ -14,9 +14,10 @@ public sealed partial class TenantBypassTests
         @"^src/ClassHub\.Core/Infrastructure/Email/EmailOutboxDispatcher\.cs$",  // lease-based claim (no tenant data)
         @"^src/ClassHub\.Core/Modules/[^/]+/Persistence/[^/]*Queries\.cs$",      // explicit public/admin/access queries
         @"^src/ClassHub\.Core/Modules/[^/]+/Jobs/",                                // background jobs (system scope)
+        @"^src/ClassHub\.Api/Platform/PlatformCommands\.cs$",                    // CLI: sp_getapplock only (no tenant data)
     ];
 
-    [GeneratedRegex(@"\b(IgnoreQueryFilters|ExecuteSqlRaw|ExecuteSqlInterpolated|ExecuteSql|SqlQueryRaw|SqlQuery|FromSqlRaw|FromSqlInterpolated|FromSql)\s*[<(]")]
+    [GeneratedRegex(@"\b(IgnoreQueryFilters|ExecuteSqlRaw|ExecuteSqlInterpolated|ExecuteSql|SqlQueryRaw|SqlQuery|FromSqlRaw|FromSqlInterpolated|FromSql)(Async)?\s*[<(]")]
     private static partial Regex BypassPattern();
 
     [Fact]
@@ -34,6 +35,15 @@ public sealed partial class TenantBypassTests
 
         violations.ShouldBeEmpty("Tenant filter bypass or raw SQL outside the allow list: " + string.Join(", ", violations));
     }
+
+    [Theory]
+    [InlineData("db.Set<X>().IgnoreQueryFilters()")]
+    [InlineData("await db.Database.ExecuteSqlRawAsync(sql)")]
+    [InlineData("await db.Database.ExecuteSqlInterpolatedAsync($\"...\")")]
+    [InlineData("await db.Database.ExecuteSqlAsync($\"...\")")]
+    [InlineData("db.Database.SqlQuery<int>($\"...\")")]
+    [InlineData("db.Set<X>().FromSqlRaw(sql)")]
+    public void The_detector_matches_sync_and_async_raw_sql(string code) => BypassPattern().IsMatch(code).ShouldBeTrue();
 
     [Fact]
     public void The_allow_list_is_actually_used()

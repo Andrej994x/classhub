@@ -32,7 +32,7 @@ builder.Services.AddClassHubRateLimiting(builder.Configuration);
 builder.Services.AddClassHubPersistence(builder.Configuration);
 builder.Services.AddClassHubEmail(builder.Configuration);
 builder.Services.AddClassHubModules(builder.Configuration);
-builder.Services.AddOpenApi("v1");
+builder.Services.AddOpenApi("v1", options => options.AddOperationTransformer<RouteParameterOperationTransformer>());
 
 var app = builder.Build();
 
