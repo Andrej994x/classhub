@@ -7,11 +7,11 @@ This is the live status of the autonomous implementation loop ([ROADMAP.md](ROAD
 | Field | Value |
 |---|---|
 | Release | R0 — Foundation |
-| Current phase | R0-P4 — Authentication (Identity), implemented locally; R0-P3 PR #5 waiting to merge |
-| Branch | `feature/r0-p4-authentication` (from the R0-P3 head `fd1526e`; rebase onto `main` once #5 merges) |
-| Workflow step | 4 — implementation and local checks done (149/149); Codex review after the rebase |
-| Next action | User resolves the outdated CodeQL review thread on PR #5 → #5 auto-merges → rebase R0-P4 → Codex → PR |
-| Open blockers | **PR #5 blocked by one unresolved (outdated) review thread** (see Blockers) |
+| Current phase | R0-P4 — Authentication (Identity) |
+| Branch | `feature/r0-p4-authentication` (rebased onto `main` @ `293ae76`) |
+| Workflow step | 5 — implementation and local checks done (149/149); Codex review next |
+| Next action | Codex review → PR → auto-merge → R0-P5 |
+| Open blockers | None |
 
 ## Phase status
 
@@ -22,8 +22,8 @@ Status values: `not started`, `in progress`, `in review` (PR open), `merged`, `b
 | R0-P0 | Local & GitHub prerequisites | merged (direct bootstrap) | `main` | — | `53d3f15` | n/a (no code) | n/a | Repo created and configured |
 | R0-P1 | Repository foundation & CI | merged | `chore/r0-p1-repository-foundation` | [#1](https://github.com/Andrej994x/classhub/pull/1) | `2e3c225` | 2 rounds: 1 × P2 (i18n check ignored a missing locale) fixed; round 2 clean | 8/8 green | Ruleset `main protection` created and verified |
 | R0-P2 | EF Core & SQL Server foundation | merged | `chore/r0-p2-database-foundation` | [#4](https://github.com/Andrej994x/classhub/pull/4) | `63d189d` | 1 round: no actionable defects | 9/9 green | Windows-auth gate passed (Shared memory, NTLM); `migrations` added to the ruleset |
-| R0-P3 | API platform baseline | in progress | `chore/r0-p3-api-platform-baseline` | | | | | |
-| R0-P4 | Authentication (Identity) | not started | | | | | | |
+| R0-P3 | API platform baseline | merged | `chore/r0-p3-api-platform-baseline` | [#5](https://github.com/Andrej994x/classhub/pull/5) | `293ae76` | 5 rounds: 3 × P2 (forwarded headers fail-open, missing default rate limit, limiter after authorization) fixed; rounds 4–5 clean; CodeQL HttpOnly finding fixed | 9/9 green | Blocked once by an outdated CodeQL review thread (resolved after the fix) |
+| R0-P4 | Authentication (Identity) | in progress | `feature/r0-p4-authentication` | | | | | |
 | R0-P5 | Workspaces, roles & tenancy | not started | | | | | | |
 | R0-P6 | Web foundation & localization | not started | | | | | | |
 | R0-P7 | Auth UI & first E2E | not started | | | | | | |
@@ -41,7 +41,7 @@ Releases 1–3 and Beta are listed in [ROADMAP.md](ROADMAP.md) section D. They a
 - Ruleset **main protection** (id 26526706): active on the default branch; PR required (squash only, review threads resolved); required checks = the 7 above from GitHub Actions (app 15368), strict (branch up to date); linear history; no deletion or force push; **no bypass actors** (`current_user_can_bypass: never`). Verified via `GET /repos/.../rules/branches/main`.
 - Tests: 3 backend + 2 frontend, all green locally and in CI.
 
-### R0-P3 — API platform baseline (in progress)
+### R0-P3 — API platform baseline (merged, PR #5, `293ae76`)
 
 - ProblemDetails with stable `code` + `traceId`; `ClassHubException` hierarchy; FluentValidation filter; Serilog request logging with redaction; security headers/CSP; HSTS outside dev; forwarded headers (off by default); named rate limits (validated options); cookie auth scheme (Identity application scheme, 401/403 without redirect); deny-by-default fallback policy + endpoint-metadata test; antiforgery for JSON (`GET /api/auth/antiforgery`, `X-XSRF-TOKEN`); module discovery under `/api`; module-boundary architecture tests; OpenAPI contract → TypeScript types with CI drift checks.
 - Local tests: 105/105 backend green, web lint/i18n/tests/build green.
@@ -75,7 +75,7 @@ Releases 1–3 and Beta are listed in [ROADMAP.md](ROADMAP.md) section D. They a
 | Blocker | Affects | Action needed |
 |---|---|---|
 | ~~Docker engine not responding~~ **Resolved 2026-11-04** | R0-P2 onward | Docker Desktop restarted at the user's request; verified with a disposable SQL Server container |
-| **Unresolved review thread on PR #5** | Merge of R0-P3 (and everything after it) | CodeQL posted "Cookie 'HttpOnly' attribute is not set" as a review comment. Fixed in `fd1526e` (no readable cookie; code scanning shows no open alerts); the thread is now outdated but unresolved, and the ruleset requires resolved threads. Resolving it from here was blocked by the auto-mode permission check. **User action:** resolve the thread on PR #5 (or allow `gh api graphql … resolveReviewThread`). |
+| ~~Unresolved review thread on PR #5~~ **Resolved 2026-11-04** | Merge of R0-P3 | CodeQL posted "Cookie 'HttpOnly' attribute is not set" as a review comment. Fixed in `fd1526e` (no readable cookie; code scanning shows no open alerts); the thread is now outdated but unresolved, and the ruleset requires resolved threads. Resolving it from here was blocked by the auto-mode permission check. **User action:** resolve the thread on PR #5 (or allow `gh api graphql … resolveReviewThread`). |
 
 ## Decisions taken during execution
 
