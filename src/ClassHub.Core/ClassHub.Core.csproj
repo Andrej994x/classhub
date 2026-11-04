@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>ClassHub.Core</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Modules expose Minimal API endpoints and use ASP.NET Core abstractions (Identity, authorization). -->
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+</Project>
