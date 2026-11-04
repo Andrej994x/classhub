@@ -7,11 +7,11 @@ This is the live status of the autonomous implementation loop ([ROADMAP.md](ROAD
 | Field | Value |
 |---|---|
 | Release | R0 — Foundation |
-| Current phase | R0-P7 — Auth UI & first E2E |
-| Branch | `feature/r0-p7-auth-ui` (from `main` @ `eab9c19`) |
-| Workflow step | 5 — commit-bound Codex review, then PR |
-| Next action | R0-P7 PR; after the first `e2e` run add `e2e` to the ruleset's required checks (ROADMAP R0-P7 acceptance: "the `e2e` job is green and required"); then R0-P8 |
-| Open blockers | None |
+| Current phase | R0-P8 — Foundation hardening & closeout |
+| Branch | `chore/r0-p8-foundation-hardening` (from `main` @ `8d02b1f`) |
+| Workflow step | 5 — signed Codex review of the branch, then PR |
+| Next action | R0-P8 PR (still checked by the old `pull_request` gate). After the merge: require the status `classhub/codex-evidence` in the ruleset, verify the new trusted gate on the next PR, mark Release 0 complete |
+| Open blockers | None. User action (optional): the direct-push probe (see R0-P8 results) |
 
 ## Phase status
 
@@ -26,8 +26,8 @@ Status values: `not started`, `in progress`, `in review` (PR open), `merged`, `b
 | R0-P4 | Authentication (Identity) | merged | `feature/r0-p4-authentication` | [#6](https://github.com/Andrej994x/classhub/pull/6) | `5203a72` | 3 rounds: 4 findings fixed (atomic registration, confirmation token check, reset enumeration, READCOMMITTEDLOCK), 1 P1 rejected with evidence | 9/9 green | |
 | R0-P5 | Workspaces, roles & tenancy | merged | `feature/r0-p5-workspace-tenancy` | [#8](https://github.com/Andrej994x/classhub/pull/8) | `22f1158` | Pre-review + 4 rounds: 8 × P2 fixed (owner grant atomic + serialized, IANA time zones, ISO 4217 currencies, workspace backfill migration, OpenAPI route parameters, async raw-SQL detection, no-op audit); round 4 clean | 9/9 green | First PR checked by the corrected `pr-gate` (generated evidence of `6dabf9b`); migration applied to local `ClassHubDb` |
 | R0-P6 | Web foundation & localization | merged | `feature/r0-p6-web-foundation` | [#9](https://github.com/Andrej994x/classhub/pull/9) | `eab9c19` | 3 rounds: 3 × P2 fixed (antiforgery fetch network errors, auth shell at `/login`, `<html lang>` at startup); round 3 clean | 9/9 green | |
-| R0-P7 | Auth UI & first E2E | in review | `feature/r0-p7-auth-ui` | | | | | Playwright 12/12 locally |
-| R0-P8 | Foundation hardening & closeout | not started | | | | | | |
+| R0-P7 | Auth UI & first E2E | merged | `feature/r0-p7-auth-ui` | [#10](https://github.com/Andrej994x/classhub/pull/10) | `8d02b1f` | 7 rounds: 6 × P2 fixed (failed logout, 401 session handling, reset in a signed-in tab, late language answers, reconciling sessions with the API, identity-scoped cache); round 7 clean | 10/10 green incl. first `e2e` (12/12) | `e2e` added to the required checks |
+| R0-P8 | Foundation hardening & closeout | in review | `chore/r0-p8-foundation-hardening` | | | Whole-repo security review: 2 × P1 (PR gate) fixed by signed evidence + trusted gate (owner decision), 2 × P2 fixed | | |
 
 Releases 1–3 and Beta are listed in [ROADMAP.md](ROADMAP.md) section D. They are added to this table when Release 0 is complete.
 
@@ -52,6 +52,24 @@ Releases 1–3 and Beta are listed in [ROADMAP.md](ROADMAP.md) section D. They a
 - **Gate passed:** `dotnet ef database update` created `ClassHubDb` on `.\SQLEXPRESS` via Windows authentication. The running API connects as `EFCore/10.0.14` over **Shared memory**, `NTLM`. Collation `Macedonian_FYROM_100_CI_AS_SC`, RCSI on, migrations `InitialTechnical` + `EnableReadCommittedSnapshot` applied. No SQL Server configuration was changed.
 - Local tests: 49/49 green (unit 5, architecture 1, integration 43 on Testcontainers SQL Server 2022).
 - CI `migrations` job sequence verified locally against a throwaway container.
+
+### R0-P8 — Foundation hardening & closeout (in review)
+
+- **Whole-repository Codex security review** (custom prompt with the AGENTS.md checklist, `codex review -` on `main` @ `8d02b1f`; transcript `.codex-review/r0-p8-whole-repo-security.transcript.md`):
+  - P1 — PR evidence was self-attested (could be typed without running Codex). **Owner decision (2026-11-04): signed local attestation.** Evidence is signed with an Ed25519 key that exists only on the review machine (`%USERPROFILE%\.classhub\`, fingerprint `8caddbdb…1f396`); the gate verifies it with the committed public key.
+  - P1 — `pr-gate` ran the PR's own workflow definition. Now `pull_request_target` (base-branch definition, no PR code) publishing the required commit status `classhub/codex-evidence`.
+  - P2 — registration timing revealed registered emails: equal hashing work on both paths (test).
+  - P2 — `Email:Provider=DevMailbox` was possible in Production: startup now fails outside Development/Testing/E2E (tests).
+- **Docs:** threat model in `SECURITY.md` (assets, actors, trust boundaries, STRIDE table, residual risks); ARCHITECTURE overview at the end of R0; DATABASE migration history; DEVELOPMENT required checks, evidence key; RECOVERY key rotation.
+- **Repository verification (API, 2026-11-04):** ruleset `main protection` active, `current_user_can_bypass: never`, no bypass actors; rules deletion, non-fast-forward, linear history, PR (squash only, review threads resolved), 9 required checks incl. `e2e`; secret scanning + push protection on; Dependabot alerts + security updates on; private vulnerability reporting on; 0 open Dependabot, code scanning and secret scanning alerts. Every commit on `main` except the R0-P0 bootstrap came through a PR.
+- **Dependency audits:** `dotnet list package --vulnerable --include-transitive`: none; `npm audit`: 0 vulnerabilities.
+- **Fresh-clone setup test** (only the commands in `DEVELOPMENT.md`, clone of `main` @ `8d02b1f` in a new folder): tool restore, restore, `npm ci`, `dotnet ef database update` (no-op), Release build with warnings as errors, unit 73/73, architecture 14/14, web lint/i18n/Vitest 60/60/build: all green in 110 s; `dotnet run --project src/ClassHub.Api` served `/health` 200, `/health/ready` 200 (Windows authentication to `ClassHubDb`), `/app` and `/login` (built SPA), `/api/auth/me` 401 ProblemDetails.
+- **Direct-push probe:** not run by the agent (the auto-mode permission check blocks pushes to `main`, correctly). The API shows the PR rule applies to everyone (`current_user_can_bypass: never`). **User action (optional):** `git commit --allow-empty -m probe` on a scratch branch, `git push origin HEAD:main` must fail with `GH013`, then delete the scratch branch.
+
+### R0-P7 — Auth UI & first E2E (merged, PR #10, `8d02b1f`)
+
+- Sign-in, registration, email confirmation, password reset and dev mailbox screens (RHF + Zod); session-aware shell, UX-only guards with same-site `returnTo`; account language saved on the account (`PATCH /api/auth/me`); sessions reconciled with the API after 401s, resets and account changes; guarded E2E environment.
+- Playwright: 3 flows × mk/en × desktop/mobile = 12/12 locally and in CI (first `e2e` run); `e2e` added to the ruleset's required checks.
 
 ### R0-P6 — Web foundation & localization (merged, PR #9, `eab9c19`)
 
@@ -106,5 +124,6 @@ Releases 1–3 and Beta are listed in [ROADMAP.md](ROADMAP.md) section D. They a
 | 2026-11-04 | `codex review --base origin/main` without a custom prompt | codex-cli 0.164 rejects a prompt combined with `--base`; guidelines come from AGENTS.md |
 | 2026-11-04 | PR gate evidence = Codex section + Codex's final review message in the PR body; full transcript stays in `.codex-review/` | GitHub PR body size limit; transcripts include local paths |
 | 2026-11-04 | PR evidence is generated by `scripts/codex-review.mjs` and bound to the PR head commit (superseding hand-written sections) | Self-reported review summaries are not evidence (PR #7) |
+| 2026-11-04 | Evidence is Ed25519-signed with a key held only on the review machine; `pr-gate` runs on `pull_request_target` and publishes the required status `classhub/codex-evidence` | Owner decision on the R0-P8 P1 findings (signed local attestation instead of a paid CI integration or mandatory approvals) |
 | 2026-11-04 | App's CI auto-fix monitor not enabled (auto-mode permission check denied it) | PR status is read when needed; auto-merge runs on GitHub |
 | 2026-11-04 | `System.Security.Cryptography.Pkcs` pinned to 10.0.14 (transitive) | Vulnerable 9.0.11 via Microsoft.Data.SqlClient 6.1.7 |
