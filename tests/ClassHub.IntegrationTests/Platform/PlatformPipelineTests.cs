@@ -158,6 +158,32 @@ public sealed class PlatformPipelineTests : IClassFixture<PlatformPipelineTests.
     }
 
     [Fact]
+    public async Task Default_limit_applies_to_real_api_endpoints_without_a_named_policy()
+    {
+        using var factory = new PlatformApiFactory(includeProbeModule: false, settings: new Dictionary<string, string?>
+        {
+            ["RateLimiting:DefaultPermitLimit"] = "3",
+            ["RateLimiting:DefaultWindowSeconds"] = "3600",
+        });
+        using var client = factory.CreateClient();
+        var uri = new Uri("/api/auth/antiforgery", UriKind.Relative);
+
+        for (var i = 0; i < 3; i++)
+        {
+            using var ok = await client.GetAsync(uri, Ct);
+            ok.StatusCode.ShouldBe(HttpStatusCode.NoContent);
+        }
+
+        using var limited = await client.GetAsync(uri, Ct);
+        limited.StatusCode.ShouldBe(HttpStatusCode.TooManyRequests);
+        (await ReadJsonAsync(limited)).GetProperty("code").GetString().ShouldBe(ErrorCodes.RateLimited);
+
+        // Health checks are outside /api and never limited.
+        using var health = await client.GetAsync(new Uri("/health", UriKind.Relative), Ct);
+        health.StatusCode.ShouldBe(HttpStatusCode.OK);
+    }
+
+    [Fact]
     public async Task Unsafe_request_without_antiforgery_token_is_rejected()
     {
         using var client = _host.Factory.CreateClient();

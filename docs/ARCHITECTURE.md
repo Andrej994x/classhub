@@ -44,7 +44,7 @@ Persistence details: [DATABASE.md](DATABASE.md). Test infrastructure: [TESTING.m
 - Modules implement `IModule` and map relative routes; `MapClassHubModules` mounts them under `/api`. Modules are discovered from `ClassHub.Core` (and the host may register more `IModule` services, which tests use for probe endpoints).
 - Request validation: FluentValidation validators (auto-registered from Core) + `.WithValidation<TRequest>()` → 400 `VALIDATION_FAILED` with camelCase field paths (`items[0].displayName`).
 - CSRF: cookie-authenticated unsafe endpoints use `.RequireAntiforgeryHeader()`; the SPA gets tokens from `GET /api/auth/antiforgery` (`XSRF-TOKEN` readable cookie + HttpOnly `.ClassHub.Antiforgery`) and sends `X-XSRF-TOKEN`. Tokens are bound to the user: re-issue after sign-in/sign-out.
-- Rate limiting: named fixed-window policies per client IP (`auth`, `public-form`, `public-read`), limits in `RateLimiting:*` (validated on start), 429 `RATE_LIMITED` + `Retry-After`. In-memory, no Redis.
+- Rate limiting: a **default** fixed-window limit per client IP for every `/api` request (global limiter, `RateLimiting:DefaultPermitLimit`, 300/min), plus stricter named policies endpoints opt into on top (`auth`, `public-form`, `public-read`). Health checks are not limited. Limits are validated on start; rejections are 429 `RATE_LIMITED` + `Retry-After`. In-memory, no Redis.
 - JSON request body limit: 1 MB (Kestrel); upload endpoints set their own limits later.
 
 ## API contract → TypeScript
