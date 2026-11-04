@@ -6,11 +6,11 @@ This is the live status of the autonomous implementation loop ([ROADMAP.md](ROAD
 
 | Field | Value |
 |---|---|
-| Release | R0 — Foundation |
-| Current phase | R0-P8 — Foundation hardening & closeout |
-| Branch | `chore/r0-p8-foundation-hardening` (from `main` @ `8d02b1f`) |
-| Workflow step | 5 — signed Codex review of the branch, then PR |
-| Next action | R0-P8 PR (still checked by the old `pull_request` gate). After the merge: in the ruleset replace the required `pr-gate` job name with the status `classhub/codex-evidence`, verify the new trusted gate on the next PR, mark Release 0 complete |
+| Release | R0 — Foundation (complete) → R1 next |
+| Current phase | Release 0 closeout (trusted gate only) |
+| Branch | `chore/r0-close-trusted-gate` (from `main` @ `7973981`) |
+| Workflow step | 7 — PR checked only by the trusted gate |
+| Next action | After this PR merges: replace the required `pr-gate` job name with the status `classhub/codex-evidence` in the ruleset; then R1-P1 |
 | Open blockers | None. User action (optional): the direct-push probe (see R0-P8 results) |
 
 ## Phase status
@@ -27,9 +27,18 @@ Status values: `not started`, `in progress`, `in review` (PR open), `merged`, `b
 | R0-P5 | Workspaces, roles & tenancy | merged | `feature/r0-p5-workspace-tenancy` | [#8](https://github.com/Andrej994x/classhub/pull/8) | `22f1158` | Pre-review + 4 rounds: 8 × P2 fixed (owner grant atomic + serialized, IANA time zones, ISO 4217 currencies, workspace backfill migration, OpenAPI route parameters, async raw-SQL detection, no-op audit); round 4 clean | 9/9 green | First PR checked by the corrected `pr-gate` (generated evidence of `6dabf9b`); migration applied to local `ClassHubDb` |
 | R0-P6 | Web foundation & localization | merged | `feature/r0-p6-web-foundation` | [#9](https://github.com/Andrej994x/classhub/pull/9) | `eab9c19` | 3 rounds: 3 × P2 fixed (antiforgery fetch network errors, auth shell at `/login`, `<html lang>` at startup); round 3 clean | 9/9 green | |
 | R0-P7 | Auth UI & first E2E | merged | `feature/r0-p7-auth-ui` | [#10](https://github.com/Andrej994x/classhub/pull/10) | `8d02b1f` | 7 rounds: 6 × P2 fixed (failed logout, 401 session handling, reset in a signed-in tab, late language answers, reconciling sessions with the API, identity-scoped cache); round 7 clean | 10/10 green incl. first `e2e` (12/12) | `e2e` added to the required checks |
-| R0-P8 | Foundation hardening & closeout | in review | `chore/r0-p8-foundation-hardening` | | | Whole-repo security review: 2 × P1 (PR gate) fixed by signed evidence + trusted gate (owner decision), 2 × P2 fixed | | |
+| R0-P8 | Foundation hardening & closeout | merged | `chore/r0-p8-foundation-hardening` | [#11](https://github.com/Andrej994x/classhub/pull/11) | `7973981` | Whole-repo security review: 2 × P1 + 2 × P2 fixed; branch rounds: 1 × P1 (gate field binding), 1 × P2 (key recovery), CodeQL high (keygen race) fixed; final round clean | 10/10 green | Transition PR: kept the old `pull_request` trigger so a gate ran on it |
 
 Releases 1–3 and Beta are listed in [ROADMAP.md](ROADMAP.md) section D. They are added to this table when Release 0 is complete.
+
+## Release 0 — complete (2026-11-04)
+
+Definition of Done (ROADMAP E) demonstrated:
+- A teacher registers, confirms the email, signs in and uses an isolated workspace in mk or en on desktop and mobile (Playwright 12/12 in CI).
+- A second teacher cannot access the first teacher's workspace (integration isolation kit, Playwright "not found").
+- All CI gates pass: backend, integration (Testcontainers), migrations, frontend, e2e, security, CodeQL, PR gate with signed, commit-bound Codex evidence.
+- Every phase was merged through the ruleset (PRs #1, #4–#11; no bypass); setup, progress and recovery are documented (fresh-clone run in R0-P8).
+- This closeout PR is the first one checked only by the trusted gate (`pull_request_target`, base-branch workflow, signature verification).
 
 ## Phase results
 
@@ -53,7 +62,7 @@ Releases 1–3 and Beta are listed in [ROADMAP.md](ROADMAP.md) section D. They a
 - Local tests: 49/49 green (unit 5, architecture 1, integration 43 on Testcontainers SQL Server 2022).
 - CI `migrations` job sequence verified locally against a throwaway container.
 
-### R0-P8 — Foundation hardening & closeout (in review)
+### R0-P8 — Foundation hardening & closeout (merged, PR #11, `7973981`)
 
 - **Whole-repository Codex security review** (custom prompt with the AGENTS.md checklist, `codex review -` on `main` @ `8d02b1f`; transcript `.codex-review/r0-p8-whole-repo-security.transcript.md`):
   - P1 — PR evidence was self-attested (could be typed without running Codex). **Owner decision (2026-11-04): signed local attestation.** Evidence is signed with an Ed25519 key that exists only on the review machine (`%USERPROFILE%\.classhub\`, fingerprint `8caddbdb…1f396`); the gate verifies it with the committed public key.
