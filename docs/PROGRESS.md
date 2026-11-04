@@ -7,10 +7,10 @@ This is the live status of the autonomous implementation loop ([ROADMAP.md](ROAD
 | Field | Value |
 |---|---|
 | Release | R0 — Foundation |
-| Current phase | R0-P4 — Authentication (Identity) |
-| Branch | `feature/r0-p4-authentication` (rebased onto `main` @ `293ae76`) |
-| Workflow step | 5 — implementation and local checks done (149/149); Codex review next |
-| Next action | Codex review → PR → auto-merge → R0-P5 |
+| Current phase | R0-P5 — Workspaces, roles & tenancy (WIP, NOT green) |
+| Branch | `feature/r0-p5-workspace-tenancy` (from `main` @ `5203a72`; WIP commit pushed, no PR) |
+| Workflow step | 3 — implementation in progress; model building fails (see Next action) |
+| Next action | Fix `TenancyModelConventions.Apply`: it re-registers Identity's `IdentityPasskeyData` (EF 10 Identity passkeys) as an entity → "requires a primary key". Only touch types implementing ITenantOwned/IArchivable (do not call `modelBuilder.Entity(clrType)` for every type). Then: migration `AddWorkspacesTenancyAndAudit`, tests (tenancy probe, cross-tenant kit, CLI, provisioning atomicity, bypass scan), OpenAPI update, docs, Codex, PR |
 | Open blockers | None |
 
 ## Phase status
@@ -23,8 +23,8 @@ Status values: `not started`, `in progress`, `in review` (PR open), `merged`, `b
 | R0-P1 | Repository foundation & CI | merged | `chore/r0-p1-repository-foundation` | [#1](https://github.com/Andrej994x/classhub/pull/1) | `2e3c225` | 2 rounds: 1 × P2 (i18n check ignored a missing locale) fixed; round 2 clean | 8/8 green | Ruleset `main protection` created and verified |
 | R0-P2 | EF Core & SQL Server foundation | merged | `chore/r0-p2-database-foundation` | [#4](https://github.com/Andrej994x/classhub/pull/4) | `63d189d` | 1 round: no actionable defects | 9/9 green | Windows-auth gate passed (Shared memory, NTLM); `migrations` added to the ruleset |
 | R0-P3 | API platform baseline | merged | `chore/r0-p3-api-platform-baseline` | [#5](https://github.com/Andrej994x/classhub/pull/5) | `293ae76` | 5 rounds: 3 × P2 (forwarded headers fail-open, missing default rate limit, limiter after authorization) fixed; rounds 4–5 clean; CodeQL HttpOnly finding fixed | 9/9 green | Blocked once by an outdated CodeQL review thread (resolved after the fix) |
-| R0-P4 | Authentication (Identity) | in progress | `feature/r0-p4-authentication` | | | | | |
-| R0-P5 | Workspaces, roles & tenancy | not started | | | | | | |
+| R0-P4 | Authentication (Identity) | merged | `feature/r0-p4-authentication` | [#6](https://github.com/Andrej994x/classhub/pull/6) | `5203a72` | 3 rounds: 4 findings fixed (atomic registration, confirmation token check, reset enumeration, READCOMMITTEDLOCK), 1 P1 rejected with evidence | 9/9 green | |
+| R0-P5 | Workspaces, roles & tenancy | in progress (WIP) | `feature/r0-p5-workspace-tenancy` | | | | | Not green yet |
 | R0-P6 | Web foundation & localization | not started | | | | | | |
 | R0-P7 | Auth UI & first E2E | not started | | | | | | |
 | R0-P8 | Foundation hardening & closeout | not started | | | | | | |

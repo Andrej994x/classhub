@@ -3,6 +3,7 @@ using ClassHub.Core.Infrastructure.Email;
 using ClassHub.Core.Infrastructure.Persistence;
 using ClassHub.Core.Infrastructure.Web;
 using ClassHub.Core.Modules.Identity.Contracts;
+using ClassHub.Core.Modules.Workspaces.Contracts;
 using ClassHub.Core.SharedKernel.Errors;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Http;
@@ -22,6 +23,7 @@ internal sealed partial class AccountService(
     SignInManager<AppUser> signIn,
     IPasswordHasher<AppUser> passwordHasher,
     IEmailOutbox outbox,
+    IWorkspaceProvisioning workspaces,
     ClassHubDbContext db,
     IOptions<AppLinkOptions> links,
     TimeProvider clock,
@@ -89,6 +91,8 @@ internal sealed partial class AccountService(
             throw ToValidationException(created, "password");
         }
 
+        // Every teacher gets an isolated workspace with the Owner role, in the same transaction.
+        await workspaces.ProvisionForNewTeacherAsync(user.Id, user.Locale, user.TimeZone, cancellationToken);
         await QueueConfirmationEmailAsync(user, cancellationToken);
         await transaction.CommitAsync(cancellationToken);
         LogRegistered(logger, user.Id);

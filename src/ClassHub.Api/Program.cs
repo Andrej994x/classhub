@@ -36,6 +36,12 @@ builder.Services.AddOpenApi("v1");
 
 var app = builder.Build();
 
+// Local administrative commands (never exposed over HTTP), e.g. `-- grant-platform-owner <email>`.
+if (await PlatformCommands.TryRunAsync(app, args))
+{
+    return;
+}
+
 if (app.Services.GetRequiredService<ForwardedHeadersSettings>().Enabled)
 {
     app.UseForwardedHeaders();
