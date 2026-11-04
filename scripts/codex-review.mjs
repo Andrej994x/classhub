@@ -12,21 +12,32 @@
 //       transcript hash is re-verified. Evidence can never be re-bound to another commit.
 //   node scripts/codex-review.mjs apply --evidence <file> (--pr <number> | --body <file>)
 //       Replaces the Codex evidence block in a PR body (via gh) or in a local body file.
+//   node scripts/codex-review.mjs keygen [--force]
+//       Creates the Ed25519 evidence key: the private key goes OUTSIDE the repository (default
+//       ~/.classhub/codex-evidence-ed25519.pem, override with CLASSHUB_EVIDENCE_KEY), the public key to
+//       scripts/ci/codex-evidence-public.pem (commit it; the PR gate verifies signatures with it).
+//
+// Evidence is signed with the private key (scripts/ci/evidence-signature.mjs). The PR gate rejects unsigned
+// evidence and evidence edited after signing, so typing evidence by hand cannot pass it.
 //
 // The evidence is derived only from the real transcript and git: reviewed commit (full SHA), base commit,
 // Codex CLI version, transcript SHA-256 and the severity counts of the final review message. It is never
 // typed by hand. --rejected records how many final-round P0/P1 findings were rejected with documented
 // reasoning (a "### Rejected findings" section in the PR body is then required by the PR gate).
-import { createHash } from 'node:crypto';
+import { createHash, generateKeyPairSync } from 'node:crypto';
 import { execFileSync, spawn } from 'node:child_process';
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { closeSync, existsSync, fchmodSync, mkdirSync, openSync, readFileSync, writeFileSync, writeSync } from 'node:fs';
+import { homedir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { SIGNATURE_PREFIX, publicKeyFingerprint, signPayload, signingPayload } from './ci/evidence-signature.mjs';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const OUT_DIR = join(ROOT, '.codex-review');
 export const START = '<!-- codex-review:start -->';
 export const END = '<!-- codex-review:end -->';
+export const PUBLIC_KEY_PATH = join(ROOT, 'scripts', 'ci', 'codex-evidence-public.pem');
+export const privateKeyPath = () => process.env.CLASSHUB_EVIDENCE_KEY || join(homedir(), '.classhub', 'codex-evidence-ed25519.pem');
 
 const git = (...args) => execFileSync('git', args, { cwd: ROOT, encoding: 'utf8' }).trim();
 
@@ -97,7 +108,8 @@ export function countFindings(message) {
   return counts;
 }
 
-export function buildEvidence({ commit, base, cli, transcriptSha256, message, rejected = 0 }) {
+/** Builds the evidence block. With `privateKey` (PEM) it is signed; the PR gate only accepts signed evidence. */
+export function buildEvidence({ commit, base, cli, transcriptSha256, message, rejected = 0, privateKey }) {
   if (!/^[0-9a-f]{40}$/.test(commit)) throw new Error(`Reviewed commit must be a full SHA, got '${commit}'.`);
   if (!/^[0-9a-f]{40}$/.test(base)) throw new Error(`Base commit must be a full SHA, got '${base}'.`);
   const counts = countFindings(message);
@@ -106,6 +118,10 @@ export function buildEvidence({ commit, base, cli, transcriptSha256, message, re
     throw new Error(`--rejected ${rejected} is invalid: the final round has ${criticalHigh} P0/P1 finding(s).`);
   }
   const unresolved = criticalHigh - rejected;
+  const raw = message.replace(/```/g, "'''");
+  const signature = privateKey
+    ? [`${SIGNATURE_PREFIX}${signPayload(signingPayload({ commit, base, cli, transcriptSha256, raw, counts, rejected }), privateKey)}`]
+    : [];
   return [
     START,
     '<!-- codex-review -->',
@@ -117,12 +133,13 @@ export function buildEvidence({ commit, base, cli, transcriptSha256, message, re
     `Final round findings: P0=${counts.P0} P1=${counts.P1} P2=${counts.P2} P3=${counts.P3}`,
     `Rejected critical/high: ${rejected}`,
     `Unresolved critical/high: ${unresolved}`,
+    ...signature,
     '',
     '<details><summary>Raw Codex output (final review message of the reviewed commit)</summary>',
     '',
     '<!-- codex-raw-output:start -->',
     '```text',
-    message.replace(/```/g, "'''"),
+    raw,
     '```',
     '<!-- codex-raw-output:end -->',
     '',
@@ -172,7 +189,7 @@ function codexVersion() {
 const sha256 = (bytes) => createHash('sha256').update(bytes).digest('hex');
 
 /** Builds evidence from a review record; the transcript must still have the recorded hash. */
-export function evidenceFromRecord(record, transcriptBytes, rejected = 0) {
+export function evidenceFromRecord(record, transcriptBytes, rejected = 0, privateKey = undefined) {
   const actual = sha256(transcriptBytes);
   if (actual !== record.transcriptSha256) {
     throw new Error(`Transcript hash ${actual} does not match the review record (${record.transcriptSha256}).`);
@@ -184,13 +201,57 @@ export function evidenceFromRecord(record, transcriptBytes, rejected = 0) {
     transcriptSha256: record.transcriptSha256,
     message: extractFinalMessage(transcriptBytes.toString('utf8')),
     rejected,
+    privateKey,
   });
+}
+
+/** The evidence key; signing is mandatory for the review and evidence commands. */
+function loadPrivateKey() {
+  const path = privateKeyPath();
+  if (!existsSync(path)) {
+    throw new Error(`No evidence key at ${path}. Create it once with 'node scripts/codex-review.mjs keygen' (see docs/DEVELOPMENT.md).`);
+  }
+  return readFileSync(path, 'utf8');
+}
+
+function keygen() {
+  const path = privateKeyPath();
+  if (resolve(path).startsWith(ROOT)) throw new Error('The private evidence key must be stored outside the repository.');
+  const { privateKey, publicKey } = generateKeyPairSync('ed25519');
+  mkdirSync(dirname(path), { recursive: true });
+  // One open with exclusive create ('wx'): no window between "does it exist?" and writing (no clobbering a key
+  // that appeared meanwhile). --force replaces an existing key deliberately.
+  let fd;
+  try {
+    fd = openSync(path, process.argv.includes('--force') ? 'w' : 'wx', 0o600);
+  } catch (error) {
+    if (error.code === 'EEXIST') {
+      throw new Error(`${path} already exists. Pass --force to replace it (then the public key must be replaced in a PR, see docs/RECOVERY.md).`);
+    }
+    throw error;
+  }
+  try {
+    writeSync(fd, privateKey.export({ type: 'pkcs8', format: 'pem' }));
+    try {
+      fchmodSync(fd, 0o600);
+    } catch {
+      // Windows: the file is in the user profile, readable only by the user by default.
+    }
+  } finally {
+    closeSync(fd);
+  }
+  const publicPem = publicKey.export({ type: 'spki', format: 'pem' });
+  writeFileSync(PUBLIC_KEY_PATH, publicPem);
+  console.log(`Private key: ${path} (keep it secret; back it up outside the repository)`);
+  console.log(`Public key:  ${PUBLIC_KEY_PATH} (commit it)`);
+  console.log(`Fingerprint: ${publicKeyFingerprint(publicPem)}`);
 }
 
 /** Tracked changes and untracked (not ignored) files: Codex could review them as part of the working tree. */
 const workingTreeChanges = () => git('status', '--porcelain', '--untracked-files=normal');
 
 async function review() {
+  loadPrivateKey(); // fail before the (long) review when the key is missing
   if (workingTreeChanges()) {
     throw new Error('The working tree has uncommitted or untracked changes. Commit them first: the review covers HEAD only.');
   }
@@ -224,7 +285,7 @@ async function review() {
     completedAtUtc: new Date().toISOString(),
   };
   writeFileSync(join(OUT_DIR, `${commit}.review.json`), `${JSON.stringify(record, null, 2)}\n`);
-  const evidence = evidenceFromRecord(record, transcriptBytes, Number(arg('rejected', '0')));
+  const evidence = evidenceFromRecord(record, transcriptBytes, Number(arg('rejected', '0')), loadPrivateKey());
   const evidencePath = join(OUT_DIR, `${commit}.evidence.md`);
   writeFileSync(evidencePath, `${evidence}\n`);
   console.log(`Transcript: ${transcriptPath}\nEvidence:   ${evidencePath}`);
@@ -258,14 +319,15 @@ async function main() {
     if (!recordPath || !existsSync(recordPath)) throw new Error('--review <.codex-review/<sha>.review.json> is required.');
     const record = JSON.parse(readFileSync(recordPath, 'utf8'));
     const transcriptBytes = readFileSync(join(dirname(resolve(recordPath)), record.transcript));
-    const evidence = evidenceFromRecord(record, transcriptBytes, Number(arg('rejected', '0')));
+    const evidence = evidenceFromRecord(record, transcriptBytes, Number(arg('rejected', '0')), loadPrivateKey());
     const out = join(OUT_DIR, `${record.commit}.evidence.md`);
     writeFileSync(out, `${evidence}\n`);
     console.log(`Evidence: ${out}`);
     return undefined;
   }
   if (command === 'apply') return apply();
-  console.error('Usage: node scripts/codex-review.mjs review|evidence|apply [options]');
+  if (command === 'keygen') return keygen();
+  console.error('Usage: node scripts/codex-review.mjs review|evidence|apply|keygen [options]');
   process.exitCode = 64;
   return undefined;
 }

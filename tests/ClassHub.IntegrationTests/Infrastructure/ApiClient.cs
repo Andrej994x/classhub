@@ -20,10 +20,17 @@ public sealed class ApiClient : IDisposable
 
     public HttpClient Http => _http;
 
-    public static async Task<ApiClient> CreateAsync(ClassHubApiFixture fixture)
+    public static Task<ApiClient> CreateAsync(ClassHubApiFixture fixture)
     {
         ArgumentNullException.ThrowIfNull(fixture);
-        var client = new ApiClient(fixture.Factory.CreateClient(new() { AllowAutoRedirect = false }));
+        return CreateAsync(fixture.Factory);
+    }
+
+    /// <summary>A client for a derived factory (for example with replaced services).</summary>
+    public static async Task<ApiClient> CreateAsync(Microsoft.AspNetCore.Mvc.Testing.WebApplicationFactory<Program> factory)
+    {
+        ArgumentNullException.ThrowIfNull(factory);
+        var client = new ApiClient(factory.CreateClient(new() { AllowAutoRedirect = false }));
         await client.RefreshAntiforgeryAsync();
         return client;
     }

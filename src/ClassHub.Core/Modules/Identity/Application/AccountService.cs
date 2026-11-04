@@ -48,6 +48,9 @@ internal sealed partial class AccountService(
         var existing = await users.FindByEmailAsync(email);
         if (existing is not null)
         {
+            // Same expensive work as a new account (Identity hashes the password in CreateAsync), so the
+            // response time does not reveal that the address is registered.
+            _ = passwordHasher.HashPassword(candidate, request.Password!);
             outbox.Enqueue(AccountEmails.AlreadyRegistered(email, existing.Locale, Link("/login")));
             await db.SaveChangesAsync(cancellationToken);
             LogRegistrationForExistingEmail(logger);

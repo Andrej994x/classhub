@@ -41,6 +41,15 @@ Rules:
 - Generated migration files are excluded from style analyzers (`.editorconfig`, `generated_code = true`); review their SQL in the PR.
 - Statements that cannot run in a transaction (for example `ALTER DATABASE`) use `migrationBuilder.Sql(..., suppressTransaction: true)`.
 
+## Migration history (Release 0)
+
+| Migration | Phase | Content |
+|---|---|---|
+| `InitialTechnical` | R0-P2 | `SchemaInfo` technical table |
+| `EnableReadCommittedSnapshot` | R0-P2 | RCSI on (`suppressTransaction`) |
+| `AddIdentityAndEmailOutbox` | R0-P4 | Identity tables (unique `EmailIndex`), `DataProtectionKeys`, `EmailOutbox`, `DevMailbox` |
+| `AddWorkspacesTenancyAndAudit` | R0-P5 | `Workspaces`, `WorkspaceMembers`, `AuditLog`, seeded platform roles, idempotent workspace backfill for existing accounts |
+
 ## Database settings
 
 | Setting | Value | Where |
