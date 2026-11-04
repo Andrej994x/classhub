@@ -117,7 +117,34 @@ namespace ClassHub.Core.Infrastructure.Persistence.Migrations
                 columns: new[] { "WorkspaceId", "UserId" },
                 unique: true,
                 filter: "[RevokedAtUtc] IS NULL");
+
+            // Accounts registered before workspaces existed (R0-P4) get the workspace that registration now
+            // provisions: same defaults (name in the account language, account time zone, MKD), an Owner
+            // membership and an audit entry. Idempotent: only accounts without any membership.
+            migrationBuilder.Sql(BackfillWorkspacesSql);
         }
+
+        internal const string BackfillWorkspacesSql = """
+            DECLARE @now datetime2(3) = SYSUTCDATETIME();
+            DECLARE @backfill TABLE (UserId uniqueidentifier PRIMARY KEY, WorkspaceId uniqueidentifier NOT NULL, Locale nvarchar(10) NOT NULL, TimeZone nvarchar(64) NOT NULL);
+
+            INSERT INTO @backfill (UserId, WorkspaceId, Locale, TimeZone)
+            SELECT u.[Id], NEWID(), CASE WHEN u.[Locale] = N'en' THEN N'en' ELSE N'mk' END, u.[TimeZone]
+            FROM [AspNetUsers] AS u
+            WHERE NOT EXISTS (SELECT 1 FROM [WorkspaceMembers] AS m WHERE m.[UserId] = u.[Id]);
+
+            INSERT INTO [Workspaces] ([Id], [Name], [TimeZone], [Currency], [Locale], [CreatedAtUtc])
+            SELECT b.WorkspaceId, CASE WHEN b.Locale = N'en' THEN N'My workspace' ELSE N'Мој работен простор' END, b.TimeZone, 'MKD', b.Locale, @now
+            FROM @backfill AS b;
+
+            INSERT INTO [WorkspaceMembers] ([Id], [WorkspaceId], [UserId], [Role], [CreatedAtUtc], [RevokedAtUtc])
+            SELECT NEWID(), b.WorkspaceId, b.UserId, N'Owner', @now, NULL
+            FROM @backfill AS b;
+
+            INSERT INTO [AuditLog] ([Id], [OccurredAtUtc], [ActorUserId], [Action], [TargetType], [TargetId], [WorkspaceId], [DetailsJson], [RequestId])
+            SELECT NEWID(), @now, NULL, N'workspace.created', N'Workspace', CONVERT(nvarchar(36), b.WorkspaceId), b.WorkspaceId, N'{"via":"migration"}', NULL
+            FROM @backfill AS b;
+            """;
 
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)

@@ -63,6 +63,36 @@ public sealed class PlatformOwnerCommandTests(ClassHubApiFixture fixture)
     }
 
     [Fact]
+    public async Task Concurrent_bootstraps_are_serialized_so_only_the_first_owner_is_added_without_force()
+    {
+        // Tests in this collection run one at a time, so the owner state can be set up here.
+        await using (var setup = fixture.CreateDbContext())
+        {
+            await setup.Database.ExecuteSqlInterpolatedAsync($"DELETE FROM AspNetUserRoles WHERE RoleId = {PlatformRoles.OwnerRoleId}", Ct);
+        }
+
+        using var winner = await fixture.CreateTeacherAsync();
+        using var loser = await fixture.CreateTeacherAsync();
+
+        // Another bootstrap holds the lock and is about to grant the role to `winner`.
+        await using var other = fixture.CreateDbContext();
+        await using var otherTransaction = await other.Database.BeginTransactionAsync(Ct);
+        await other.Database.ExecuteSqlInterpolatedAsync(
+            $"EXEC sp_getapplock @Resource = {PlatformCommands.OwnerBootstrapLock}, @LockMode = 'Exclusive', @LockOwner = 'Transaction'", Ct);
+
+        var contender = RunAsync(loser.Email, force: false);
+        await Task.Delay(TimeSpan.FromSeconds(1), Ct);
+        contender.IsCompleted.ShouldBeFalse(); // waits for the lock instead of checking stale state
+
+        await other.Database.ExecuteSqlInterpolatedAsync(
+            $"INSERT INTO AspNetUserRoles (UserId, RoleId) VALUES ({winner.Me.Id}, {PlatformRoles.OwnerRoleId})", Ct);
+        await otherTransaction.CommitAsync(Ct);
+
+        (await contender).ShouldBe(2); // an owner exists now: refused without --force-add
+        (await IsOwnerAsync(loser.Me.Id)).ShouldBeFalse();
+    }
+
+    [Fact]
     public void The_command_is_not_reachable_over_http()
     {
         using var factory = new PlatformApiFactory(includeProbeModule: false);

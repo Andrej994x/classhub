@@ -90,7 +90,8 @@ The Testing host validates security stamps on every request (`Identity:SecurityS
 | Settings | owner reads and updates name/time zone/currency/locale (audited with before/after); invalid IANA zones, currencies, locales and empty names are rejected |
 | Isolation | another teacher gets 404 on GET and PATCH and changes nothing; a platform admin without membership gets 404; unknown and malformed ids 404; anonymous 401; tenant rows are invisible to a context without a tenant |
 | Machinery (probe model) | filter shows only the current workspace and nothing without one; inserts stamped; foreign-workspace writes refused; WorkspaceId cannot change; orphan rows refused; **the database rejects cross-workspace references** (composite FK) |
-| CLI | `grant-platform-owner`: unknown email → 1, first owner → 0, second owner needs `--force-add` (2 otherwise), audited, role change ends the old session, not reachable over HTTP |
+| CLI | `grant-platform-owner`: unknown email → 1, first owner → 0, second owner needs `--force-add` (2 otherwise), audited, role change ends the old session, not reachable over HTTP; a failure before the audit entry grants nothing; a concurrent bootstrap waits for the lock and is refused once an owner exists |
+| Migrations | `WorkspaceBackfillMigrationTests`: upgrading a populated R0-P4 database gives every existing account an owned workspace (account language and time zone), audited, once |
 | Architecture | tenant-filter bypasses and raw SQL only in allow-listed files |
 | Unit | role permissions, policy names, tenant context binding, unknown permissions |
 

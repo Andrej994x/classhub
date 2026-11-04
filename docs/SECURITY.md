@@ -15,7 +15,7 @@ ASP.NET Core Identity with cookie sessions. See [ARCHITECTURE.md](ARCHITECTURE.m
 - Fallback policy: authenticated user. It also applies to requests that match no endpoint.
 - Every endpoint declares `AllowAnonymous` or a **named** policy (`EndpointAuthorizationMetadataTests`).
 - Policies: `Authenticated`; workspace policies `ws:<permission>` (for example `ws:workspace.read`). Permissions are code constants (`WorkspacePermissions`), mapped from workspace roles (`WorkspaceRolePermissions`; today `Owner` has all workspace permissions). Unknown permission names fail when the policy is resolved.
-- Platform roles (`PlatformOwner`, `PlatformAdmin`) are Identity roles. **They grant no workspace access**: a platform admin without membership gets 404 on workspace routes (tested). The first Platform Owner is created only with the local CLI `dotnet run --project src/ClassHub.Api -- grant-platform-owner <email> [--force-add]` (audited, never exposed over HTTP).
+- Platform roles (`PlatformOwner`, `PlatformAdmin`) are Identity roles. **They grant no workspace access**: a platform admin without membership gets 404 on workspace routes (tested). The first Platform Owner is created only with the local CLI `dotnet run --project src/ClassHub.Api -- grant-platform-owner <email> [--force-add]` (audited, never exposed over HTTP). The owner check, the grant, the session revocation and the audit entry run in one transaction under an application lock (`sp_getapplock`), so concurrent bootstraps cannot both add an owner without `--force-add`.
 
 ## Tenant isolation (R0-P5)
 

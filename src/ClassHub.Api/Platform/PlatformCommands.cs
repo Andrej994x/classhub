@@ -3,6 +3,7 @@ using ClassHub.Core.Infrastructure.Persistence;
 using ClassHub.Core.Modules.Identity.Contracts;
 using ClassHub.Core.SharedKernel.Security;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 
 namespace ClassHub.Api.Platform;
 
@@ -13,6 +14,9 @@ namespace ClassHub.Api.Platform;
 public static class PlatformCommands
 {
     public const string GrantPlatformOwner = "grant-platform-owner";
+
+    /// <summary>Application lock (sp_getapplock) that serializes Platform Owner bootstraps.</summary>
+    public const string OwnerBootstrapLock = "classhub:platform-owner-bootstrap";
 
     /// <summary>Runs a command if <paramref name="args"/> names one; returns false to start the web host.</summary>
     public static async Task<bool> TryRunAsync(WebApplication app, string[] args)
@@ -55,6 +59,17 @@ public static class PlatformCommands
             return 1;
         }
 
+        // One transaction, serialized across processes: the "is there an owner yet?" check, the grant, the
+        // session revocation and the audit entry. Without the lock two concurrent bootstraps of different
+        // accounts could both see no owner and both succeed without --force-add. The Identity store saves on
+        // its own, so without the transaction a later failure would leave an unaudited owner.
+        var db = services.GetRequiredService<ClassHubDbContext>();
+        await using var transaction = await db.Database.BeginTransactionAsync();
+        await db.Database.ExecuteSqlRawAsync(
+            "DECLARE @result int; EXEC @result = sp_getapplock @Resource = {0}, @LockMode = 'Exclusive', @LockOwner = 'Transaction', @LockTimeout = 30000; " +
+            "IF @result < 0 THROW 50001, 'Could not acquire the platform owner lock.', 1;",
+            OwnerBootstrapLock);
+
         if (await users.IsInRoleAsync(user, PlatformRoles.Owner))
         {
             await output.WriteLineAsync("The account is already a Platform Owner.");
@@ -68,20 +83,14 @@ public static class PlatformCommands
             return 2;
         }
 
-        // One transaction: the grant, the session revocation and the audit entry commit together or not at all
-        // (the Identity store saves on its own, so without it a later failure would leave an unaudited owner).
-        var db = services.GetRequiredService<ClassHubDbContext>();
-        await using (var transaction = await db.Database.BeginTransactionAsync())
-        {
-            ThrowIfFailed(await users.AddToRoleAsync(user, PlatformRoles.Owner));
+        ThrowIfFailed(await users.AddToRoleAsync(user, PlatformRoles.Owner));
 
-            // Role changes end existing sessions, so the new role applies at the next sign-in.
-            ThrowIfFailed(await users.UpdateSecurityStampAsync(user));
+        // Role changes end existing sessions, so the new role applies at the next sign-in.
+        ThrowIfFailed(await users.UpdateSecurityStampAsync(user));
 
-            services.GetRequiredService<IAuditLog>().Record("platform.role.granted", "User", user.Id.ToString(), after: new { role = PlatformRoles.Owner, via = "cli" });
-            await db.SaveChangesAsync();
-            await transaction.CommitAsync();
-        }
+        services.GetRequiredService<IAuditLog>().Record("platform.role.granted", "User", user.Id.ToString(), after: new { role = PlatformRoles.Owner, via = "cli" });
+        await db.SaveChangesAsync();
+        await transaction.CommitAsync();
 
         await output.WriteLineAsync("Platform Owner role granted.");
         return 0;
