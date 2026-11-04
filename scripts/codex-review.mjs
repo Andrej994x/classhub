@@ -53,17 +53,27 @@ export function extractFinalMessage(transcript) {
 }
 
 const INABILITY = /\b(could not|couldn't|unable to|cannot|can't|failed to|was not able to)\b[^.\n]{0,60}\b(review|access|read|open|find|load|inspect|see)\b/i;
-const CLEAN = /\bno\b[^.\n]{0,60}\b(defects|issues|regressions|problems|findings|bugs)\b/i;
+// Clean verdicts: negative phrasing ("no actionable defects", "did not find any issues", "found no
+// regressions"), or Codex's structured output ("findings": [] / "overall_correctness": "patch is correct").
+const CLEAN = [
+  /\b(no|not|none|without|never)\b[^.\n]{0,60}\b(defects?|issues?|regressions?|problems?|findings?|bugs?|concerns?|errors?)\b/i,
+  /\b(did not|didn't|could not|couldn't)\s+(find|identify|spot|see)\b[^.\n]{0,60}\b(defects?|issues?|regressions?|problems?|findings?|bugs?|concerns?)\b/i,
+  /"findings"\s*:\s*\[\s*\]/i,
+  /"overall_correctness"\s*:\s*"patch is correct"/i,
+  /\bpatch is correct\b/i,
+];
 
 /** Fails closed unless the message is a real review result: findings, or an explicit clean verdict
  *  without any statement that the review could not be done. */
 export function assertCompletedReview(message) {
   const hasFindings = /\[P[0-3]\]/.test(message);
-  if (INABILITY.test(message) && !hasFindings) {
-    throw new Error('Codex reports that it could not complete the review; no evidence is produced.');
+  // "I could not find any issues" is a verdict, not an inability to review.
+  const isClean = CLEAN.some((pattern) => pattern.test(message));
+  if (INABILITY.test(message) && !hasFindings && !isClean) {
+    throw new Error('Codex reports that it could not complete the review; no evidence is produced. Check the transcript.');
   }
-  if (!hasFindings && !CLEAN.test(message)) {
-    throw new Error('The final Codex message has neither findings nor an explicit "no defects/issues" verdict; no evidence is produced.');
+  if (!hasFindings && !isClean) {
+    throw new Error('The final Codex message has neither findings nor a recognizable clean verdict; no evidence is produced. Check the transcript and run the review again.');
   }
 }
 

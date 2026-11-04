@@ -70,6 +70,9 @@ test('inability-to-review answers and verdict-less messages produce no evidence'
     'No actionable defects were identified in the changes against the supplied merge base.',
     'The changes align with the R0-P3 platform scope. Inspection found no concrete, actionable regressions in the pipeline.',
     'No actionable defects were identified; build and test execution was not verified in this read-only review.',
+    'I did not find any actionable issues in the diff against origin/main.',
+    'I could not find any regressions introduced by these changes.',
+    '{"findings": [], "overall_correctness": "patch is correct", "overall_explanation": "fine"}',
   ]) {
     assert.equal(extractFinalMessage(transcript(ok)), ok);
   }
