@@ -83,7 +83,7 @@ public sealed class ClassHubApiFixture : IAsyncLifetime
         _respawner ??= await Respawner.CreateAsync(connection, new RespawnerOptions
         {
             DbAdapter = DbAdapter.SqlServer,
-            TablesToIgnore = [new Table("__EFMigrationsHistory"), new Table("SchemaInfo"), new Table("DataProtectionKeys")],
+            TablesToIgnore = [new Table("__EFMigrationsHistory"), new Table("SchemaInfo"), new Table("DataProtectionKeys"), new Table("AspNetRoles")],
         });
         await _respawner.ResetAsync(connection);
     }

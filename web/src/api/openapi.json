@@ -285,6 +285,87 @@
           }
         }
       }
+    },
+    "/api/me/workspaces": {
+      "get": {
+        "tags": [
+          "Workspaces"
+        ],
+        "operationId": "ListMyWorkspaces",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/MyWorkspaceResponse"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/w/{workspaceId}": {
+      "get": {
+        "tags": [
+          "Workspaces"
+        ],
+        "operationId": "GetWorkspace",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkspaceResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "Workspaces"
+        ],
+        "operationId": "UpdateWorkspace",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateWorkspaceRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkspaceResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpValidationProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -451,6 +532,26 @@
           }
         }
       },
+      "MyWorkspaceResponse": {
+        "required": [
+          "id",
+          "name",
+          "role"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "role": {
+            "type": "string"
+          }
+        }
+      },
       "RegisterRequest": {
         "required": [
           "email",
@@ -506,12 +607,87 @@
             ]
           }
         }
+      },
+      "UpdateWorkspaceRequest": {
+        "required": [
+          "name",
+          "timeZone",
+          "currency",
+          "locale"
+        ],
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "timeZone": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "currency": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "locale": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "WorkspaceResponse": {
+        "required": [
+          "id",
+          "name",
+          "timeZone",
+          "currency",
+          "locale",
+          "role",
+          "createdAtUtc"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "timeZone": {
+            "type": "string"
+          },
+          "currency": {
+            "type": "string"
+          },
+          "locale": {
+            "type": "string"
+          },
+          "role": {
+            "type": "string"
+          },
+          "createdAtUtc": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
       }
     }
   },
   "tags": [
     {
       "name": "Auth"
+    },
+    {
+      "name": "Workspaces"
     }
   ]
 }

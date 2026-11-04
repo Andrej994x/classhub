@@ -17,10 +17,16 @@ public static class TenancyModelConventions
         ArgumentNullException.ThrowIfNull(modelBuilder);
         ArgumentNullException.ThrowIfNull(context);
 
-        // Owned types (for example Identity's passkey data) must not be re-registered as entities.
-        foreach (var entityType in modelBuilder.Model.GetEntityTypes().Where(t => t.BaseType is null && !t.IsOwned()).ToList())
+        // Only touch ClassHub's own tenant-owned / archivable entities: calling modelBuilder.Entity() for other
+        // types (for example ASP.NET Core Identity's passkey data) would re-include them as entities.
+        var targets = modelBuilder.Model.GetEntityTypes()
+            .Where(t => t.BaseType is null && !t.IsOwned() &&
+                (typeof(ITenantOwned).IsAssignableFrom(t.ClrType) || typeof(IArchivable).IsAssignableFrom(t.ClrType)))
+            .Select(t => t.ClrType)
+            .ToList();
+
+        foreach (var clrType in targets)
         {
-            var clrType = entityType.ClrType;
             var builder = modelBuilder.Entity(clrType);
 
             if (typeof(ITenantOwned).IsAssignableFrom(clrType))
