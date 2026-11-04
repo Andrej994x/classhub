@@ -21,6 +21,12 @@ public static class ErrorCodes
     public const string AntiforgeryInvalid = "ANTIFORGERY_INVALID";
     public const string InternalError = "INTERNAL_ERROR";
 
+    // Accounts (R0-P4)
+    public const string InvalidCredentials = "INVALID_CREDENTIALS";
+    public const string AccountSuspended = "ACCOUNT_SUSPENDED";
+    public const string InvalidToken = "INVALID_TOKEN";
+    public const string EmailAlreadyConfirmed = "EMAIL_ALREADY_CONFIRMED";
+
     /// <summary>Default code for an HTTP status when no specific code was set.</summary>
     public static string ForStatus(int statusCode) => statusCode switch
     {

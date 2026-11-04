@@ -1,5 +1,6 @@
 using ClassHub.Api;
 using ClassHub.Api.Platform;
+using ClassHub.Core.Infrastructure.Email;
 using ClassHub.Core.Infrastructure.Persistence;
 using ClassHub.Core.Modules;
 using ClassHub.Core.SharedKernel.Errors;
@@ -29,6 +30,7 @@ builder.Services.AddExceptionHandler<ClassHubExceptionHandler>();
 builder.Services.AddClassHubSecurity(builder.Configuration, builder.Environment);
 builder.Services.AddClassHubRateLimiting(builder.Configuration);
 builder.Services.AddClassHubPersistence(builder.Configuration);
+builder.Services.AddClassHubEmail(builder.Configuration);
 builder.Services.AddClassHubModules(builder.Configuration);
 builder.Services.AddOpenApi("v1");
 

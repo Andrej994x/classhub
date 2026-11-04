@@ -460,6 +460,8 @@
         "dependencies": {
           "FluentValidation": "[12.2.0, )",
           "FluentValidation.DependencyInjectionExtensions": "[12.2.0, )",
+          "Microsoft.AspNetCore.DataProtection.EntityFrameworkCore": "[10.0.14, )",
+          "Microsoft.AspNetCore.Identity.EntityFrameworkCore": "[10.0.14, )",
           "Microsoft.EntityFrameworkCore.SqlServer": "[10.0.14, )",
           "Microsoft.Extensions.Diagnostics.HealthChecks.EntityFrameworkCore": "[10.0.14, )"
         }
@@ -477,6 +479,24 @@
         "contentHash": "QpKXgiO9E6wXCh19X2Musn8MZM0xt7KQt/QrD6GDBn3MCUfy8a+rkhCzrYJNCfoxTsTRQ7bpKP8T3geTnJNNeQ==",
         "dependencies": {
           "FluentValidation": "12.2.0"
+        }
+      },
+      "Microsoft.AspNetCore.DataProtection.EntityFrameworkCore": {
+        "type": "CentralTransitive",
+        "requested": "[10.0.14, )",
+        "resolved": "10.0.14",
+        "contentHash": "zXov4zfbIsBCAYniekMemgWSAMpfzQ1jhWGs4k2WIr0n1Ac4osMD1xbqf31CllPZ2z4dTsYzWRmGZO+czKGOxw==",
+        "dependencies": {
+          "Microsoft.EntityFrameworkCore": "10.0.14"
+        }
+      },
+      "Microsoft.AspNetCore.Identity.EntityFrameworkCore": {
+        "type": "CentralTransitive",
+        "requested": "[10.0.14, )",
+        "resolved": "10.0.14",
+        "contentHash": "GPU3K0HaLlYu0dnocEglRhrnYRu6VTJocynD5TF8I2lvcMsNzhv46WJLxh/USxu6hgmOrNZH/VhGl4ckdiPHpg==",
+        "dependencies": {
+          "Microsoft.EntityFrameworkCore.Relational": "10.0.14"
         }
       },
       "Microsoft.EntityFrameworkCore.SqlServer": {

@@ -17,6 +17,24 @@
           "FluentValidation": "12.2.0"
         }
       },
+      "Microsoft.AspNetCore.DataProtection.EntityFrameworkCore": {
+        "type": "Direct",
+        "requested": "[10.0.14, )",
+        "resolved": "10.0.14",
+        "contentHash": "zXov4zfbIsBCAYniekMemgWSAMpfzQ1jhWGs4k2WIr0n1Ac4osMD1xbqf31CllPZ2z4dTsYzWRmGZO+czKGOxw==",
+        "dependencies": {
+          "Microsoft.EntityFrameworkCore": "10.0.14"
+        }
+      },
+      "Microsoft.AspNetCore.Identity.EntityFrameworkCore": {
+        "type": "Direct",
+        "requested": "[10.0.14, )",
+        "resolved": "10.0.14",
+        "contentHash": "GPU3K0HaLlYu0dnocEglRhrnYRu6VTJocynD5TF8I2lvcMsNzhv46WJLxh/USxu6hgmOrNZH/VhGl4ckdiPHpg==",
+        "dependencies": {
+          "Microsoft.EntityFrameworkCore.Relational": "10.0.14"
+        }
+      },
       "Microsoft.EntityFrameworkCore.SqlServer": {
         "type": "Direct",
         "requested": "[10.0.14, )",
