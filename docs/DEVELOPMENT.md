@@ -61,7 +61,7 @@ NuGet packages are versioned centrally in `Directory.Packages.props` with lock f
 
 ```powershell
 git fetch origin
-codex review --base origin/main "Follow the review guidelines in AGENTS.md. Phase <ID>: <focus>."
+codex review --base origin/main *> .codex-review\<phase>-<n>.md
 ```
 
-Verified with codex-cli 0.164.0: `codex review` accepts `--base <branch>` together with a custom prompt. Paste the full output into the PR body between the `codex-raw-output` markers (see the PR template).
+Verified with codex-cli 0.164.0: `--base` **cannot** be combined with a custom prompt (`error: the argument '--base <BRANCH>' cannot be used with '[PROMPT]'`). Codex reads the review guidelines from [AGENTS.md](../AGENTS.md) automatically. The full transcript stays in `.codex-review/` (git-ignored). Paste Codex's final review message (its findings, or the statement that there are none) into the PR body between the `codex-raw-output` markers (see the PR template).

@@ -5,6 +5,8 @@ import { readdirSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 
 const REFERENCE = 'mk';
+/** Every supported UI language must exist; a missing file fails the check. */
+const REQUIRED_LOCALES = ['mk', 'en'];
 const localesDir = resolve(process.argv[2] ?? join(import.meta.dirname, '..', 'src', 'i18n', 'locales'));
 
 /** Flattens nested JSON into { "a.b.c": "value" }. */
@@ -29,6 +31,9 @@ const locales = Object.fromEntries(
 );
 
 const errors = [];
+for (const locale of REQUIRED_LOCALES) {
+  if (!(locale in locales)) errors.push(`Required locale "${locale}.json" not found in ${localesDir}`);
+}
 const reference = locales[REFERENCE];
 if (!reference) {
   errors.push(`Reference locale "${REFERENCE}.json" not found in ${localesDir}`);
@@ -57,4 +62,4 @@ if (errors.length > 0) {
   console.error(`i18n check failed (${errors.length}):\n- ${errors.join('\n- ')}`);
   process.exit(1);
 }
-console.log(`i18n check passed: ${files.length} locales, ${Object.keys(reference).length} keys each.`);
+console.log(`i18n check passed: ${files.length} locales (${Object.keys(locales).join(', ')}), ${Object.keys(reference).length} keys each.`);
