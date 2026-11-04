@@ -52,7 +52,9 @@ export function extractFinalMessage(transcript) {
   return message;
 }
 
-const INABILITY = /\b(could not|couldn't|unable to|cannot|can't|failed to|was not able to)\b[^.\n]{0,60}\b(review|access|read|open|find|load|inspect|see)\b/i;
+// Statements that the review itself could not be done. "find/identify/spot/see" are deliberately absent:
+// "I could not find any issues" is a verdict, not a failure.
+const INABILITY = /\b(could not|couldn't|unable to|cannot|can't|failed to|was not able to|wasn't able to|not possible to)\b[^.\n]{0,60}\b(review|access|read|open|load|inspect|complete|retrieve|clone|fetch|analy[sz]e|examine|evaluate)\b/i;
 // Clean verdicts: negative phrasing ("no actionable defects", "did not find any issues", "found no
 // regressions"), or Codex's structured output ("findings": [] / "overall_correctness": "patch is correct").
 const CLEAN = [
@@ -67,10 +69,12 @@ const CLEAN = [
  *  without any statement that the review could not be done. */
 export function assertCompletedReview(message) {
   const hasFindings = /\[P[0-3]\]/.test(message);
-  // "I could not find any issues" is a verdict, not an inability to review.
   const isClean = CLEAN.some((pattern) => pattern.test(message));
-  if (INABILITY.test(message) && !hasFindings && !isClean) {
-    throw new Error('Codex reports that it could not complete the review; no evidence is produced. Check the transcript.');
+  // Without findings, an explicit inability statement always wins: "could not access the repository, so no
+  // findings" is a failed review, not a clean one. (Findings prove the review ran; their text may quote
+  // such phrases.) When in doubt, fail closed and run the review again.
+  if (!hasFindings && INABILITY.test(message)) {
+    throw new Error('Codex reports that it could not (fully) complete the review; no evidence is produced. Check the transcript and run it again.');
   }
   if (!hasFindings && !isClean) {
     throw new Error('The final Codex message has neither findings nor a recognizable clean verdict; no evidence is produced. Check the transcript and run the review again.');

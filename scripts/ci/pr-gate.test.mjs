@@ -63,8 +63,16 @@ test('a transcript without a completed review is rejected', () => {
 test('inability-to-review answers and verdict-less messages produce no evidence', () => {
   assert.throws(
     () => extractFinalMessage(transcript('I could not review the changes because the repository could not be accessed.')),
-    /could not complete the review/);
+    /could not \(fully\) complete the review/);
   assert.throws(() => extractFinalMessage(transcript('Here is a summary of the repository layout and its modules.')), /neither findings nor/);
+  // An inability statement wins over clean-looking wording or an empty structured result.
+  for (const failed of [
+    'I could not access the repository, so no findings can be reported.',
+    '{"findings": [], "overall_explanation": "Unable to read the diff against origin/main."}',
+    'The review could not be completed: failed to load the changed files. No issues found.',
+  ]) {
+    assert.throws(() => extractFinalMessage(transcript(failed)), /could not \(fully\) complete the review/);
+  }
   // Real verdicts recorded so far stay accepted.
   for (const ok of [
     'No actionable defects were identified in the changes against the supplied merge base.',
