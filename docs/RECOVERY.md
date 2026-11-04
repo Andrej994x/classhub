@@ -26,8 +26,9 @@ How to resume or repair the autonomous workflow after an interruption or failure
 
 ## 3. Codex review problems
 
-- `codex login status` must say logged in. Re-run `codex review --base origin/main` after `git fetch origin`.
-- If Codex cannot produce a review (auth, quota, network): **do not** fill the PR gate section; record the blocker and stop. A PR without a real review cannot pass `pr-gate`.
+- `codex login status` must say logged in. Re-run `node scripts/codex-review.mjs review` (it fetches `origin` and reviews the committed HEAD).
+- `pr-gate` fails with "covers <sha>, but this check is for <sha>": a commit was pushed after the review. Review the new head and `apply --pr <n>` the new evidence.
+- If Codex cannot produce a review (auth, quota, network): there is no evidence and the PR cannot merge. Record the blocker and stop; never write evidence by hand.
 
 ## 4. A merged change is wrong
 

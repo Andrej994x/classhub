@@ -9,9 +9,9 @@ For each phase, in order:
 2. Implement only the phase scope, with tests (unit, integration on Testcontainers SQL Server, Vitest, Playwright where the phase touches a critical flow).
 3. Run all local checks (see AGENTS.md). Fix failures; never skip, weaken or delete tests to get green.
 4. Commit (Conventional Commits, ending with the Co-Authored-By line).
-5. `git fetch origin` and run `codex review --base origin/main` (no prompt: codex-cli 0.164 rejects a prompt together with `--base`; the guidelines come from AGENTS.md). Save the transcript to `.codex-review/` (git-ignored); the PR body gets Codex's final review message.
-6. Fix confirmed critical/high findings and medium findings that affect correctness, security or data integrity. Re-run checks; re-run Codex after significant changes.
-7. Push, open the PR with the template (Codex section with the raw output), then `gh pr merge --squash --auto --delete-branch`.
+5. Run `node scripts/codex-review.mjs review` (wraps `codex review --base origin/main` on the committed HEAD and writes generated evidence). Never type review evidence by hand.
+6. Fix confirmed critical/high findings and medium findings that affect correctness, security or data integrity in new commits, re-run checks, and **review again**: evidence must always be for the current head commit.
+7. Only after the final review completed: apply the evidence to the PR body (`node scripts/codex-review.mjs apply …`), push, open the PR, then `gh pr merge --squash --auto --delete-branch`. Never open a PR or push to an open PR with "review in progress" — see docs/DEVELOPMENT.md.
 8. If a required check fails: fix on the branch (max 3 fix cycles per gate, then stop and report).
 9. After the merge: sync `main`, record the merge SHA in `docs/PROGRESS.md` in the next phase's first commit, continue.
 
