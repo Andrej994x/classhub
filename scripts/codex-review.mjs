@@ -6,8 +6,10 @@
 //       Requires a clean working tree. Runs `codex review --base origin/main` on the current HEAD, saves the
 //       full transcript to .codex-review/<head-sha>.transcript.md and writes the evidence block to
 //       .codex-review/<head-sha>.evidence.md.
-//   node scripts/codex-review.mjs evidence --transcript <file> --commit <sha> [--base <sha>] [--rejected <n>]
-//       Regenerates the evidence block from an existing transcript (for example after a re-check).
+//   node scripts/codex-review.mjs evidence --review <.codex-review/<sha>.review.json> [--rejected <n>]
+//       Regenerates the evidence block of a completed review (for example to record a rejection). The
+//       reviewed commit, base and transcript come only from the review record written by `review`; the
+//       transcript hash is re-verified. Evidence can never be re-bound to another commit.
 //   node scripts/codex-review.mjs apply --evidence <file> (--pr <number> | --body <file>)
 //       Replaces the Codex evidence block in a PR body (via gh) or in a local body file.
 //
@@ -113,7 +115,14 @@ export function applyEvidence(body, evidence) {
     const stop = details >= 0 ? details + '</details>'.length : text.indexOf('\n## ', legacy);
     const old = text.slice(legacy, stop < 0 ? text.length : stop);
     const history = old.split('\n').filter((l) => l.startsWith('|')).join('\n');
-    const keep = history ? `### Review history\n\n${history}\n\n` : '';
+    // Earlier rounds' raw output stays for the audit trail, without raw-output markers (the gate only
+    // recounts the generated block of the reviewed commit).
+    const oldRaw = old.match(/<!-- codex-raw-output:start -->\n?([\s\S]*?)<!-- codex-raw-output:end -->/)?.[1]
+      ?.replace(/^```text\n?/, '').replace(/\n?```\s*$/, '').trim();
+    let keep = history ? `### Review history\n\n${history}\n\n` : '';
+    if (oldRaw) {
+      keep += `<details><summary>All review rounds (raw Codex output, recorded before generated evidence)</summary>\n\n\`\`\`text\n${oldRaw.replace(/```/g, "'''")}\n\`\`\`\n\n</details>\n\n`;
+    }
     return text.slice(0, legacy) + keep + evidence + (stop < 0 ? '' : text.slice(stop));
   }
 
@@ -129,14 +138,20 @@ function codexVersion() {
   return execFileSync('codex', ['--version'], { encoding: 'utf8', shell: process.platform === 'win32' }).trim();
 }
 
-function evidenceFrom(transcriptPath, commit, base, rejected) {
-  const bytes = readFileSync(transcriptPath);
+const sha256 = (bytes) => createHash('sha256').update(bytes).digest('hex');
+
+/** Builds evidence from a review record; the transcript must still have the recorded hash. */
+export function evidenceFromRecord(record, transcriptBytes, rejected = 0) {
+  const actual = sha256(transcriptBytes);
+  if (actual !== record.transcriptSha256) {
+    throw new Error(`Transcript hash ${actual} does not match the review record (${record.transcriptSha256}).`);
+  }
   return buildEvidence({
-    commit,
-    base,
-    cli: codexVersion(),
-    transcriptSha256: createHash('sha256').update(bytes).digest('hex'),
-    message: extractFinalMessage(bytes.toString('utf8')),
+    commit: record.commit,
+    base: record.base,
+    cli: record.cli,
+    transcriptSha256: record.transcriptSha256,
+    message: extractFinalMessage(transcriptBytes.toString('utf8')),
     rejected,
   });
 }
@@ -157,10 +172,21 @@ async function review() {
     child.stderr.on('data', (d) => output.push(d));
     child.on('close', done);
   });
-  writeFileSync(transcriptPath, Buffer.concat(output));
+  const transcriptBytes = Buffer.concat(output);
+  writeFileSync(transcriptPath, transcriptBytes);
   if (code !== 0) throw new Error(`codex review exited with ${code}; see ${transcriptPath}. No evidence was written.`);
   if (git('rev-parse', 'HEAD') !== commit) throw new Error('HEAD changed during the review. Run it again.');
-  const evidence = evidenceFrom(transcriptPath, commit, base, Number(arg('rejected', '0')));
+  extractFinalMessage(transcriptBytes.toString('utf8')); // the review must have completed
+  const record = {
+    commit,
+    base,
+    cli: codexVersion(),
+    transcript: `${commit}.transcript.md`,
+    transcriptSha256: sha256(transcriptBytes),
+    completedAtUtc: new Date().toISOString(),
+  };
+  writeFileSync(join(OUT_DIR, `${commit}.review.json`), `${JSON.stringify(record, null, 2)}\n`);
+  const evidence = evidenceFromRecord(record, transcriptBytes, Number(arg('rejected', '0')));
   const evidencePath = join(OUT_DIR, `${commit}.evidence.md`);
   writeFileSync(evidencePath, `${evidence}\n`);
   console.log(`Transcript: ${transcriptPath}\nEvidence:   ${evidencePath}`);
@@ -190,11 +216,12 @@ async function main() {
   const command = process.argv[2];
   if (command === 'review') return review();
   if (command === 'evidence') {
-    const transcript = arg('transcript');
-    const commit = git('rev-parse', arg('commit', 'HEAD'));
-    const base = git('rev-parse', arg('base', 'origin/main'));
-    const evidence = evidenceFrom(transcript, commit, base, Number(arg('rejected', '0')));
-    const out = arg('out', join(OUT_DIR, `${commit}.evidence.md`));
+    const recordPath = arg('review');
+    if (!recordPath || !existsSync(recordPath)) throw new Error('--review <.codex-review/<sha>.review.json> is required.');
+    const record = JSON.parse(readFileSync(recordPath, 'utf8'));
+    const transcriptBytes = readFileSync(join(dirname(resolve(recordPath)), record.transcript));
+    const evidence = evidenceFromRecord(record, transcriptBytes, Number(arg('rejected', '0')));
+    const out = join(OUT_DIR, `${record.commit}.evidence.md`);
     writeFileSync(out, `${evidence}\n`);
     console.log(`Evidence: ${out}`);
     return undefined;

@@ -7,7 +7,8 @@ import { join, resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { applyEvidence, buildEvidence, countFindings, extractFinalMessage } from '../codex-review.mjs';
+import { createHash } from 'node:crypto';
+import { applyEvidence, buildEvidence, countFindings, evidenceFromRecord, extractFinalMessage } from '../codex-review.mjs';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const HEAD = 'a'.repeat(40);
@@ -61,6 +62,13 @@ test('a transcript without a completed review is rejected', () => {
 
 test('severity counts ignore duplicates', () => {
   assert.deepEqual(countFindings(`${p1Message}\n${p1Message}`), { P0: 0, P1: 1, P2: 1, P3: 0 });
+});
+
+test('evidence is only produced from an intact review record (no re-binding)', () => {
+  const bytes = Buffer.from(transcript(cleanMessage));
+  const record = { commit: HEAD, base: BASE, cli: 'codex-cli 0.164.0', transcriptSha256: createHash('sha256').update(bytes).digest('hex') };
+  assert.match(evidenceFromRecord(record, bytes), new RegExp(`Reviewed commit: ${HEAD}`));
+  assert.throws(() => evidenceFromRecord(record, Buffer.from(transcript('Another review for another commit.'))), /does not match the review record/);
 });
 
 test('evidence requires full SHAs and a valid rejection count', () => {
@@ -118,6 +126,9 @@ test('applying evidence keeps the human review history of a legacy body', () => 
   ].join('\n');
   const updated = applyEvidence(legacy, evidence(cleanMessage));
   assert.match(updated, /### Review history\n\n\| # \| Round \| Finding \|/);
+  assert.match(updated, /All review rounds \(raw Codex output[\s\S]*```text\nx\n```/);
+  assert.equal(updated.split('<!-- codex-raw-output:start -->').length, 2); // only the generated block is marked
+  assert.ok(runGate(updated).ok, 'a converted legacy body passes the gate');
   assert.match(updated, /<!-- codex-review:start -->[\s\S]*<!-- codex-review:end -->/);
   assert.match(updated, /## Security considerations\nnone/);
   assert.doesNotMatch(updated, /Reviewed commit: 4e3f0a1/);
