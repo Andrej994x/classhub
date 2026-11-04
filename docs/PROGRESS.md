@@ -53,12 +53,12 @@ Releases 1–3 and Beta are listed in [ROADMAP.md](ROADMAP.md) section D. They a
 - Local tests: 49/49 green (unit 5, architecture 1, integration 43 on Testcontainers SQL Server 2022).
 - CI `migrations` job sequence verified locally against a throwaway container.
 
-### PR-gate evidence fix (PR #7, `fix/pr-gate-codex-evidence`)
+### PR-gate evidence fix (merged, PR #7, `56a5523`)
 
 - **Root cause** (same failure on #1, #4, #5, #6): PRs were opened, and fixes pushed, while the body still said "Codex review: in progress"; evidence was assembled by hand and not tied to a commit (the gate accepted any PR commit); re-runs of `pr-gate` reuse the event payload, so a corrected body was never seen; no concurrency group.
 - **Fix:** `scripts/codex-review.mjs` runs the real review on a clean tree and writes commit-bound evidence (`review.json`: commit, base, CLI version, transcript SHA-256; raw final message). `pr-gate` reads the body from the API, requires reviewed commit = PR head SHA, recounts severities from the raw output, requires 0 unresolved P0/P1 and a `### Rejected findings` section for rejected ones; per-PR concurrency. 14 node tests run in the `frontend` job.
 - **Merged PRs #1, #4, #5, #6:** bodies regenerated from their real final-round transcripts (no new results invented); all pass the new gate script against the live API. #6 records its 1 rejected P1 with the evidence.
-- **Incident 2026-11-04 ~15:51 UTC:** GitHub Actions "degraded performance"; all runs for PR #7 stayed queued (no runner assigned) for over 25 minutes.
+- **Incident 2026-11-04 ~15:51 UTC:** GitHub Actions "degraded performance"; all runs for PR #7 stayed queued (no runner assigned) for over 25 minutes, then completed: 8/8 green, auto-merged. The `pr-gate` re-runs on the corrected bodies of #1, #4, #5 and #6 all passed.
 
 ## R0-P0 prerequisite results (2026-11-04)
 
