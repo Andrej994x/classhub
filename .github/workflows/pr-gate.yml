@@ -1,15 +1,23 @@
 name: PR gate
 
-# Required check. Verifies that the pull request carries generated, commit-bound evidence of a completed
-# independent Codex review of exactly the commit being checked (docs/DEVELOPMENT.md), plus branch naming.
+# Required check. Verifies that the pull request carries signed, commit-bound evidence of a completed
+# independent Codex review of exactly the head commit (docs/DEVELOPMENT.md), plus branch naming.
+#
+# Trust: `pull_request_target` always runs THIS file as it is on the base branch, so a pull request cannot
+# change its own gate (with `pull_request`, the PR's version of the workflow would run). The job never checks
+# out or runs pull-request code: it reads the PR body through the API and verifies it with the script and the
+# public evidence key from the base commit. Its verdict is also published as the commit status
+# `classhub/codex-evidence`, which the ruleset requires: workflows of fork pull requests have no write token
+# and cannot create it, unlike a job that merely reuses the name `pr-gate`.
 on:
-  pull_request:
+  pull_request_target:
     branches: [main]
     types: [opened, edited, synchronize, reopened, ready_for_review]
 
 permissions:
   contents: read
   pull-requests: read
+  statuses: write
 
 # A newer run for the same PR (new commit or body edit) supersedes older ones, so a stale result can
 # never be the latest one.
@@ -17,18 +25,35 @@ concurrency:
   group: pr-gate-${{ github.event.pull_request.number }}
   cancel-in-progress: true
 
+env:
+  STATUS_CONTEXT: classhub/codex-evidence
+
 jobs:
   pr-gate:
     name: pr-gate
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
+      - name: Report pending
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: >
+          gh api "repos/$REPO/statuses/$HEAD_SHA" -f state=pending -f context="$STATUS_CONTEXT"
+          -f description="Checking the signed Codex review evidence" -f target_url="$RUN_URL" > /dev/null
+
+      # Base commit only (never the PR head), and only the gate scripts and the public key.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          # The gate script always comes from the base branch, so a PR cannot weaken its own gate.
           ref: ${{ github.event.pull_request.base.sha }}
           sparse-checkout: scripts/ci
           persist-credentials: false
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '22'
 
       - name: Check Codex review evidence
         env:
@@ -39,3 +64,20 @@ jobs:
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
           PR_BODY: ${{ github.event.pull_request.body }}
         run: bash scripts/ci/pr-gate.sh
+
+      - name: Report the result
+        if: success() || failure() # not when superseded (cancelled): the newer run reports
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          OUTCOME: ${{ job.status }}
+        run: |
+          if [ "$OUTCOME" = "success" ]; then
+            state=success; description="Signed Codex review evidence verified for this commit"
+          else
+            state=failure; description="Signed Codex review evidence missing or invalid (see the run)"
+          fi
+          gh api "repos/$REPO/statuses/$HEAD_SHA" -f state="$state" -f context="$STATUS_CONTEXT" \
+            -f description="$description" -f target_url="$RUN_URL" > /dev/null

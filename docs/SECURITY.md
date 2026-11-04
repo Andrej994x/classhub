@@ -58,14 +58,16 @@ Use GitHub's private vulnerability reporting on this repository. Do not open a p
 | Tampering: open redirect | `/login?returnTo=https://evil` | `safeReturnTo` accepts only same-site paths | Vitest |
 | Denial of service | Request floods, huge bodies | Global per-IP limit on `/api`, named limits, 1 MB body limit | `PlatformPipelineTests` |
 | Repudiation | "I did not change the settings" | Append-only audit log with actor and request id | `WorkspaceTenancyTests` |
-| Supply chain | Malicious dependency, unreviewed code on `main` | Locked restores, central versions, pinned actions, Dependabot, audits, CodeQL, gitleaks, PR gate on commit-bound Codex evidence, ruleset without bypass | CI, `pr-gate.test.mjs` |
+| Supply chain | Malicious dependency, unreviewed code on `main` | Locked restores, central versions, pinned actions, Dependabot, audits, CodeQL, gitleaks, ruleset without bypass | CI |
+| Tampering: faked review evidence | A PR body with hand-typed "clean" Codex evidence, or a PR that edits the gate workflow | Evidence signed with an Ed25519 key that exists only on the developer machine (public key in the repo); the gate runs on `pull_request_target` from the base branch without PR code and publishes the required status `classhub/codex-evidence` (fork workflows cannot create it) | `pr-gate.test.mjs` (unsigned, foreign key, edits after signing) |
 
 ### Residual risks (accepted for Release 0)
 
 - MFA for platform roles is not implemented yet (R1-P9); no admin features exist until then.
 - Email delivery is local only (dev mailbox); a real provider and its SPF/DKIM setup come with hosting.
 - The local runtime identity is the developer's Windows account (sysadmin); production identity is decided with hosting (D-28).
-- Codex reviews run on the developer machine; CI verifies the evidence (commit, transcript hash, counts) but cannot re-run Codex.
+- Codex reviews run on the developer machine; CI verifies the signed evidence but cannot re-run Codex. Whoever controls the machine holding the private evidence key can sign evidence; the key never leaves that machine (R0-P8 decision: signed local attestation instead of a paid CI integration or mandatory human approvals).
+- Collaborators with write access can push branches whose workflows have a write token and could set commit statuses; today the only writer is the owner (and automation on the owner's machine).
 
 ## Authentication (R0-P4)
 
@@ -108,4 +110,4 @@ Secrets are redacted and emails masked in logs; error responses never contain ex
 ## Accepted local risks
 
 - Development runs as the developer's Windows account (sysadmin) against `.\SQLEXPRESS`; a least-privilege runtime identity comes with hosting (D-28).
-- Codex reviews run locally; CI checks the generated, commit-bound evidence but cannot execute Codex itself.
+- Codex reviews run locally; CI checks the signed, commit-bound evidence but cannot execute Codex itself.

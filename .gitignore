@@ -47,6 +47,7 @@ App_Data/
 *.p12
 *.key
 *.pem
+!scripts/ci/codex-evidence-public.pem
 secrets.json
 appsettings.*.local.json
 

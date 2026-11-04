@@ -9,7 +9,7 @@ For each phase, in order:
 2. Implement only the phase scope, with tests (unit, integration on Testcontainers SQL Server, Vitest, Playwright where the phase touches a critical flow).
 3. Run all local checks (see AGENTS.md). Fix failures; never skip, weaken or delete tests to get green.
 4. Commit (Conventional Commits, ending with the Co-Authored-By line).
-5. Run `node scripts/codex-review.mjs review` (wraps `codex review --base origin/main` on the committed HEAD and writes generated evidence). Never type review evidence by hand.
+5. Run `node scripts/codex-review.mjs review` (wraps `codex review --base origin/main` on the committed HEAD and writes generated evidence, signed with the local evidence key; `keygen` once per machine, see docs/DEVELOPMENT.md). Never type review evidence by hand: unsigned or edited evidence fails the gate.
 6. Fix confirmed critical/high findings and medium findings that affect correctness, security or data integrity in new commits, re-run checks, and **review again**: evidence must always be for the current head commit.
 7. Only after the final review completed: apply the evidence to the PR body (`node scripts/codex-review.mjs apply …`), push, open the PR, then `gh pr merge --squash --auto --delete-branch`. Never open a PR or push to an open PR with "review in progress" — see docs/DEVELOPMENT.md.
 8. If a required check fails: fix on the branch (max 3 fix cycles per gate, then stop and report).

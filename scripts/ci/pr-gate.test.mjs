@@ -7,13 +7,24 @@ import { join, resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { createHash } from 'node:crypto';
+import { createHash, generateKeyPairSync } from 'node:crypto';
 import { applyEvidence, buildEvidence, countFindings, evidenceFromRecord, extractFinalMessage } from '../codex-review.mjs';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const HEAD = 'a'.repeat(40);
 const BASE = 'b'.repeat(40);
 const HASH = 'c'.repeat(64);
+
+// A test evidence key; the gate is pointed at its public key (EVIDENCE_PUBLIC_KEY).
+const pem = (pair) => ({
+  privateKey: pair.privateKey.export({ type: 'pkcs8', format: 'pem' }),
+  publicKey: pair.publicKey.export({ type: 'spki', format: 'pem' }),
+});
+const KEY = pem(generateKeyPairSync('ed25519'));
+const OTHER_KEY = pem(generateKeyPairSync('ed25519'));
+const keyDir = mkdtempSync(join(tmpdir(), 'pr-gate-key-'));
+const PUBLIC_KEY_FILE = join(keyDir, 'public.pem');
+writeFileSync(PUBLIC_KEY_FILE, KEY.publicKey);
 
 const transcript = (finalMessage) =>
   `OpenAI Codex v0.164.0\n--------\nexec\ngit diff origin/main...HEAD\n codex\nnot the end\ncodex\n${finalMessage}\n${finalMessage}\n`;
@@ -30,7 +41,7 @@ const p1Message = [
 ].join('\n');
 
 function evidence(message, overrides = {}) {
-  return buildEvidence({ commit: HEAD, base: BASE, cli: 'codex-cli 0.164.0', transcriptSha256: HASH, message, ...overrides });
+  return buildEvidence({ commit: HEAD, base: BASE, cli: 'codex-cli 0.164.0', transcriptSha256: HASH, message, privateKey: KEY.privateKey, ...overrides });
 }
 
 function runGate(body, { headSha = HEAD, headRef = 'feature/r0-p5-workspace-tenancy' } = {}) {
@@ -47,6 +58,7 @@ function runGate(body, { headSha = HEAD, headRef = 'feature/r0-p5-workspace-tena
       PATH: `${dir}${process.platform === 'win32' ? ';' : ':'}${process.env.PATH}`,
       GH_STUB_BODY_FILE: bodyFile,
       GH_TOKEN: 'x', REPO: 'o/r', PR_NUMBER: '7', HEAD_REF: headRef, HEAD_SHA: headSha, PR_BODY: '',
+      EVIDENCE_PUBLIC_KEY: PUBLIC_KEY_FILE,
     },
   });
   return { ok: result.status === 0, out: `${result.stdout}${result.stderr}` };
@@ -170,4 +182,59 @@ test('applying evidence keeps the human review history of a legacy body', () => 
   // Re-applying replaces the generated block instead of adding another one.
   const again = applyEvidence(updated, evidence(cleanMessage));
   assert.equal(again.split('<!-- codex-review:start -->').length, 2);
+});
+
+test('unsigned evidence fails: typing evidence by hand is not enough', () => {
+  const r = runGate(applyEvidence('', evidence(cleanMessage, { privateKey: undefined })));
+  assert.ok(!r.ok);
+  assert.match(r.out, /not signed/);
+});
+
+test('evidence signed with another key fails', () => {
+  const r = runGate(applyEvidence('', evidence(cleanMessage, { privateKey: OTHER_KEY.privateKey })));
+  assert.ok(!r.ok);
+  assert.match(r.out, /signature is invalid/);
+});
+
+test('editing signed evidence afterwards fails (raw output, commit, transcript hash)', () => {
+  const signed = applyEvidence('', evidence(p1Message, { rejected: 1 }));
+  const reasoning = '\n### Rejected findings\n\n- [P1] granularity hints: rejected because the exact statement runs in the integration suite on SQL Server 2022 with RCSI.\n';
+  assert.ok(runGate(signed + reasoning).ok, 'the untouched evidence passes');
+
+  // Same counts, different wording: a softened finding must not keep a valid signature.
+  const softened = signed.replace('SQL Server rejects this statement.', 'SQL Server may warn about this statement.');
+  assert.match(runGate(softened + reasoning).out, /signature is invalid/);
+
+  // Re-pointing old evidence at a new head commit.
+  const newHead = 'e'.repeat(40);
+  const repointed = signed.replace(`Reviewed commit: ${HEAD}`, `Reviewed commit: ${newHead}`);
+  assert.match(runGate(repointed + reasoning, { headSha: newHead }).out, /signature is invalid/);
+
+  const otherTranscript = signed.replace(`Transcript SHA-256: ${HASH}`, `Transcript SHA-256: ${'f'.repeat(64)}`);
+  assert.match(runGate(otherTranscript + reasoning).out, /signature is invalid/);
+
+  // Raising the rejection count after signing (to "resolve" a P1).
+  const unsignedRejection = applyEvidence('', evidence(p1Message)).replace('Rejected critical/high: 0', 'Rejected critical/high: 1').replace('Unresolved critical/high: 1', 'Unresolved critical/high: 0');
+  assert.match(runGate(unsignedRejection + reasoning).out, /signature is invalid/);
+});
+
+test('the gate fails closed without the trusted public key', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'pr-gate-nokey-'));
+  const bodyFile = join(dir, 'body.md');
+  writeFileSync(bodyFile, applyEvidence('', evidence(cleanMessage)));
+  const gh = join(dir, 'gh');
+  writeFileSync(gh, '#!/usr/bin/env bash\ncat "$GH_STUB_BODY_FILE"\n');
+  chmodSync(gh, 0o755);
+  const result = spawnSync('bash', [join(ROOT, 'scripts', 'ci', 'pr-gate.sh')], {
+    encoding: 'utf8',
+    env: {
+      ...process.env,
+      PATH: `${dir}${process.platform === 'win32' ? ';' : ':'}${process.env.PATH}`,
+      GH_STUB_BODY_FILE: bodyFile,
+      GH_TOKEN: 'x', REPO: 'o/r', PR_NUMBER: '7', HEAD_REF: 'feature/x', HEAD_SHA: HEAD, PR_BODY: '',
+      EVIDENCE_PUBLIC_KEY: join(dir, 'missing.pem'),
+    },
+  });
+  assert.notEqual(result.status, 0);
+  assert.match(`${result.stdout}${result.stderr}`, /public key is missing/);
 });
