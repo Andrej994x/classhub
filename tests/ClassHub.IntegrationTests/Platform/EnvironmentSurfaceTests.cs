@@ -23,6 +23,18 @@ public sealed class EnvironmentSurfaceTests
         routes.ShouldNotContain(r => r.Contains("mailbox", StringComparison.OrdinalIgnoreCase));
     }
 
+    [Theory]
+    [InlineData("Production")]
+    [InlineData("Staging")]
+    public void The_dev_mailbox_email_provider_stops_the_host_outside_development_testing_and_e2e(string environment)
+    {
+        using var factory = new PlatformApiFactory(
+            includeProbeModule: false, settings: new Dictionary<string, string?> { ["Email:Provider"] = "DevMailbox" }, environment: environment);
+
+        var error = Should.Throw<InvalidOperationException>(() => factory.Services.GetRequiredService<EndpointDataSource>());
+        error.Message.ShouldContain("only allowed in Development, Testing, E2E");
+    }
+
     [Fact]
     public void The_dev_mailbox_is_mapped_in_testing()
     {

@@ -39,7 +39,10 @@ public sealed class PlatformApiFactory(
         }
 
         // No database here: keep Data Protection keys (antiforgery, cookies) in memory and deliver no email.
-        builder.UseSetting("Email:Provider", "None");
+        if (settings?.ContainsKey("Email:Provider") != true)
+        {
+            builder.UseSetting("Email:Provider", "None");
+        }
         builder.ConfigureTestServices(services =>
             services.AddSingleton<Microsoft.AspNetCore.DataProtection.IDataProtectionProvider>(
                 new Microsoft.AspNetCore.DataProtection.EphemeralDataProtectionProvider()));

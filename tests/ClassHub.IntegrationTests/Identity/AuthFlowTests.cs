@@ -5,10 +5,12 @@ using ClassHub.Core.Modules.Identity;
 using ClassHub.Core.Modules.Identity.Contracts;
 using ClassHub.Core.SharedKernel.Errors;
 using ClassHub.IntegrationTests.Infrastructure;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Options;
 
 namespace ClassHub.IntegrationTests.Identity;
 
@@ -137,6 +139,47 @@ public sealed class AuthFlowTests(ClassHubApiFixture fixture)
         await fixture.WaitForEmailAsync(email, "account.already-registered", since);
         await using var db = fixture.CreateDbContext();
         (await db.Users.CountAsync(u => u.NormalizedEmail == email.ToUpperInvariant(), Ct)).ShouldBe(1);
+    }
+
+    [Fact]
+    public async Task Registering_a_known_email_does_the_same_password_hashing_work_as_a_new_one()
+    {
+        // Timing-based enumeration: the expensive step (PBKDF2) must happen on both paths.
+        var counter = new HashCounter();
+        using var factory = fixture.Factory.WithWebHostBuilder(builder => builder.ConfigureTestServices(services =>
+            services.Replace(ServiceDescriptor.Scoped<IPasswordHasher<AppUser>>(sp =>
+                new CountingPasswordHasher(new PasswordHasher<AppUser>(sp.GetService<IOptions<PasswordHasherOptions>>()), counter)))));
+        using var client = await ApiClient.CreateAsync(factory);
+        var email = ApiTestExtensions.UniqueEmail();
+
+        await RegisterAsync(client, email);
+        var forNewAccount = counter.Hashes;
+        await RegisterAsync(client, email);
+        var forKnownAccount = counter.Hashes - forNewAccount;
+
+        forNewAccount.ShouldBe(1);
+        forKnownAccount.ShouldBe(forNewAccount);
+    }
+
+    private sealed class HashCounter
+    {
+        private int _hashes;
+
+        public int Hashes => Volatile.Read(ref _hashes);
+
+        public void Increment() => Interlocked.Increment(ref _hashes);
+    }
+
+    private sealed class CountingPasswordHasher(IPasswordHasher<AppUser> inner, HashCounter counter) : IPasswordHasher<AppUser>
+    {
+        public string HashPassword(AppUser user, string password)
+        {
+            counter.Increment();
+            return inner.HashPassword(user, password);
+        }
+
+        public PasswordVerificationResult VerifyHashedPassword(AppUser user, string hashedPassword, string providedPassword) =>
+            inner.VerifyHashedPassword(user, hashedPassword, providedPassword);
     }
 
     [Fact]
