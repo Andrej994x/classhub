@@ -48,7 +48,23 @@ export function extractFinalMessage(transcript) {
     }
   }
   if (message.length < 20) throw new Error('The final Codex message is empty or too short.');
+  assertCompletedReview(message);
   return message;
+}
+
+const INABILITY = /\b(could not|couldn't|unable to|cannot|can't|failed to|was not able to)\b[^.\n]{0,60}\b(review|access|read|open|find|load|inspect|see)\b/i;
+const CLEAN = /\bno\b[^.\n]{0,60}\b(defects|issues|regressions|problems|findings|bugs)\b/i;
+
+/** Fails closed unless the message is a real review result: findings, or an explicit clean verdict
+ *  without any statement that the review could not be done. */
+export function assertCompletedReview(message) {
+  const hasFindings = /\[P[0-3]\]/.test(message);
+  if (INABILITY.test(message) && !hasFindings) {
+    throw new Error('Codex reports that it could not complete the review; no evidence is produced.');
+  }
+  if (!hasFindings && !CLEAN.test(message)) {
+    throw new Error('The final Codex message has neither findings nor an explicit "no defects/issues" verdict; no evidence is produced.');
+  }
 }
 
 /** Counts unique findings by severity in a final review message ("[P0]".."[P3]"). */
@@ -156,9 +172,13 @@ export function evidenceFromRecord(record, transcriptBytes, rejected = 0) {
   });
 }
 
+/** Tracked changes and untracked (not ignored) files: Codex could review them as part of the working tree. */
+const workingTreeChanges = () => git('status', '--porcelain', '--untracked-files=normal');
+
 async function review() {
-  const dirty = git('status', '--porcelain', '--untracked-files=no');
-  if (dirty) throw new Error('The working tree has uncommitted changes. Commit them first: the review covers HEAD only.');
+  if (workingTreeChanges()) {
+    throw new Error('The working tree has uncommitted or untracked changes. Commit them first: the review covers HEAD only.');
+  }
   git('fetch', 'origin', '--quiet');
   const commit = git('rev-parse', 'HEAD');
   const base = git('rev-parse', 'origin/main');
@@ -176,6 +196,9 @@ async function review() {
   writeFileSync(transcriptPath, transcriptBytes);
   if (code !== 0) throw new Error(`codex review exited with ${code}; see ${transcriptPath}. No evidence was written.`);
   if (git('rev-parse', 'HEAD') !== commit) throw new Error('HEAD changed during the review. Run it again.');
+  if (workingTreeChanges()) {
+    throw new Error('Files changed while the review ran, so it may not match HEAD. No evidence was written; run it again.');
+  }
   extractFinalMessage(transcriptBytes.toString('utf8')); // the review must have completed
   const record = {
     commit,

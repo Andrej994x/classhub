@@ -60,6 +60,21 @@ test('a transcript without a completed review is rejected', () => {
   assert.throws(() => extractFinalMessage('exec\nsomething\n'), /no final "codex" message/);
 });
 
+test('inability-to-review answers and verdict-less messages produce no evidence', () => {
+  assert.throws(
+    () => extractFinalMessage(transcript('I could not review the changes because the repository could not be accessed.')),
+    /could not complete the review/);
+  assert.throws(() => extractFinalMessage(transcript('Here is a summary of the repository layout and its modules.')), /neither findings nor/);
+  // Real verdicts recorded so far stay accepted.
+  for (const ok of [
+    'No actionable defects were identified in the changes against the supplied merge base.',
+    'The changes align with the R0-P3 platform scope. Inspection found no concrete, actionable regressions in the pipeline.',
+    'No actionable defects were identified; build and test execution was not verified in this read-only review.',
+  ]) {
+    assert.equal(extractFinalMessage(transcript(ok)), ok);
+  }
+});
+
 test('severity counts ignore duplicates', () => {
   assert.deepEqual(countFindings(`${p1Message}\n${p1Message}`), { P0: 0, P1: 1, P2: 1, P3: 0 });
 });
