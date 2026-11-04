@@ -1,0 +1,74 @@
+# ---------------------------------------------------------------------------
+# ClassHub .gitignore
+# Never commit secrets, local databases/backups, uploads or personal data.
+# ---------------------------------------------------------------------------
+
+# --- .NET build output and IDE state ---
+bin/
+obj/
+[Dd]ebug/
+[Rr]elease/
+*.user
+*.suo
+*.userprefs
+.vs/
+.idea/
+*.DotSettings.user
+TestResults/
+*.trx
+coverage/
+*.coverage
+*.coveragexml
+artifacts/
+
+# --- Node / frontend ---
+node_modules/
+web/dist/
+web/coverage/
+web/playwright-report/
+web/test-results/
+web/blob-report/
+web/playwright/.cache/
+*.tsbuildinfo
+
+# Vite build output served by ASP.NET Core (always rebuilt)
+src/ClassHub.Api/wwwroot/dist/
+
+# --- Local runtime data (uploads, dev files) ---
+App_Data/
+**/App_Data/
+.data/
+
+# --- Secrets and local configuration ---
+.env
+.env.*
+!.env.example
+*.pfx
+*.p12
+*.key
+*.pem
+secrets.json
+appsettings.*.local.json
+
+# --- Databases and backups (never commit) ---
+*.mdf
+*.ldf
+*.ndf
+*.bak
+*.bacpac
+*.dacpac
+*.sqlite
+*.db
+
+# --- Agent / review working files ---
+.codex-review/
+.claude/settings.local.json
+
+# --- OS and editor noise ---
+.DS_Store
+Thumbs.db
+desktop.ini
+*.swp
+*~
+.vscode/*
+!.vscode/extensions.json

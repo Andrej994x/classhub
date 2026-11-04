@@ -1,0 +1,23 @@
+# Normalize line endings: LF in the repository and working tree (CI runs on Linux).
+* text=auto eol=lf
+
+# Windows-only scripts keep CRLF
+*.cmd text eol=crlf
+*.bat text eol=crlf
+
+# Diff drivers
+*.cs     text diff=csharp
+*.cshtml text diff=html
+*.md     text diff=markdown
+
+# Binary files
+*.png  binary
+*.jpg  binary
+*.jpeg binary
+*.gif  binary
+*.ico  binary
+*.webp binary
+*.woff binary
+*.woff2 binary
+*.pdf  binary
+*.zip  binary
