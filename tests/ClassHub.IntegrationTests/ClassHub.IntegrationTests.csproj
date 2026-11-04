@@ -10,10 +10,13 @@
     <PackageReference Include="xunit.v3" />
     <PackageReference Include="Shouldly" />
     <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" />
+    <PackageReference Include="Testcontainers.MsSql" />
+    <PackageReference Include="Respawn" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\ClassHub.Api\ClassHub.Api.csproj" />
+    <ProjectReference Include="..\..\src\ClassHub.Core\ClassHub.Core.csproj" />
   </ItemGroup>
 
   <ItemGroup>

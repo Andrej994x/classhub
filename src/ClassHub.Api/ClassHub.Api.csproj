@@ -7,6 +7,11 @@
 
   <ItemGroup>
     <PackageReference Include="Serilog.AspNetCore" />
+    <!-- Design-time services for `dotnet ef` (startup project). Not shipped with the app. -->
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
   </ItemGroup>
 
   <ItemGroup>

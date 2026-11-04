@@ -21,11 +21,19 @@ dotnet restore ClassHub.slnx
 cd web; npm ci; cd ..
 ```
 
+## Local database (once, then after each new migration)
+
+```powershell
+dotnet tool run dotnet-ef database update --project src/ClassHub.Core --startup-project src/ClassHub.Api
+```
+
+Creates or updates `ClassHubDb` on `.\SQLEXPRESS` with Windows authentication. Details: [DATABASE.md](DATABASE.md).
+
 ## Running locally
 
 | Part | Command | URL |
 |---|---|---|
-| API + (later) Razor public pages | `dotnet run --project src/ClassHub.Api` | http://localhost:5080 (`/health`) |
+| API + (later) Razor public pages | `dotnet run --project src/ClassHub.Api` | http://localhost:5080 (`/health`, `/health/live`, `/health/ready`) |
 | React SPA (dev server, proxies `/api` to 5080) | `cd web; npm run dev` | http://localhost:5173 |
 
 ## Checks (run before every commit)
@@ -51,7 +59,8 @@ NuGet packages are versioned centrally in `Directory.Packages.props` with lock f
 | Check | Workflow | What it verifies |
 |---|---|---|
 | `backend` | `ci.yml` | locked restore, Release build with warnings as errors, unit + architecture tests |
-| `integration` | `ci.yml` | integration tests (Testcontainers SQL Server from R0-P2) |
+| `integration` | `ci.yml` | integration tests on a Testcontainers SQL Server 2022 |
+| `migrations` | `ci.yml` | no model changes without a migration; all migrations apply to an empty SQL Server 2022; idempotent script re-applies as a no-op; collation and RCSI verified |
 | `frontend` | `ci.yml` | `npm ci`, oxlint, i18n parity, Vitest, type-check + build |
 | `security` | `security.yml` | gitleaks (full history), vulnerable NuGet packages, `npm audit`, dependency review |
 | `codeql (csharp)`, `codeql (javascript-typescript)` | `codeql.yml` | CodeQL security-extended analysis |

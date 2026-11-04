@@ -19,6 +19,8 @@ env:
   DOTNET_CLI_TELEMETRY_OPTOUT: true
   DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
   NODE_VERSION: '22'
+  # Same tag as ClassHubApiFixture.DefaultSqlServerImage.
+  SQL_SERVER_IMAGE: mcr.microsoft.com/mssql/server:2022-CU27-ubuntu-22.04
 
 jobs:
   backend:
@@ -61,10 +63,86 @@ jobs:
       - name: Build
         run: dotnet build ClassHub.slnx --configuration Release --no-restore
 
-      # From R0-P2 these tests start a disposable SQL Server 2022 container via Testcontainers
-      # (the runner's Docker engine). They never use any other database.
-      - name: Integration tests
-        run: dotnet test --project tests/ClassHub.IntegrationTests --configuration Release --no-build
+      # The tests start a disposable SQL Server 2022 container via Testcontainers (the runner's
+      # Docker engine). Guards refuse any other database; no connection string is configured here.
+      - name: Integration tests (Testcontainers SQL Server)
+        env:
+          CLASSHUB_TEST_SQL_IMAGE: ${{ env.SQL_SERVER_IMAGE }}
+        run: |
+          unset ConnectionStrings__ClassHub
+          dotnet test --project tests/ClassHub.IntegrationTests --configuration Release --no-build
+
+  migrations:
+    name: migrations
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6.1.0
+        with:
+          global-json-file: global.json
+
+      - name: Restore (locked mode) and pinned dotnet-ef
+        run: |
+          dotnet restore ClassHub.slnx --locked-mode
+          dotnet tool restore
+
+      - name: Build
+        run: dotnet build src/ClassHub.Api --configuration Release --no-restore
+
+      - name: Start an empty SQL Server 2022 (throwaway, generated password)
+        run: |
+          sa_password="Ci1!$(openssl rand -hex 16)"
+          echo "::add-mask::$sa_password"
+          docker run --detach --name mssql --publish 14330:1433 \
+            --env ACCEPT_EULA=Y --env "MSSQL_SA_PASSWORD=$sa_password" "$SQL_SERVER_IMAGE"
+          for attempt in $(seq 1 60); do
+            if docker exec mssql /opt/mssql-tools18/bin/sqlcmd -C -S localhost -U sa -P "$sa_password" -Q "SELECT 1" > /dev/null 2>&1; then
+              echo "SQL Server is ready."
+              echo "MSSQL_SA_PASSWORD=$sa_password" >> "$GITHUB_ENV"
+              echo "ConnectionStrings__ClassHub=Server=localhost,14330;Database=ClassHubCi;User Id=sa;Password=$sa_password;Encrypt=True;TrustServerCertificate=True" >> "$GITHUB_ENV"
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "SQL Server did not become ready in time." >&2
+          docker logs mssql
+          exit 1
+
+      - name: Fail if the model has changes without a migration
+        run: >
+          dotnet tool run dotnet-ef migrations has-pending-model-changes --no-build --configuration Release
+          --project src/ClassHub.Core --startup-project src/ClassHub.Api
+
+      - name: Generate idempotent migration script
+        run: >
+          dotnet tool run dotnet-ef migrations script --idempotent --no-build --configuration Release
+          --project src/ClassHub.Core --startup-project src/ClassHub.Api --output "$RUNNER_TEMP/migrations.sql"
+
+      - name: Apply all migrations to an empty database
+        run: >
+          dotnet tool run dotnet-ef database update --no-build --configuration Release
+          --project src/ClassHub.Core --startup-project src/ClassHub.Api
+
+      - name: Re-apply the idempotent script (must be a no-op)
+        run: |
+          docker cp "$RUNNER_TEMP/migrations.sql" mssql:/tmp/migrations.sql
+          docker exec mssql /opt/mssql-tools18/bin/sqlcmd -C -b -S localhost -U sa -P "$MSSQL_SA_PASSWORD" -d ClassHubCi -i /tmp/migrations.sql
+
+      - name: Verify database settings
+        run: |
+          docker exec mssql /opt/mssql-tools18/bin/sqlcmd -C -b -h -1 -W -S localhost -U sa -P "$MSSQL_SA_PASSWORD" -d ClassHubCi \
+            -Q "SET NOCOUNT ON; IF (SELECT collation_name FROM sys.databases WHERE name = DB_NAME()) <> 'Macedonian_FYROM_100_CI_AS_SC' OR (SELECT is_read_committed_snapshot_on FROM sys.databases WHERE name = DB_NAME()) <> 1 THROW 50000, 'Unexpected collation or RCSI setting', 1; SELECT 'collation and RCSI OK';"
+
+      - name: Upload migration script
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: migrations-sql
+          path: ${{ runner.temp }}/migrations.sql
+          if-no-files-found: ignore
+          retention-days: 14
 
   frontend:
     name: frontend
