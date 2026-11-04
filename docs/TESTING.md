@@ -19,6 +19,13 @@ cd web; npm test
 
 Tests run on Microsoft.Testing.Platform (`global.json`). The first integration run pulls the SQL Server image (~1.7 GB). A full run takes about 40 seconds afterwards.
 
+## Frontend tests (R0-P6)
+
+- `src/test/render.tsx` → `renderRoute(path, language?)` renders the real route tree in a memory router with a fresh QueryClient, in Macedonian unless a language is given. Tests query by role and the visible (translated) name.
+- `src/api/client.test.ts` drives the API client against a fake `fetch`: antiforgery fetch-before-unsafe, token adoption after sign-in, one retry on `ANTIFORGERY_INVALID`, ProblemDetails → `ApiError`, network errors, cookies.
+- `src/lib/format.test.ts`: DST-aware time zones, mk/en dates, money with currency, translated error codes.
+- Backend side: `Platform/SpaHostingTests` (integration) checks the fallback only for SPA prefixes, cache headers, and that `/api` and health checks never return the SPA.
+
 ## Integration test database safety
 
 Integration tests **never** use the local `ClassHubDb`, `.\SQLEXPRESS`, LocalDB, or any shared server. `ClassHubApiFixture` (one per test run, `[Collection(ApiCollection.Name)]`) does, in order:

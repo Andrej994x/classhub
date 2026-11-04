@@ -58,6 +58,19 @@ if (!reference) {
   }
 }
 
+// Every API error code (ClassHub.Core SharedKernel ErrorCodes) needs a translation under errors.codes.
+const errorCodesFile = resolve(import.meta.dirname, '..', '..', 'src', 'ClassHub.Core', 'SharedKernel', 'Errors', 'ErrorCodes.cs');
+if (reference && process.argv[2] === undefined) {
+  try {
+    const source = readFileSync(errorCodesFile, 'utf8');
+    for (const [, code] of source.matchAll(/public const string \w+ = "([A-Z_]+)";/g)) {
+      if (!(`errors.codes.${code}` in reference)) errors.push(`[${REFERENCE}] missing translation for API error code "${code}" (errors.codes.${code})`);
+    }
+  } catch {
+    errors.push(`Cannot read ${errorCodesFile} to check API error code translations`);
+  }
+}
+
 if (errors.length > 0) {
   console.error(`i18n check failed (${errors.length}):\n- ${errors.join('\n- ')}`);
   process.exit(1);
