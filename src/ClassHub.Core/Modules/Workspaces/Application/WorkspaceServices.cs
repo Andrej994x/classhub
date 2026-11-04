@@ -75,7 +75,8 @@ internal sealed class WorkspaceService(ClassHubDbContext db, ITenantContext tena
         }
 
         var after = new { workspace.Name, workspace.TimeZone, workspace.Currency, workspace.Locale };
-        if (before != after)
+        // Value equality (anonymous types compare by value with Equals, by reference with !=).
+        if (!before.Equals(after))
         {
             audit.Record("workspace.settings.updated", "Workspace", workspace.Id.ToString(), workspace.Id, before, after);
             await db.SaveChangesAsync(cancellationToken);

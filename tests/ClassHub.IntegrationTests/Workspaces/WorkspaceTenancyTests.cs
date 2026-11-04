@@ -71,6 +71,27 @@ public sealed class WorkspaceTenancyTests(ClassHubApiFixture fixture)
         entry.DetailsJson.ShouldNotBeNull().ShouldContain("Europe/Berlin");
     }
 
+    [Fact]
+    public async Task Requests_that_change_nothing_record_no_audit_entry()
+    {
+        using var teacher = await fixture.CreateTeacherAsync();
+        var current = await teacher.Client.GetJsonAsync<WorkspaceResponse>($"/api/w/{teacher.WorkspaceId}");
+
+        using (var empty = await teacher.Client.PatchAsync($"/api/w/{teacher.WorkspaceId}", new { }))
+        {
+            empty.StatusCode.ShouldBe(HttpStatusCode.OK);
+        }
+
+        using (var same = await teacher.Client.PatchAsync($"/api/w/{teacher.WorkspaceId}",
+            new { name = current.Name, timeZone = current.TimeZone, currency = current.Currency.ToLowerInvariant(), locale = current.Locale }))
+        {
+            same.StatusCode.ShouldBe(HttpStatusCode.OK);
+        }
+
+        await using var db = fixture.CreateDbContext();
+        (await db.AuditLog.CountAsync(a => a.Action == "workspace.settings.updated" && a.WorkspaceId == teacher.WorkspaceId, Ct)).ShouldBe(0);
+    }
+
     [Theory]
     [InlineData("timeZone", "UTC", "UTC")]
     [InlineData("timeZone", "America/Argentina/Buenos_Aires", "America/Argentina/Buenos_Aires")]
