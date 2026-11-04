@@ -218,6 +218,22 @@ test('editing signed evidence afterwards fails (raw output, commit, transcript h
   assert.match(runGate(unsignedRejection + reasoning).out, /signature is invalid/);
 });
 
+test('fields outside the evidence block cannot change what is certified (reused old evidence)', () => {
+  // Valid signed evidence for an older commit, plus a forged "Reviewed commit" line for the new head above it.
+  const newHead = 'e'.repeat(40);
+  const reused = `Reviewed commit: ${newHead}\nFinal round findings: P0=0 P1=0 P2=0 P3=0\n\n${applyEvidence('', evidence(cleanMessage))}`;
+  const r = runGate(reused, { headSha: newHead });
+  assert.ok(!r.ok, r.out);
+  assert.match(r.out, /covers a{40}, but this check is for e{40}/);
+});
+
+test('a second evidence block fails', () => {
+  const one = applyEvidence('', evidence(cleanMessage));
+  const r = runGate(`${one}\n\n${evidence(cleanMessage)}`);
+  assert.ok(!r.ok);
+  assert.match(r.out, /exactly one Codex evidence block/);
+});
+
 test('the gate fails closed without the trusted public key', () => {
   const dir = mkdtempSync(join(tmpdir(), 'pr-gate-nokey-'));
   const bodyFile = join(dir, 'body.md');

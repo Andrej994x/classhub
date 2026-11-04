@@ -57,11 +57,14 @@ const field = (body, name) => {
  * Every value the signature covers is read from the body and re-assembled into the payload, so changing
  * any of them (or the raw output) after signing invalidates the signature.
  */
-export function verifyEvidence(body, publicKeyPem) {
+export function verifyEvidence(body, publicKeyPem, expectedHead) {
   const text = body.replace(/\r/g, '');
   const start = text.indexOf('<!-- codex-review:start -->');
   const end = text.indexOf('<!-- codex-review:end -->');
   if (start < 0 || end < start) throw new Error('No generated Codex evidence block.');
+  if (text.indexOf('<!-- codex-review:start -->', start + 1) >= 0 || text.indexOf('<!-- codex-review:end -->', end + 1) >= 0) {
+    throw new Error('The body must contain exactly one Codex evidence block.');
+  }
   const block = text.slice(start, end);
 
   const signatureLine = block.split('\n').find((line) => line.startsWith(SIGNATURE_PREFIX));
@@ -81,5 +84,8 @@ export function verifyEvidence(body, publicKeyPem) {
   };
   const ok = verify(null, Buffer.from(signingPayload(signed), 'utf8'), createPublicKey(publicKeyPem), signature);
   if (!ok) throw new Error('The evidence signature is invalid: the evidence was not produced by the review script with the trusted key, or it was edited afterwards.');
+  if (expectedHead !== undefined && signed.commit !== expectedHead) {
+    throw new Error(`The signed evidence covers ${signed.commit}, but this check is for ${expectedHead}.`);
+  }
   return signed;
 }

@@ -21,7 +21,9 @@ fail() {
   exit 1
 }
 
-field() { (grep -E "^$1: " <<<"$body" || true) | head -n1 | sed -E "s|^$1: ||" | tr -d '[:space:]'; }
+# Every evidence field is read from the single marked evidence block only (the same text the signature
+# covers), never from elsewhere in the body: lines outside the block cannot change what is checked.
+field() { (grep -E "^$1: " <<<"$block" || true) | head -n1 | sed -E "s|^$1: ||" | tr -d '[:space:]'; }
 
 # Read the current PR body from the API: a re-run reuses the original event payload, which may hold an
 # outdated body. Fall back to the event's body only if the API is unavailable.
@@ -38,11 +40,15 @@ hint="Generate it with 'node scripts/codex-review.mjs review' and 'node scripts/
 # 2. Evidence block.
 grep -q '<!-- codex-review:start -->' <<<"$body" && grep -q '<!-- codex-review:end -->' <<<"$body" \
   || fail "No generated Codex evidence block (codex-review:start/end markers). $hint"
-grep -Eq '^Codex review: completed[[:space:]]*$' <<<"$body" || fail "Evidence must state 'Codex review: completed'. $hint"
+starts="$(grep -c '<!-- codex-review:start -->' <<<"$body" || true)"
+ends="$(grep -c '<!-- codex-review:end -->' <<<"$body" || true)"
+(( starts == 1 && ends == 1 )) || fail "The body must contain exactly one Codex evidence block (found $starts start and $ends end markers). $hint"
+block="$(awk '/<!-- codex-review:start -->/{f=1} f{print} /<!-- codex-review:end -->/{if(f)exit}' <<<"$body")"
+grep -Eq '^Codex review: completed[[:space:]]*$' <<<"$block" || fail "Evidence must state 'Codex review: completed'. $hint"
 
 reviewed="$(field 'Reviewed commit')"
 base="$(field 'Base commit')"
-cli="$( (grep -E '^Codex CLI: ' <<<"$body" || true) | head -n1 | sed -E 's/^Codex CLI: //')"
+cli="$( (grep -E '^Codex CLI: ' <<<"$block" || true) | head -n1 | sed -E 's/^Codex CLI: //')"
 transcript="$(field 'Transcript SHA-256')"
 [[ "$reviewed" =~ ^[0-9a-f]{40}$ ]] || fail "'Reviewed commit' must be a full 40-character SHA. $hint"
 [[ "$base" =~ ^[0-9a-f]{40}$ ]] || fail "'Base commit' must be a full 40-character SHA. $hint"
@@ -54,13 +60,13 @@ transcript="$(field 'Transcript SHA-256')"
 [[ "$reviewed" == "$HEAD_SHA" ]] || fail "The Codex review covers $reviewed, but this check is for $HEAD_SHA. Review the current head and update the evidence. $hint"
 
 # 4. Raw Codex output present; recount severities from it.
-raw="$(awk '/<!-- codex-raw-output:start -->/{f=1;next}/<!-- codex-raw-output:end -->/{f=0}f' <<<"$body")"
+raw="$(awk '/<!-- codex-raw-output:start -->/{f=1;next}/<!-- codex-raw-output:end -->/{f=0}f' <<<"$block")"
 # Only presence is checked here; whether the review completed is decided semantically by the generator
 # (findings or an explicit clean verdict). The shortest real verdict, "No issues found.", has 14 characters.
 raw_chars="$(tr -d '[:space:]`' <<<"$raw" | wc -c)"
 (( raw_chars >= 10 )) || fail "Raw Codex output is missing between the codex-raw-output markers. $hint"
 
-declared="$( (grep -E '^Final round findings: ' <<<"$body" || true) | head -n1)"
+declared="$( (grep -E '^Final round findings: ' <<<"$block" || true) | head -n1)"
 [[ "$declared" =~ ^Final\ round\ findings:\ P0=([0-9]+)\ P1=([0-9]+)\ P2=([0-9]+)\ P3=([0-9]+)[[:space:]]*$ ]] \
   || fail "'Final round findings: P0=n P1=n P2=n P3=n' is missing or malformed. $hint"
 d0="${BASH_REMATCH[1]}"; d1="${BASH_REMATCH[2]}"; d2="${BASH_REMATCH[3]}"; d3="${BASH_REMATCH[4]}"
@@ -90,7 +96,7 @@ public_key="${EVIDENCE_PUBLIC_KEY:-$here/codex-evidence-public.pem}"
 [[ -f "$public_key" ]] || fail "The trusted evidence public key is missing ($public_key)."
 body_file="$(mktemp)"
 printf '%s' "$body" > "$body_file"
-signature_result="$(node "$here/verify-evidence.mjs" "$body_file" "$public_key" 2>&1)" || { rm -f "$body_file"; fail "$signature_result $hint"; }
+signature_result="$(node "$here/verify-evidence.mjs" "$body_file" "$public_key" "$HEAD_SHA" 2>&1)" || { rm -f "$body_file"; fail "$signature_result $hint"; }
 rm -f "$body_file"
 echo "$signature_result"
 
