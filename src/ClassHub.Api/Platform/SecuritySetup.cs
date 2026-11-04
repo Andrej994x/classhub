@@ -72,18 +72,50 @@ internal static class SecuritySetup
 
         var forwarded = configuration.GetSection(ForwardedHeadersSettings.SectionName).Get<ForwardedHeadersSettings>()
             ?? new ForwardedHeadersSettings();
+        var trustedProxies = ValidateForwardedHeaders(forwarded);
         services.Configure<ForwardedHeadersOptions>(options =>
         {
             options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
             options.KnownProxies.Clear();
             options.KnownIPNetworks.Clear();
-            foreach (var proxy in forwarded.KnownProxies)
+            foreach (var proxy in trustedProxies)
             {
-                options.KnownProxies.Add(System.Net.IPAddress.Parse(proxy));
+                options.KnownProxies.Add(proxy);
             }
         });
         services.AddSingleton(forwarded);
 
         return services;
+    }
+
+    /// <summary>
+    /// Fails closed: forwarded headers may only be enabled together with at least one valid trusted
+    /// proxy address. With empty trust lists ASP.NET Core would accept X-Forwarded-For/Proto from any
+    /// peer, letting clients spoof their IP (rate limits) and scheme.
+    /// </summary>
+    internal static IReadOnlyList<System.Net.IPAddress> ValidateForwardedHeaders(ForwardedHeadersSettings settings)
+    {
+        ArgumentNullException.ThrowIfNull(settings);
+
+        var proxies = new List<System.Net.IPAddress>();
+        foreach (var value in settings.KnownProxies)
+        {
+            if (!System.Net.IPAddress.TryParse(value?.Trim(), out var address))
+            {
+                throw new InvalidOperationException(
+                    $"ForwardedHeaders:KnownProxies contains an invalid IP address: '{value}'.");
+            }
+
+            proxies.Add(address);
+        }
+
+        if (settings.Enabled && proxies.Count == 0)
+        {
+            throw new InvalidOperationException(
+                "ForwardedHeaders:Enabled is true but ForwardedHeaders:KnownProxies is empty. " +
+                "Configure the IP address of every trusted reverse proxy, or disable forwarded headers.");
+        }
+
+        return proxies;
     }
 }

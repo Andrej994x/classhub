@@ -26,7 +26,7 @@ Persistence details: [DATABASE.md](DATABASE.md). Test infrastructure: [TESTING.m
 
 ## Request pipeline (order)
 
-1. Forwarded headers (only if `ForwardedHeaders:Enabled`, with configured `KnownProxies`).
+1. Forwarded headers (only if `ForwardedHeaders:Enabled`). Startup **fails** when it is enabled without at least one valid `KnownProxies` address, so forwarded IP/scheme can never be accepted from arbitrary peers.
 2. `UseExceptionHandler` → `ClassHubExceptionHandler`: `ClassHubException` → its status, `code` and safe message; `DbUpdateConcurrencyException` → 409 `CONCURRENCY_CONFLICT`; `BadHttpRequestException` → its 4xx; anything else → 500 `INTERNAL_ERROR` with a generic title (details only in the log).
 3. `UseStatusCodePages` → empty 4xx/5xx responses (401, 403, unknown routes, malformed JSON) become ProblemDetails. Every ProblemDetails has `code` (default from `ErrorCodes.ForStatus`) and `traceId`.
 4. HSTS outside Development/Testing/E2E.

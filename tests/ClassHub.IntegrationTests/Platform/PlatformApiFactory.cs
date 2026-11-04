@@ -21,7 +21,8 @@ namespace ClassHub.IntegrationTests.Platform;
 /// </summary>
 public sealed class PlatformApiFactory(
     bool includeProbeModule = true,
-    IReadOnlyDictionary<string, string?>? settings = null) : WebApplicationFactory<Program>
+    IReadOnlyDictionary<string, string?>? settings = null,
+    System.Net.IPAddress? remoteIpAddress = null) : WebApplicationFactory<Program>
 {
     /// <summary>Unreachable on purpose; only used so the host can be built.</summary>
     public const string UnusedConnectionString =
@@ -44,6 +45,26 @@ public sealed class PlatformApiFactory(
                 services.AddScoped<IValidator<ProbeRequest>, ProbeRequestValidator>();
             });
         }
+
+        if (remoteIpAddress is not null)
+        {
+            // TestServer requests have no peer address; simulate the TCP peer the way Kestrel would.
+            builder.ConfigureTestServices(services =>
+                services.AddSingleton<IStartupFilter>(new RemoteIpStartupFilter(remoteIpAddress)));
+        }
+    }
+
+    private sealed class RemoteIpStartupFilter(System.Net.IPAddress address) : IStartupFilter
+    {
+        public Action<IApplicationBuilder> Configure(Action<IApplicationBuilder> next) => app =>
+        {
+            app.Use((context, nextMiddleware) =>
+            {
+                context.Connection.RemoteIpAddress = address;
+                return nextMiddleware(context);
+            });
+            next(app);
+        };
     }
 }
 

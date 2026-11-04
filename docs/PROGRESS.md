@@ -45,7 +45,7 @@ Releases 1–3 and Beta are listed in [ROADMAP.md](ROADMAP.md) section D. They a
 
 - ProblemDetails with stable `code` + `traceId`; `ClassHubException` hierarchy; FluentValidation filter; Serilog request logging with redaction; security headers/CSP; HSTS outside dev; forwarded headers (off by default); named rate limits (validated options); cookie auth scheme (Identity application scheme, 401/403 without redirect); deny-by-default fallback policy + endpoint-metadata test; antiforgery for JSON (`GET /api/auth/antiforgery`, `X-XSRF-TOKEN`); module discovery under `/api`; module-boundary architecture tests; OpenAPI contract → TypeScript types with CI drift checks.
 - Local tests: 105/105 backend green, web lint/i18n/tests/build green.
-- Dependabot: TypeScript and `@types/node` majors ignored; PRs #2 (TypeScript 7) and #3 (`@types/node` 26) closed with an explanation (D-04, Node 22 runtime).
+- Dependabot: TypeScript and `@types/node` majors ignored (D-04, Node 22 runtime). PRs #2 (TypeScript 7) and #3 (`@types/node` 26) stay **open but unmergeable** (they cannot pass `pr-gate`); closing them was blocked by the auto-mode permission check. **User action (optional):** close #2 and #3.
 
 ### R0-P2 — EF Core & SQL Server foundation (merged, PR #4, `63d189d`)
 

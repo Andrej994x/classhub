@@ -258,6 +258,64 @@ public sealed class PlatformPipelineTests : IClassFixture<PlatformPipelineTests.
         Should.Throw<OptionsValidationException>(() => factory.CreateClient());
     }
 
+    [Fact]
+    public void Enabling_forwarded_headers_without_trusted_proxies_stops_the_host_at_startup()
+    {
+        using var factory = new PlatformApiFactory(includeProbeModule: false, settings: new Dictionary<string, string?>
+        {
+            ["ForwardedHeaders:Enabled"] = "true",
+        });
+
+        Should.Throw<InvalidOperationException>(() => factory.CreateClient())
+            .Message.ShouldContain("KnownProxies");
+    }
+
+    [Fact]
+    public void Invalid_trusted_proxy_addresses_stop_the_host_at_startup()
+    {
+        using var factory = new PlatformApiFactory(includeProbeModule: false, settings: new Dictionary<string, string?>
+        {
+            ["ForwardedHeaders:Enabled"] = "true",
+            ["ForwardedHeaders:KnownProxies:0"] = "not-an-ip",
+        });
+
+        Should.Throw<InvalidOperationException>(() => factory.CreateClient())
+            .Message.ShouldContain("not-an-ip");
+    }
+
+    [Theory]
+    [InlineData("198.51.100.7", false)] // untrusted peer: spoofed X-Forwarded-For is ignored
+    [InlineData("10.1.2.3", true)]      // the configured proxy: X-Forwarded-For identifies the client
+    public async Task Forwarded_headers_are_only_honored_from_a_trusted_proxy(string peerAddress, bool honored)
+    {
+        using var factory = new PlatformApiFactory(
+            settings: new Dictionary<string, string?>
+            {
+                ["ForwardedHeaders:Enabled"] = "true",
+                ["ForwardedHeaders:KnownProxies:0"] = "10.1.2.3",
+                ["RateLimiting:AuthPermitLimit"] = "2",
+                ["RateLimiting:AuthWindowSeconds"] = "3600",
+            },
+            remoteIpAddress: System.Net.IPAddress.Parse(peerAddress));
+        using var client = factory.CreateClient();
+        var uri = new Uri("/api/_probe/limited", UriKind.Relative);
+
+        // Three requests, each claiming a different client. If the header is honored, each client has
+        // its own limit (all succeed); if it is ignored, all share the peer's limit of 2.
+        var statuses = new List<HttpStatusCode>();
+        for (var i = 0; i < 3; i++)
+        {
+            using var request = new HttpRequestMessage(HttpMethod.Get, uri);
+            request.Headers.Add("X-Forwarded-For", $"203.0.113.{i + 1}");
+            using var response = await client.SendAsync(request, Ct);
+            statuses.Add(response.StatusCode);
+        }
+
+        statuses.ShouldBe(honored
+            ? [HttpStatusCode.OK, HttpStatusCode.OK, HttpStatusCode.OK]
+            : [HttpStatusCode.OK, HttpStatusCode.OK, HttpStatusCode.TooManyRequests]);
+    }
+
     private static async Task<string> GetRequestTokenAsync(HttpClient client)
     {
         using var response = await client.GetAsync(new Uri("/api/auth/antiforgery", UriKind.Relative), Ct);
