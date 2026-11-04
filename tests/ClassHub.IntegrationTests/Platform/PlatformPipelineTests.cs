@@ -183,6 +183,29 @@ public sealed class PlatformPipelineTests : IClassFixture<PlatformPipelineTests.
         health.StatusCode.ShouldBe(HttpStatusCode.OK);
     }
 
+    [Theory]
+    [InlineData("/api/does-not-exist")]
+    [InlineData("/api/_probe/protected")]
+    public async Task Requests_rejected_by_authorization_still_count_against_the_default_limit(string path)
+    {
+        using var factory = new PlatformApiFactory(settings: new Dictionary<string, string?>
+        {
+            ["RateLimiting:DefaultPermitLimit"] = "3",
+            ["RateLimiting:DefaultWindowSeconds"] = "3600",
+        });
+        using var client = factory.CreateClient(new() { AllowAutoRedirect = false });
+        var uri = new Uri(path, UriKind.Relative);
+
+        for (var i = 0; i < 3; i++)
+        {
+            using var rejected = await client.GetAsync(uri, Ct);
+            rejected.StatusCode.ShouldBe(HttpStatusCode.Unauthorized);
+        }
+
+        using var limited = await client.GetAsync(uri, Ct);
+        limited.StatusCode.ShouldBe(HttpStatusCode.TooManyRequests);
+    }
+
     [Fact]
     public async Task Unsafe_request_without_antiforgery_token_is_rejected()
     {

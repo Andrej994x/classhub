@@ -32,7 +32,7 @@ Persistence details: [DATABASE.md](DATABASE.md). Test infrastructure: [TESTING.m
 4. HSTS outside Development/Testing/E2E.
 5. `SecurityHeadersMiddleware`: `nosniff`, `Referrer-Policy`, `Cross-Origin-Opener-Policy`, `Permissions-Policy`; CSP `default-src 'none'` + `X-Frame-Options: DENY` for `/api`, `/health`, `/openapi`; same-origin CSP + `SAMEORIGIN` for pages.
 6. Serilog request logging (path without query string) with `SensitiveDataRedactionEnricher` (secrets → `***`, emails masked, nested values included).
-7. Routing → authentication (cookie `.ClassHub.Auth`, Identity application scheme; 401/403 instead of redirects) → authorization → rate limiter.
+7. Routing → authentication (cookie `.ClassHub.Auth`, Identity application scheme; 401/403 instead of redirects) → **rate limiter** → authorization. The limiter runs before authorization so rejected requests (401/403, unknown routes) still count against the client's limits.
 
 ## Authorization model (deny by default)
 

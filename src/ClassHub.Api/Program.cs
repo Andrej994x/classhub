@@ -50,8 +50,10 @@ app.UseMiddleware<SecurityHeadersMiddleware>();
 app.UseSerilogRequestLogging();
 app.UseRouting();
 app.UseAuthentication();
-app.UseAuthorization();
+// Before authorization: requests that authorization rejects (401/403, unknown routes) still count
+// against the client's limits. After routing, so endpoint-specific policies apply.
 app.UseRateLimiter();
+app.UseAuthorization();
 
 // Liveness: the process answers. No dependencies, no details.
 app.MapGet("/health", () => TypedResults.Ok(new HealthResponse("ok")))
