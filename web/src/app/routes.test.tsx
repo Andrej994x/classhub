@@ -1,6 +1,7 @@
-import { screen, within } from '@testing-library/react';
+import { act, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
+import { meQueryKey } from '../auth/session.ts';
 import { i18n } from '../i18n/index.ts';
 import { fakeApi, teacher, WORKSPACE_ID } from '../test/fakeApi.ts';
 import { renderRoute } from '../test/render.tsx';
@@ -129,6 +130,21 @@ describe('routes and layouts', () => {
     await expect.poll(() => screen.queryByRole('alert')?.textContent ?? '').toContain('Најавете се за да продолжите');
     expect(router.state.location.pathname).toBe(`/app/w/${WORKSPACE_ID}`);
     expect(screen.getByRole('navigation', { name: 'Главна навигација' })).toBeInTheDocument();
+  });
+
+  it("forgets the previous account's workspace data when another account signed in elsewhere", async () => {
+    const api = fakeApi({ me: teacher() });
+    const { queryClient } = await renderRoute(`/app/w/${WORKSPACE_ID}`);
+    await screen.findByRole('heading', { level: 1, name: 'Математика со Ана' });
+    expect(queryClient.getQueryData(['w', WORKSPACE_ID])).toBeDefined();
+
+    // Another tab signed out and signed in as a different teacher; this tab re-checks the session.
+    api.state.me = teacher({ id: '33333333-3333-4333-8333-333333333333', email: 'bojan@example.com' });
+    await act(() => queryClient.invalidateQueries({ queryKey: meQueryKey }));
+
+    await expect.poll(() => queryClient.getQueryData<{ email: string }>(meQueryKey)?.email).toBe('bojan@example.com');
+    expect(queryClient.getQueryData(['w', WORKSPACE_ID])).toBeUndefined();
+    expect(queryClient.getQueryData(['me', 'workspaces'])).toBeUndefined();
   });
 
   it('ignores a late language answer that arrives after signing out', async () => {

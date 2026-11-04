@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query';
 import { api } from '../api/client.ts';
 import { ApiError } from '../api/errors.ts';
 import type { components } from '../api/schema';
@@ -28,11 +28,25 @@ export function adoptAccountLanguage(me: Me | null) {
   }
 }
 
+/**
+ * Drops everything cached for an identity (workspaces, workspace details, …) except the account query, and
+ * the antiforgery token, which is bound to the identity.
+ */
+export function forgetIdentityData(queryClient: QueryClient) {
+  api.resetToken();
+  queryClient.removeQueries({ predicate: (query) => query.queryKey[0] !== meQueryKey[0] || query.queryKey[1] !== meQueryKey[1] });
+}
+
 export function useMe() {
+  const queryClient = useQueryClient();
   return useQuery({
     queryKey: meQueryKey,
     queryFn: async () => {
+      const previous = queryClient.getQueryData<Me | null>(meQueryKey);
       const me = await fetchMe();
+      // The session changed outside this tab's sign-in/sign-out (another tab, expiry): nothing cached for the
+      // previous identity may be shown to the new one (workspace isolation in the UI as well).
+      if (previous !== undefined && (previous?.id ?? null) !== (me?.id ?? null)) forgetIdentityData(queryClient);
       adoptAccountLanguage(me);
       return me;
     },
