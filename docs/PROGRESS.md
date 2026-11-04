@@ -11,7 +11,7 @@ This is the live status of the autonomous implementation loop ([ROADMAP.md](ROAD
 | Branch | `chore/r0-p1-repository-foundation` (created from `main` @ `53d3f15`) |
 | Workflow step | 1 — branch created; R0-P0 result recorded (this commit) |
 | Next action | R0-P1 step 2–3: scaffold solution, web app, CI, docs (ROADMAP section K) |
-| Open blockers | Docker engine not responding (see Blockers); blocks R0-P2, not R0-P1 |
+| Open blockers | None |
 
 ## Phase status
 
@@ -39,7 +39,7 @@ Releases 1–3 and Beta are listed in [ROADMAP.md](ROADMAP.md) section D. They a
 | Node.js / npm | v22.17.0 / 10.9.2 ✅ (meets Vite 8; Node 24 LTS before Beta, D-03) |
 | GitHub CLI | Logged in as `Andrej994x`, scopes `repo, workflow, read:org, gist` ✅ |
 | Codex CLI | 0.164.0, logged in with ChatGPT ✅ |
-| Docker | Docker Desktop processes running, but `docker info` did not answer within 120 s ⚠️ |
+| Docker | Engine hung at first (no answer within 120 s); fixed by restarting Docker Desktop (see Blockers). Now Docker 25.0.3, API 1.44, Linux containers, 12 CPUs, ~8 GB ✅ |
 | Git identity (repo-local) | `Andrej Nestorov` / `103068803+Andrej994x@users.noreply.github.com` (D-07) ✅ |
 | SQL Server | No changes, as planned (ROADMAP Appendix 1) ✅ |
 | GitHub repository | `Andrej994x/classhub`, **public**, default branch `main` ✅ |
@@ -54,7 +54,7 @@ Releases 1–3 and Beta are listed in [ROADMAP.md](ROADMAP.md) section D. They a
 
 | Blocker | Affects | Action needed |
 |---|---|---|
-| Docker engine not responding (`docker info` hangs; Docker Desktop has been running since 2026-10-28) | R0-P2 and every later phase (integration tests via Testcontainers, E2E) | The user restarts Docker Desktop and confirms `docker info` works. The autonomous loop does not restart system software itself |
+| ~~Docker engine not responding~~ **Resolved 2026-11-04** | R0-P2 onward | The engine had hung after running since 2026-10-28. At the user's request: Docker Desktop processes stopped, WSL distros `docker-desktop`/`docker-desktop-data` terminated, Docker Desktop restarted. Verified: `docker info` answers; a disposable `mssql/server:2022-CU27-ubuntu-22.04` container started and answered a query in ~6 s, then was removed. If it hangs again: see `docs/RECOVERY.md` (R0-P1) |
 
 ## Decisions taken during execution
 
