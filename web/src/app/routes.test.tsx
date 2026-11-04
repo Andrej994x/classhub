@@ -53,6 +53,18 @@ describe('routes and layouts', () => {
     expect(await screen.findByRole('heading', { level: 1, name: 'Страницата не е пронајдена' })).toBeInTheDocument();
   });
 
+  it('sends the user to sign in when the session ends while the app is open', async () => {
+    fakeApi({
+      me: teacher(),
+      extra: [(call) => (call.path === `/api/w/${WORKSPACE_ID}` ? new Response(JSON.stringify({ status: 401, code: 'UNAUTHORIZED' }), { status: 401, headers: { 'content-type': 'application/json' } }) : undefined)],
+    });
+    const { router } = await renderRoute(`/app/w/${WORKSPACE_ID}`);
+
+    expect(await screen.findByRole('heading', { level: 1, name: 'Најава' })).toBeInTheDocument();
+    expect(router.state.location.pathname).toBe('/login');
+    expect(new URLSearchParams(router.state.location.search).get('returnTo')).toBe(`/app/w/${WORKSPACE_ID}`);
+  });
+
   it('sends anonymous visitors to sign in and remembers where they wanted to go', async () => {
     fakeApi();
     const { router } = await renderRoute('/app/w/abc?tab=1');
