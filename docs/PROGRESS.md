@@ -7,10 +7,10 @@ This is the live status of the autonomous implementation loop ([ROADMAP.md](ROAD
 | Field | Value |
 |---|---|
 | Release | R0 — Foundation |
-| Current phase | R0-P5 — Workspaces, roles & tenancy |
-| Branch | `feature/r0-p5-workspace-tenancy` (rebased on `main` after the PR-gate fix, PR #7) |
-| Workflow step | 5 — commit-bound Codex review (`node scripts/codex-review.mjs review`), then PR |
-| Next action | Open the R0-P5 PR with generated evidence; first real Actions run of the corrected `pr-gate`. Then R0-P6 (committed locally on `feature/r0-p6-web-foundation`, to be rebased) |
+| Current phase | R0-P6 — Web foundation & localization |
+| Branch | `feature/r0-p6-web-foundation` (from `main` @ `22f1158`) |
+| Workflow step | 5 — commit-bound Codex review, then PR |
+| Next action | R0-P6 PR; then R0-P7 (committed locally on `feature/r0-p7-auth-ui`, stacked on R0-P6; Playwright green locally) and add `e2e` to the required checks after its first run |
 | Open blockers | None |
 
 ## Phase status
@@ -24,8 +24,8 @@ Status values: `not started`, `in progress`, `in review` (PR open), `merged`, `b
 | R0-P2 | EF Core & SQL Server foundation | merged | `chore/r0-p2-database-foundation` | [#4](https://github.com/Andrej994x/classhub/pull/4) | `63d189d` | 1 round: no actionable defects | 9/9 green | Windows-auth gate passed (Shared memory, NTLM); `migrations` added to the ruleset |
 | R0-P3 | API platform baseline | merged | `chore/r0-p3-api-platform-baseline` | [#5](https://github.com/Andrej994x/classhub/pull/5) | `293ae76` | 5 rounds: 3 × P2 (forwarded headers fail-open, missing default rate limit, limiter after authorization) fixed; rounds 4–5 clean; CodeQL HttpOnly finding fixed | 9/9 green | Blocked once by an outdated CodeQL review thread (resolved after the fix) |
 | R0-P4 | Authentication (Identity) | merged | `feature/r0-p4-authentication` | [#6](https://github.com/Andrej994x/classhub/pull/6) | `5203a72` | 3 rounds: 4 findings fixed (atomic registration, confirmation token check, reset enumeration, READCOMMITTEDLOCK), 1 P1 rejected with evidence | 9/9 green | |
-| R0-P5 | Workspaces, roles & tenancy | in progress | `feature/r0-p5-workspace-tenancy` | | | Pre-review: 3 × P2 (non-atomic owner grant, slash-only time zones, shape-only currency) fixed | | 211/211 backend tests locally |
-| R0-P6 | Web foundation & localization | in progress (committed locally) | `feature/r0-p6-web-foundation` | | | | | Stacked on R0-P5 |
+| R0-P5 | Workspaces, roles & tenancy | merged | `feature/r0-p5-workspace-tenancy` | [#8](https://github.com/Andrej994x/classhub/pull/8) | `22f1158` | Pre-review + 4 rounds: 8 × P2 fixed (owner grant atomic + serialized, IANA time zones, ISO 4217 currencies, workspace backfill migration, OpenAPI route parameters, async raw-SQL detection, no-op audit); round 4 clean | 9/9 green | First PR checked by the corrected `pr-gate` (generated evidence of `6dabf9b`); migration applied to local `ClassHubDb` |
+| R0-P6 | Web foundation & localization | in review | `feature/r0-p6-web-foundation` | | | | | |
 | R0-P7 | Auth UI & first E2E | not started | | | | | | |
 | R0-P8 | Foundation hardening & closeout | not started | | | | | | |
 
@@ -52,6 +52,12 @@ Releases 1–3 and Beta are listed in [ROADMAP.md](ROADMAP.md) section D. They a
 - **Gate passed:** `dotnet ef database update` created `ClassHubDb` on `.\SQLEXPRESS` via Windows authentication. The running API connects as `EFCore/10.0.14` over **Shared memory**, `NTLM`. Collation `Macedonian_FYROM_100_CI_AS_SC`, RCSI on, migrations `InitialTechnical` + `EnableReadCommittedSnapshot` applied. No SQL Server configuration was changed.
 - Local tests: 49/49 green (unit 5, architecture 1, integration 43 on Testcontainers SQL Server 2022).
 - CI `migrations` job sequence verified locally against a throwaway container.
+
+### R0-P5 — Workspaces, roles & tenancy (merged, PR #8, `22f1158`)
+
+- Workspaces + Owner membership provisioned at registration (and backfilled by the migration for existing accounts); `ws:` permission policies, non-members get 404; named query filters `Tenant`/`Archived`, save interceptor, composite tenant FKs, bypass allow-list test (sync and async raw SQL); audit log; seeded platform roles; CLI `grant-platform-owner` (transaction + `sp_getapplock`).
+- Local tests: 221/221 backend. `dotnet ef database update` applied `AddWorkspacesTenancyAndAudit` to `ClassHubDb` (no accounts yet, so the backfill had nothing to do).
+- Verification of the corrected PR gate in GitHub Actions: `PR gate passed: … Codex review of 6dabf9b (base 56a5523, codex-cli 0.164.0) recorded, final round P0=0 P1=0 P2=0 P3=0, rejected 0, unresolved 0.`
 
 ### PR-gate evidence fix (merged, PR #7, `56a5523`)
 
