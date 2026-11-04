@@ -65,9 +65,16 @@ export function useSignOut() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async () => {
-      await api.client.POST('/api/auth/logout');
+      try {
+        await api.client.POST('/api/auth/logout');
+      } catch (error) {
+        // 401: the session had already ended, which is what signing out wants.
+        if (!(error instanceof ApiError && error.status === 401)) throw error;
+      }
     },
-    onSettled: () => {
+    // Only after the server ended the session: on failure the cookie is still valid, so the UI must not
+    // pretend to be signed out (the caller shows the error and the user can retry).
+    onSuccess: () => {
       api.resetToken();
       queryClient.clear();
       queryClient.setQueryData(meQueryKey, null);

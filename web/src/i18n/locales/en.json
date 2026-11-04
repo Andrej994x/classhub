@@ -131,7 +131,8 @@
       "message": "Please confirm your email address. Some features (such as publishing your site) need it.",
       "resend": "Send the link again",
       "resent": "A new confirmation link is on its way."
-    }
+    },
+    "logoutFailed": "Signing out failed: {{reason}} You are still signed in."
   },
   "devMailbox": {
     "title": "Dev mailbox",

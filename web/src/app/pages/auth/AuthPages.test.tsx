@@ -181,6 +181,30 @@ describe('session controls', () => {
     expect(api.to('/api/auth/resend-confirmation')[0]?.body).toEqual({ email: 'ana@example.com' });
   });
 
+  it('stays signed in and explains it when signing out fails', async () => {
+    const user = userEvent.setup();
+    const api = fakeApi({ me: teacher(), extra: [(call) => (call.path === '/api/auth/logout' ? problem(500, 'INTERNAL_ERROR') : undefined)] });
+    const { router } = await renderRoute('/student');
+
+    await user.click(await screen.findByRole('button', { name: 'Одјава' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Одјавата не успеа');
+    expect(router.state.location.pathname).toBe('/student');
+    expect(screen.getByRole('heading', { level: 1, name: 'Мои часови' })).toBeInTheDocument();
+    expect(api.to('/api/auth/logout')).toHaveLength(1);
+  });
+
+  it('treats an already ended session (401) as signed out', async () => {
+    const user = userEvent.setup();
+    fakeApi({ me: teacher(), extra: [(call) => (call.path === '/api/auth/logout' ? problem(401, 'UNAUTHORIZED') : undefined)] });
+    const { router } = await renderRoute('/student');
+
+    await user.click(await screen.findByRole('button', { name: 'Одјава' }));
+
+    expect(await screen.findByRole('heading', { level: 1, name: 'Најава' })).toBeInTheDocument();
+    expect(router.state.location.pathname).toBe('/login');
+  });
+
   it('signs out and goes to the sign-in page', async () => {
     const user = userEvent.setup();
     const api = fakeApi({ me: teacher() });

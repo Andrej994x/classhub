@@ -25,11 +25,16 @@ export function AccountMenu() {
         variant="ghost"
         size="sm"
         disabled={signOut.isPending}
-        onClick={() => signOut.mutate(undefined, { onSettled: () => void navigate('/login', { replace: true }) })}
+        onClick={() => signOut.mutate(undefined, { onSuccess: () => void navigate('/login', { replace: true }) })}
       >
         <LogOut className="h-4 w-4" aria-hidden />
         <span className="sr-only sm:not-sr-only">{t('auth.logout')}</span>
       </Button>
+      {signOut.isError && (
+        <span role="alert" className="max-w-56 text-xs text-destructive">
+          {t('auth.logoutFailed', { reason: errorMessage(signOut.error, t) })}
+        </span>
+      )}
     </div>
   );
 }
