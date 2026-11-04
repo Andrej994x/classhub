@@ -42,6 +42,19 @@ function AreaHome({ titleKey, emptyKey }: { titleKey: string; emptyKey: string }
   );
 }
 
+/** Placeholder inside the auth layout until the R0-P7 forms replace it. */
+export function AuthPlaceholderPage({ titleKey }: { titleKey: string }) {
+  const { t } = useTranslation();
+  return (
+    <Card>
+      <CardHeader>
+        <h1 className="text-2xl font-semibold tracking-tight">{t(titleKey)}</h1>
+        <CardDescription>{t('authShell.soon')}</CardDescription>
+      </CardHeader>
+    </Card>
+  );
+}
+
 export const TeacherDashboardPage = () => <AreaHome titleKey="dashboard.title" emptyKey="dashboard.empty" />;
 export const StudentHomePage = () => <AreaHome titleKey="student.title" emptyKey="student.empty" />;
 export const AdminHomePage = () => <AreaHome titleKey="admin.title" emptyKey="admin.empty" />;

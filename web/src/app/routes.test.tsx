@@ -56,6 +56,25 @@ describe('routes and layouts', () => {
     await i18n.changeLanguage('mk');
   });
 
+  it('renders the auth shell at /login and switches its language', async () => {
+    const user = userEvent.setup();
+    await renderRoute('/login');
+
+    expect(screen.getByRole('heading', { level: 1, name: 'Најава' })).toBeInTheDocument();
+    await user.selectOptions(screen.getByRole('combobox', { name: 'Јазик' }), 'en');
+
+    expect(await screen.findByRole('heading', { level: 1, name: 'Sign in' })).toBeInTheDocument();
+    expect(document.documentElement.lang).toBe('en');
+    await i18n.changeLanguage('mk');
+  });
+
+  it.each(['/register', '/verify-email', '/forgot-password', '/reset-password'])('renders %s inside the auth shell', async (path) => {
+    await renderRoute(path);
+    expect(screen.getByRole('heading', { level: 1 })).toBeInTheDocument();
+    expect(screen.getByRole('combobox', { name: 'Јазик' })).toBeInTheDocument();
+    expect(screen.queryByText(/Страницата не е пронајдена/)).not.toBeInTheDocument();
+  });
+
   it('renders a localized not-found page for unknown paths', async () => {
     await renderRoute('/does-not-exist');
     expect(screen.getByRole('heading', { name: /Страницата не е пронајдена/ })).toBeInTheDocument();

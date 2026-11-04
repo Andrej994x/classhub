@@ -34,6 +34,13 @@ export function rememberLanguage(language: Language) {
 
 export const i18n = createInstance();
 
+const setDocumentLanguage = (language: string) => {
+  if (typeof document !== 'undefined') document.documentElement.lang = language;
+};
+
+// Subscribed before init: with bundled resources, init already emits the first languageChanged.
+i18n.on('languageChanged', setDocumentLanguage);
+
 void i18n.use(initReactI18next).init({
   resources: { mk: { translation: mk }, en: { translation: en } },
   lng: typeof window === 'undefined' ? DEFAULT_LANGUAGE : detectLanguage(),
@@ -43,6 +50,5 @@ void i18n.use(initReactI18next).init({
   returnNull: false,
 });
 
-i18n.on('languageChanged', (language) => {
-  if (typeof document !== 'undefined') document.documentElement.lang = language;
-});
+// And set explicitly when init already finished synchronously (whatever the i18next event order).
+if (i18n.resolvedLanguage) setDocumentLanguage(i18n.resolvedLanguage);

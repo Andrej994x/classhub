@@ -73,5 +73,11 @@
       "EMAIL_ALREADY_CONFIRMED": "This email address is already confirmed.",
       "NETWORK_ERROR": "Cannot reach the server. Check your internet connection."
     }
+  },
+  "authShell": {
+    "verifyEmail": "Email confirmation",
+    "forgotPassword": "Forgot your password?",
+    "resetPassword": "Choose a new password",
+    "soon": "This form is coming soon."
   }
 }

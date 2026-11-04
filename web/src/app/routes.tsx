@@ -1,6 +1,6 @@
 import type { RouteObject } from 'react-router';
-import { AdminLayout, StudentLayout, TeacherLayout } from './layouts/AppShell.tsx';
-import { AdminHomePage, HomePage, NotFoundPage, StudentHomePage, TeacherDashboardPage } from './pages/Pages.tsx';
+import { AdminLayout, AuthLayout, StudentLayout, TeacherLayout } from './layouts/AppShell.tsx';
+import { AdminHomePage, AuthPlaceholderPage, HomePage, NotFoundPage, StudentHomePage, TeacherDashboardPage } from './pages/Pages.tsx';
 
 /**
  * SPA routes. Area prefixes must match the server-side SPA fallback in ClassHub.Api (SpaHosting) and the
@@ -9,6 +9,17 @@ import { AdminHomePage, HomePage, NotFoundPage, StudentHomePage, TeacherDashboar
  */
 export const routes: RouteObject[] = [
   { path: '/', element: <HomePage /> },
+  {
+    // Empty auth shell; the forms (sign in, registration, password reset) are added in R0-P7.
+    element: <AuthLayout />,
+    children: [
+      { path: '/login', element: <AuthPlaceholderPage titleKey="nav.signIn" /> },
+      { path: '/register', element: <AuthPlaceholderPage titleKey="nav.register" /> },
+      { path: '/verify-email', element: <AuthPlaceholderPage titleKey="authShell.verifyEmail" /> },
+      { path: '/forgot-password', element: <AuthPlaceholderPage titleKey="authShell.forgotPassword" /> },
+      { path: '/reset-password', element: <AuthPlaceholderPage titleKey="authShell.resetPassword" /> },
+    ],
+  },
   {
     path: '/app',
     element: <TeacherLayout />,
