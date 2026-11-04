@@ -11,7 +11,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Issue antiforgery tokens (XSRF-TOKEN cookie). */
+        /** Issue an antiforgery request token (also in the X-XSRF-TOKEN response header). */
         get: operations["GetAntiforgeryToken"];
         put?: never;
         post?: never;
@@ -24,7 +24,11 @@ export interface paths {
 }
 export type webhooks = Record<string, never>;
 export interface components {
-    schemas: never;
+    schemas: {
+        AntiforgeryTokenResponse: {
+            requestToken: string;
+        };
+    };
     responses: never;
     parameters: never;
     requestBodies: never;
@@ -42,12 +46,14 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description No Content */
-            204: {
+            /** @description OK */
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["AntiforgeryTokenResponse"];
+                };
             };
         };
     };

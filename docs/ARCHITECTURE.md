@@ -43,7 +43,7 @@ Persistence details: [DATABASE.md](DATABASE.md). Test infrastructure: [TESTING.m
 
 - Modules implement `IModule` and map relative routes; `MapClassHubModules` mounts them under `/api`. Modules are discovered from `ClassHub.Core` (and the host may register more `IModule` services, which tests use for probe endpoints).
 - Request validation: FluentValidation validators (auto-registered from Core) + `.WithValidation<TRequest>()` → 400 `VALIDATION_FAILED` with camelCase field paths (`items[0].displayName`).
-- CSRF: cookie-authenticated unsafe endpoints use `.RequireAntiforgeryHeader()`; the SPA gets tokens from `GET /api/auth/antiforgery` (`XSRF-TOKEN` readable cookie + HttpOnly `.ClassHub.Antiforgery`) and sends `X-XSRF-TOKEN`. Tokens are bound to the user: re-issue after sign-in/sign-out.
+- CSRF: cookie-authenticated unsafe endpoints use `.RequireAntiforgeryHeader()`. `GET /api/auth/antiforgery` sets only the HttpOnly, SameSite=Strict `.ClassHub.Antiforgery` cookie and returns the request token in the JSON body (`requestToken`) and the `X-XSRF-TOKEN` response header; the SPA keeps it in memory and sends it as `X-XSRF-TOKEN`. **No JavaScript-readable cookie** is used (a CodeQL finding on the first design). Tokens are bound to the user: fetch a new one after sign-in, sign-out or a 401.
 - Rate limiting: a **default** fixed-window limit per client IP for every `/api` request (global limiter, `RateLimiting:DefaultPermitLimit`, 300/min), plus stricter named policies endpoints opt into on top (`auth`, `public-form`, `public-read`). Health checks are not limited. Limits are validated on start; rejections are 429 `RATE_LIMITED` + `Retry-After`. In-memory, no Redis.
 - JSON request body limit: 1 MB (Kestrel); upload endpoints set their own limits later.
 

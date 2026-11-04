@@ -9,16 +9,15 @@ namespace ClassHub.Core.Infrastructure.Web;
 
 /// <summary>
 /// CSRF protection for cookie-authenticated JSON endpoints: every unsafe request (POST, PUT, PATCH,
-/// DELETE) must send the request token from the <c>XSRF-TOKEN</c> cookie in the <c>X-XSRF-TOKEN</c>
-/// header (ASP.NET Core antiforgery double-submit). Safe methods pass through.
+/// DELETE) must send the antiforgery request token in the <c>X-XSRF-TOKEN</c> header, matching the
+/// HttpOnly antiforgery cookie (ASP.NET Core antiforgery). The SPA gets the request token from the
+/// response of <c>GET /api/auth/antiforgery</c> (body and header) and keeps it in memory; no
+/// JavaScript-readable cookie is used. Safe methods pass through.
 /// </summary>
 public sealed class AntiforgeryHeaderFilter : IEndpointFilter
 {
-    /// <summary>Header the SPA sends with the request token.</summary>
+    /// <summary>Header carrying the request token (sent by the SPA, and returned when tokens are issued).</summary>
     public const string HeaderName = "X-XSRF-TOKEN";
-
-    /// <summary>JavaScript-readable cookie that carries the request token to the SPA.</summary>
-    public const string RequestTokenCookieName = "XSRF-TOKEN";
 
     /// <summary>HttpOnly cookie with the antiforgery cookie token.</summary>
     public const string CookieTokenCookieName = ".ClassHub.Antiforgery";
@@ -70,22 +69,18 @@ public static class AntiforgeryEndpointExtensions
     }
 
     /// <summary>
-    /// Issues a fresh antiforgery token pair: the HttpOnly cookie token and the JavaScript-readable
-    /// <c>XSRF-TOKEN</c> request-token cookie. Call after sign-in/sign-out because tokens are bound to the user.
+    /// Issues a fresh antiforgery token pair for the current user: stores the HttpOnly cookie token and
+    /// returns the request token, which is also sent in the <c>X-XSRF-TOKEN</c> response header. Call
+    /// after sign-in/sign-out because tokens are bound to the user. The response must not be cached.
     /// </summary>
-    public static void IssueAntiforgeryTokens(this HttpContext http)
+    public static string IssueAntiforgeryTokens(this HttpContext http)
     {
         ArgumentNullException.ThrowIfNull(http);
         var antiforgery = http.RequestServices.GetRequiredService<IAntiforgery>();
         var tokens = antiforgery.GetAndStoreTokens(http);
-        http.Response.Cookies.Append(AntiforgeryHeaderFilter.RequestTokenCookieName, tokens.RequestToken ?? string.Empty, new CookieOptions
-        {
-            HttpOnly = false,
-            Secure = http.Request.IsHttps,
-            SameSite = SameSiteMode.Strict,
-            Path = "/",
-            IsEssential = true,
-        });
+        var requestToken = tokens.RequestToken ?? string.Empty;
+        http.Response.Headers[AntiforgeryHeaderFilter.HeaderName] = requestToken;
         http.Response.Headers.CacheControl = "no-store";
+        return requestToken;
     }
 }

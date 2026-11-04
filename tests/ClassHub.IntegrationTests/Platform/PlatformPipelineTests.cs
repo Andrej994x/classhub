@@ -171,7 +171,7 @@ public sealed class PlatformPipelineTests : IClassFixture<PlatformPipelineTests.
         for (var i = 0; i < 3; i++)
         {
             using var ok = await client.GetAsync(uri, Ct);
-            ok.StatusCode.ShouldBe(HttpStatusCode.NoContent);
+            ok.StatusCode.ShouldBe(HttpStatusCode.OK);
         }
 
         using var limited = await client.GetAsync(uri, Ct);
@@ -254,20 +254,23 @@ public sealed class PlatformPipelineTests : IClassFixture<PlatformPipelineTests.
     }
 
     [Fact]
-    public async Task Antiforgery_endpoint_issues_a_readable_request_token_cookie_and_an_http_only_cookie_token()
+    public async Task Antiforgery_endpoint_returns_the_request_token_and_sets_only_an_http_only_cookie()
     {
         using var client = _host.Factory.CreateClient(new() { HandleCookies = false });
 
         using var response = await client.GetAsync(new Uri("/api/auth/antiforgery", UriKind.Relative), Ct);
 
-        response.StatusCode.ShouldBe(HttpStatusCode.NoContent);
-        var cookies = response.Headers.GetValues("Set-Cookie").ToList();
-        var requestToken = cookies.Single(c => c.StartsWith("XSRF-TOKEN=", StringComparison.Ordinal));
-        requestToken.ShouldContain("samesite=strict", Case.Insensitive);
-        requestToken.ShouldNotContain("httponly", Case.Insensitive);
-        var cookieToken = cookies.Single(c => c.StartsWith(".ClassHub.Antiforgery=", StringComparison.Ordinal));
-        cookieToken.ShouldContain("httponly", Case.Insensitive);
+        response.StatusCode.ShouldBe(HttpStatusCode.OK);
+        var bodyToken = (await ReadJsonAsync(response)).GetProperty("requestToken").GetString();
+        bodyToken.ShouldNotBeNullOrWhiteSpace();
+        response.Headers.GetValues("X-XSRF-TOKEN").Single().ShouldBe(bodyToken);
         response.Headers.CacheControl!.NoStore.ShouldBeTrue();
+
+        // No JavaScript-readable cookie: every cookie set here is HttpOnly and SameSite=Strict.
+        var cookies = response.Headers.GetValues("Set-Cookie").ToList();
+        cookies.ShouldHaveSingleItem().ShouldStartWith(".ClassHub.Antiforgery=");
+        cookies.ShouldAllBe(c => c.Contains("httponly", StringComparison.OrdinalIgnoreCase));
+        cookies.ShouldAllBe(c => c.Contains("samesite=strict", StringComparison.OrdinalIgnoreCase));
     }
 
     [Fact]
@@ -368,9 +371,8 @@ public sealed class PlatformPipelineTests : IClassFixture<PlatformPipelineTests.
     private static async Task<string> GetRequestTokenAsync(HttpClient client)
     {
         using var response = await client.GetAsync(new Uri("/api/auth/antiforgery", UriKind.Relative), Ct);
-        response.StatusCode.ShouldBe(HttpStatusCode.NoContent);
-        var setCookie = response.Headers.GetValues("Set-Cookie").Single(c => c.StartsWith("XSRF-TOKEN=", StringComparison.Ordinal));
-        return Uri.UnescapeDataString(setCookie.Split(';')[0]["XSRF-TOKEN=".Length..]);
+        response.StatusCode.ShouldBe(HttpStatusCode.OK);
+        return (await ReadJsonAsync(response)).GetProperty("requestToken").GetString()!;
     }
 
     private static string Header(HttpResponseMessage response, string name) =>

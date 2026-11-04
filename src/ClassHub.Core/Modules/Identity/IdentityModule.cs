@@ -7,6 +7,9 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace ClassHub.Core.Modules.Identity;
 
+/// <summary>Response of <c>GET /api/auth/antiforgery</c>: the request token for the <c>X-XSRF-TOKEN</c> header.</summary>
+public sealed record AntiforgeryTokenResponse(string RequestToken);
+
 /// <summary>
 /// Authentication endpoints (<c>/api/auth</c>). R0-P3 provides the antiforgery token endpoint; accounts,
 /// sign-in and password flows are added in R0-P4.
@@ -21,14 +24,11 @@ public sealed class IdentityModule : IModule
     {
         var auth = endpoints.MapGroup("/auth").WithTags("Auth");
 
-        // Issues the antiforgery token pair the SPA needs before any unsafe request.
+        // Issues the antiforgery token the SPA must send (X-XSRF-TOKEN) on every unsafe request.
         auth.MapGet("/antiforgery", (HttpContext http) =>
-            {
-                http.IssueAntiforgeryTokens();
-                return TypedResults.NoContent();
-            })
+                TypedResults.Ok(new AntiforgeryTokenResponse(http.IssueAntiforgeryTokens())))
             .AllowAnonymous()
             .WithName("GetAntiforgeryToken")
-            .WithSummary("Issue antiforgery tokens (XSRF-TOKEN cookie).");
+            .WithSummary("Issue an antiforgery request token (also in the X-XSRF-TOKEN response header).");
     }
 }

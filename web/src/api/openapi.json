@@ -10,11 +10,33 @@
         "tags": [
           "Auth"
         ],
-        "summary": "Issue antiforgery tokens (XSRF-TOKEN cookie).",
+        "summary": "Issue an antiforgery request token (also in the X-XSRF-TOKEN response header).",
         "operationId": "GetAntiforgeryToken",
         "responses": {
-          "204": {
-            "description": "No Content"
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AntiforgeryTokenResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "AntiforgeryTokenResponse": {
+        "required": [
+          "requestToken"
+        ],
+        "type": "object",
+        "properties": {
+          "requestToken": {
+            "type": "string"
           }
         }
       }
