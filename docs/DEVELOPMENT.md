@@ -71,7 +71,8 @@ NuGet packages are versioned centrally in `Directory.Packages.props` with lock f
 | `frontend` | `ci.yml` | `npm ci`, oxlint, i18n parity, API types current with `openapi.json`, Vitest, type-check + build |
 | `security` | `security.yml` | gitleaks (full history), vulnerable NuGet packages, `npm audit`, dependency review |
 | `codeql (csharp)`, `codeql (javascript-typescript)` | `codeql.yml` | CodeQL security-extended analysis |
-| `pr-gate` | `pr-gate.yml` | branch name; **generated** Codex evidence for exactly the checked commit (full head SHA, base SHA, CLI version, transcript SHA-256); severity counts recomputed from the raw output; unresolved P0/P1 = 0; rejected P0/P1 need written reasoning |
+| `e2e` | `ci.yml` | Playwright against the API in the E2E environment with a disposable SQL Server container (desktop + mobile, mk + en); report and traces uploaded on failure |
+| `pr-gate` and status `classhub/codex-evidence` | `pr-gate.yml` (`pull_request_target`, base-branch definition) | branch name; **signed, generated** Codex evidence for exactly the checked commit (full head SHA, base SHA, CLI version, transcript SHA-256, Ed25519 signature); severity counts recomputed from the raw output; unresolved P0/P1 = 0; rejected P0/P1 need written reasoning |
 
 ## Independent Codex review and PR evidence
 
