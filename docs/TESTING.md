@@ -6,7 +6,7 @@
 | Architecture | `tests/ClassHub.ArchitectureTests` | xUnit v3, NetArchTest | nothing |
 | Backend integration | `tests/ClassHub.IntegrationTests` | xUnit v3, `WebApplicationFactory<Program>`, Testcontainers.MsSql, Respawn | **Docker** (Linux containers) |
 | Frontend | `web/src/**/*.test.ts(x)` | Vitest, Testing Library, jsdom | Node |
-| E2E | `web/e2e` (from R0-P7) | Playwright | Docker, Node |
+| E2E | `web/e2e` | Playwright (Chromium: Desktop Chrome + Pixel 7) | Docker, Node, .NET SDK |
 
 ## Running
 
@@ -25,6 +25,21 @@ Tests run on Microsoft.Testing.Platform (`global.json`). The first integration r
 - `src/api/client.test.ts` drives the API client against a fake `fetch`: antiforgery fetch-before-unsafe, token adoption after sign-in, one retry on `ANTIFORGERY_INVALID`, ProblemDetails → `ApiError`, network errors, cookies.
 - `src/lib/format.test.ts`: DST-aware time zones, mk/en dates, money with currency, translated error codes.
 - Backend side: `Platform/SpaHostingTests` (integration) checks the fallback only for SPA prefixes, cache headers, and that `/api` and health checks never return the SPA.
+
+## End-to-end tests (Playwright, R0-P7)
+
+```powershell
+cd web; npx playwright install chromium   # once
+npm run e2e                                # builds the SPA and the API, then runs all projects
+```
+
+`e2e/global-setup.ts` starts the whole stack and returns its teardown:
+
+1. A disposable SQL Server 2022 container (same image as the integration tests) with a generated `sa` password, published on a random **loopback** port.
+2. The production SPA build (`npm run build` → `wwwroot/dist`) and a Release build of the API (skipped with `E2E_SKIP_BUILD=1`, as CI builds them in earlier steps).
+3. The API (`dotnet ClassHub.Api.dll`) in the **E2E** environment on `http://127.0.0.1:5180` (`E2E_PORT`), with `App:PublicBaseUrl` pointing at itself so email links open the SPA. At startup it migrates the database, but `E2EDatabase.AssertDisposable` refuses anything except a `ClassHubE2E_*` database on a loopback TCP endpoint with SQL authentication: the local `ClassHubDb` (Windows authentication, `.\SQLEXPRESS`) can never be used.
+
+Flows (each in **mk and en**, on **desktop and mobile**): register → dev mailbox → confirm → sign in → the dashboard shows the workspace → sign out; forgot password → reset link → the old password fails, the new one works; a second teacher opening the first teacher's workspace URL sees "not found". Texts come from the app's locale files, so wording changes do not break tests. CI job `e2e` uploads the HTML report and traces on failure.
 
 ## Integration test database safety
 

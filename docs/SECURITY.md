@@ -17,6 +17,11 @@ ASP.NET Core Identity with cookie sessions. See [ARCHITECTURE.md](ARCHITECTURE.m
 - Policies: `Authenticated`; workspace policies `ws:<permission>` (for example `ws:workspace.read`). Permissions are code constants (`WorkspacePermissions`), mapped from workspace roles (`WorkspaceRolePermissions`; today `Owner` has all workspace permissions). Unknown permission names fail when the policy is resolved.
 - Platform roles (`PlatformOwner`, `PlatformAdmin`) are Identity roles. **They grant no workspace access**: a platform admin without membership gets 404 on workspace routes (tested). The first Platform Owner is created only with the local CLI `dotnet run --project src/ClassHub.Api -- grant-platform-owner <email> [--force-add]` (audited, never exposed over HTTP). The owner check, the grant, the session revocation and the audit entry run in one transaction under an application lock (`sp_getapplock`), so concurrent bootstraps cannot both add an owner without `--force-add`.
 
+## E2E environment safety (R0-P7)
+
+- The `E2E` environment is the only one that migrates at startup, and only after `E2EDatabase.AssertDisposable` accepted the connection string: database `ClassHubE2E_*`, loopback TCP endpoint with an explicit port, no Windows authentication (tested with the local connection string, named instances, LocalDB and remote hosts).
+- The dev mailbox API and its SPA page are mapped only in Development, Testing and E2E (integration test for Production and Staging).
+
 ## Tenant isolation (R0-P5)
 
 A teacher's **workspace** is the tenant. Layers (each tested):

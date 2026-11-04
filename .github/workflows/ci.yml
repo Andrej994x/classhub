@@ -185,3 +185,59 @@ jobs:
 
       - name: Type-check and build
         run: npm run build
+
+  e2e:
+    name: e2e
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6.1.0
+        with:
+          global-json-file: global.json
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install
+        run: npm ci
+
+      - name: Install the Chromium browser for Playwright
+        run: npx playwright install --with-deps chromium
+
+      - name: Restore and build the API (locked mode)
+        working-directory: .
+        run: |
+          dotnet restore ClassHub.slnx --locked-mode
+          dotnet build src/ClassHub.Api --configuration Release --no-restore
+
+      - name: Build the SPA
+        run: npm run build
+
+      # Global setup starts a disposable SQL Server container (generated sa password, random loopback
+      # port) and the API in the E2E environment, which migrates only a ClassHubE2E_* database.
+      - name: Playwright (desktop + mobile, mk + en)
+        env:
+          CLASSHUB_TEST_SQL_IMAGE: ${{ env.SQL_SERVER_IMAGE }}
+          E2E_SKIP_BUILD: '1'
+        run: |
+          unset ConnectionStrings__ClassHub
+          npx playwright test
+
+      - name: Upload Playwright report and traces
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: playwright-report
+          path: |
+            web/playwright-report
+            web/test-results
+          if-no-files-found: ignore
+          retention-days: 14
