@@ -52,8 +52,10 @@ transcript="$(field 'Transcript SHA-256')"
 
 # 4. Raw Codex output present; recount severities from it.
 raw="$(awk '/<!-- codex-raw-output:start -->/{f=1;next}/<!-- codex-raw-output:end -->/{f=0}f' <<<"$body")"
+# Only presence is checked here; whether the review completed is decided semantically by the generator
+# (findings or an explicit clean verdict). The shortest real verdict, "No issues found.", has 14 characters.
 raw_chars="$(tr -d '[:space:]`' <<<"$raw" | wc -c)"
-(( raw_chars >= 40 )) || fail "Raw Codex output is missing between the codex-raw-output markers. $hint"
+(( raw_chars >= 10 )) || fail "Raw Codex output is missing between the codex-raw-output markers. $hint"
 
 declared="$( (grep -E '^Final round findings: ' <<<"$body" || true) | head -n1)"
 [[ "$declared" =~ ^Final\ round\ findings:\ P0=([0-9]+)\ P1=([0-9]+)\ P2=([0-9]+)\ P3=([0-9]+)[[:space:]]*$ ]] \

@@ -108,6 +108,15 @@ test('generated evidence for a clean review passes the gate', () => {
   assert.match(r.out, /PR gate passed/);
 });
 
+test('short explicit clean verdicts are accepted end to end', () => {
+  for (const verdict of ['No issues found.', 'No actionable findings.']) {
+    const message = extractFinalMessage(transcript(verdict));
+    assert.equal(message, verdict);
+    const r = runGate(applyEvidence('', evidence(message)));
+    assert.ok(r.ok, `${verdict}: ${r.out}`);
+  }
+});
+
 test('the gate fails when the evidence is for another commit', () => {
   const r = runGate(applyEvidence('', evidence(cleanMessage)), { headSha: 'd'.repeat(40) });
   assert.ok(!r.ok);

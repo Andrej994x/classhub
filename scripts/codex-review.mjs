@@ -47,7 +47,8 @@ export function extractFinalMessage(transcript) {
       break;
     }
   }
-  if (message.length < 20) throw new Error('The final Codex message is empty or too short.');
+  if (message.trim() === '') throw new Error('The final Codex message is empty.');
+  // Completion is decided by content (findings or an explicit clean verdict), never by length.
   assertCompletedReview(message);
   return message;
 }
