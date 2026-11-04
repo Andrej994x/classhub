@@ -1,0 +1,45 @@
+name: PR gate
+
+# Required check. Verifies the pull request follows the ClassHub workflow (docs/ROADMAP.md, section I):
+# allowed branch name, an independent Codex review recorded in the PR body (with the raw Codex
+# output), the reviewed commit belongs to this PR, and no unresolved critical/high findings.
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, edited, synchronize, reopened, ready_for_review]
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  pr-gate:
+    name: pr-gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # The gate script always comes from the base branch, so a PR cannot weaken its own gate.
+          ref: ${{ github.event.pull_request.base.sha }}
+          sparse-checkout: scripts/ci
+          persist-credentials: false
+
+      # Bootstrap only: the very first PR (R0-P1) introduces the gate, so the base has no script yet.
+      # Once main contains scripts/ci/pr-gate.sh, this step never runs.
+      - name: Use the PR's gate script (bootstrap, base has none)
+        if: hashFiles('scripts/ci/pr-gate.sh') == ''
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          sparse-checkout: scripts/ci
+          persist-credentials: false
+
+      - name: Check workflow evidence
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          HEAD_REF: ${{ github.event.pull_request.head.ref }}
+          PR_BODY: ${{ github.event.pull_request.body }}
+        run: bash scripts/ci/pr-gate.sh

@@ -1,0 +1,9 @@
+{
+  "app": {
+    "name": "ClassHub",
+    "tagline": "Platform for private teachers"
+  },
+  "errors": {
+    "notFound": "Page not found"
+  }
+}

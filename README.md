@@ -13,10 +13,23 @@ ClassHub is a SaaS platform for private teachers, tutors, professors and small e
 
 ## Documentation
 
+- [docs/PRODUCT_SCOPE.md](docs/PRODUCT_SCOPE.md): business requirements (source of truth for functionality)
 - [docs/ROADMAP.md](docs/ROADMAP.md): the approved master architecture and implementation plan
 - [docs/PROGRESS.md](docs/PROGRESS.md): live implementation status
+- [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md): prerequisites, setup, commands, CI checks, workflow
+- [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md): architecture as implemented
+- [docs/RECOVERY.md](docs/RECOVERY.md): resuming and repairing the workflow
+- [AGENTS.md](AGENTS.md) / [CLAUDE.md](CLAUDE.md): rules for AI agents, including the Codex review guidelines
 
-Setup instructions will be added in `docs/DEVELOPMENT.md` (R0-P1).
+## Quick start
+
+```powershell
+dotnet tool restore
+dotnet build ClassHub.slnx
+dotnet test --solution ClassHub.slnx
+dotnet run --project src/ClassHub.Api        # http://localhost:5080/health
+cd web; npm ci; npm run dev                  # http://localhost:5173
+```
 
 ## License
 

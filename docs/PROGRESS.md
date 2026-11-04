@@ -9,8 +9,8 @@ This is the live status of the autonomous implementation loop ([ROADMAP.md](ROAD
 | Release | R0 — Foundation |
 | Current phase | R0-P1 — Repository foundation & CI |
 | Branch | `chore/r0-p1-repository-foundation` (created from `main` @ `53d3f15`) |
-| Workflow step | 1 — branch created; R0-P0 result recorded (this commit) |
-| Next action | R0-P1 step 2–3: scaffold solution, web app, CI, docs (ROADMAP section K) |
+| Workflow step | 5 — implementation committed; Codex review next |
+| Next action | Codex review → PR → first CI run → create `main` ruleset → auto-merge |
 | Open blockers | None |
 
 ## Phase status

@@ -1,0 +1,98 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  DOTNET_NOLOGO: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+  DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
+  NODE_VERSION: '22'
+
+jobs:
+  backend:
+    name: backend
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6.1.0
+        with:
+          global-json-file: global.json
+
+      - name: Restore (locked mode)
+        run: dotnet restore ClassHub.slnx --locked-mode
+
+      - name: Build (Release, warnings as errors)
+        run: dotnet build ClassHub.slnx --configuration Release --no-restore -warnaserror
+
+      - name: Unit tests
+        run: dotnet test --project tests/ClassHub.UnitTests --configuration Release --no-build
+
+      - name: Architecture tests
+        run: dotnet test --project tests/ClassHub.ArchitectureTests --configuration Release --no-build
+
+  integration:
+    name: integration
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6.1.0
+        with:
+          global-json-file: global.json
+
+      - name: Restore (locked mode)
+        run: dotnet restore ClassHub.slnx --locked-mode
+
+      - name: Build
+        run: dotnet build ClassHub.slnx --configuration Release --no-restore
+
+      # From R0-P2 these tests start a disposable SQL Server 2022 container via Testcontainers
+      # (the runner's Docker engine). They never use any other database.
+      - name: Integration tests
+        run: dotnet test --project tests/ClassHub.IntegrationTests --configuration Release --no-build
+
+  frontend:
+    name: frontend
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install
+        run: npm ci
+
+      - name: Lint (oxlint)
+        run: npm run lint
+
+      - name: i18n parity (mk/en)
+        run: npm run i18n:check
+
+      - name: Unit and component tests (Vitest)
+        run: npm test
+
+      - name: Type-check and build
+        run: npm run build
