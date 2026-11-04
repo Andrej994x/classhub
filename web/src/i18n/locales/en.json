@@ -3,7 +3,81 @@
     "name": "ClassHub",
     "tagline": "Platform for private teachers"
   },
+  "common": {
+    "loading": "Loading…",
+    "retry": "Try again",
+    "close": "Close",
+    "openMenu": "Open menu",
+    "backHome": "Back to the home page"
+  },
+  "language": {
+    "label": "Language",
+    "mk": "Македонски",
+    "en": "English"
+  },
+  "nav": {
+    "main": "Main navigation",
+    "dashboard": "Home",
+    "settings": "Settings",
+    "studentHome": "My lessons",
+    "adminHome": "Administration",
+    "signIn": "Sign in",
+    "register": "Sign up"
+  },
+  "layout": {
+    "teacherArea": "Teacher workspace",
+    "studentArea": "Student area",
+    "adminArea": "Platform administration"
+  },
+  "home": {
+    "title": "Welcome to ClassHub",
+    "lead": "Build your teacher website, attract students and run your lessons from one place."
+  },
+  "dashboard": {
+    "title": "Home",
+    "empty": "Your workspace is ready. Soon you will see your next lessons and new requests here."
+  },
+  "student": {
+    "title": "My lessons",
+    "empty": "You have no scheduled lessons yet."
+  },
+  "admin": {
+    "title": "Administration",
+    "empty": "Administration tools are added in later phases."
+  },
+  "notFound": {
+    "title": "Page not found",
+    "lead": "The page you are looking for does not exist or has moved."
+  },
   "errors": {
-    "notFound": "Page not found"
+    "notFound": "Page not found",
+    "generic": "Something went wrong. Please try again.",
+    "codes": {
+      "BAD_REQUEST": "The request could not be processed.",
+      "VALIDATION_FAILED": "Please check the highlighted fields.",
+      "UNAUTHORIZED": "Please sign in to continue.",
+      "FORBIDDEN": "You are not allowed to do this.",
+      "NOT_FOUND": "Not found.",
+      "METHOD_NOT_ALLOWED": "This action is not allowed.",
+      "CONFLICT": "This conflicts with existing records.",
+      "CONCURRENCY_CONFLICT": "Someone else changed this. Refresh and try again.",
+      "BUSINESS_RULE_VIOLATION": "This is not allowed by the rules.",
+      "UNSUPPORTED_MEDIA_TYPE": "This content type is not supported.",
+      "PAYLOAD_TOO_LARGE": "The content is too large.",
+      "RATE_LIMITED": "Too many attempts. Please wait a moment and try again.",
+      "ANTIFORGERY_INVALID": "Your session expired. Refresh the page and try again.",
+      "INTERNAL_ERROR": "Unexpected error. Please try again later.",
+      "INVALID_CREDENTIALS": "The email or password is incorrect.",
+      "ACCOUNT_SUSPENDED": "This account is suspended.",
+      "INVALID_TOKEN": "The link is invalid or has expired. Request a new one.",
+      "EMAIL_ALREADY_CONFIRMED": "This email address is already confirmed.",
+      "NETWORK_ERROR": "Cannot reach the server. Check your internet connection."
+    }
+  },
+  "authShell": {
+    "verifyEmail": "Email confirmation",
+    "forgotPassword": "Forgot your password?",
+    "resetPassword": "Choose a new password",
+    "soon": "This form is coming soon."
   }
 }

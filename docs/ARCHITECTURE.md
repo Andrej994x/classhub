@@ -70,6 +70,15 @@ Persistence details: [DATABASE.md](DATABASE.md). Test infrastructure: [TESTING.m
 
 Details and tests: [SECURITY.md](SECURITY.md#tenant-isolation-r0-p5).
 
+## Web app and SPA hosting (R0-P6)
+
+- `web/` is one Vite SPA with a React Router data router (`src/app/routes.tsx`) and four area layouts (`src/app/layouts/AppShell.tsx`): teacher `/app`, student `/student`, admin `/admin`, and auth pages. Each layout has a desktop sidebar and a mobile drawer (Radix Dialog).
+- UI primitives are shadcn-style components in `src/components/ui` (Tailwind v4 tokens in `src/index.css`, `cn()` in `src/lib/utils.ts`).
+- Localization: i18next (`src/i18n`) with `mk` (default) and `en`. The choice is stored in `localStorage` (`classhub.language`) and sets `<html lang>`. `npm run i18n:check` enforces key parity and a translation for every backend error code in `ErrorCodes.cs`.
+- Formatting (`src/lib/format.ts`) always takes an IANA time zone and shows money from minor units with its currency.
+- API access: `src/api/client.ts` wraps `openapi-fetch` with the generated types. It sends cookies, keeps the antiforgery request token in memory, fetches it from `GET /api/auth/antiforgery` before the first unsafe request, adopts tokens re-issued in the `X-XSRF-TOKEN` response header, retries once on `ANTIFORGERY_INVALID`, and turns ProblemDetails into `ApiError`. `errorMessage()` shows only translated messages for error codes, never server text. TanStack Query is provided in `src/app/Providers.tsx`.
+- Hosting: `npm run build` writes to `src/ClassHub.Api/wwwroot/dist` (git-ignored, base `/dist/`). `Platform/SpaHosting.cs` serves static files before routing (hashed `/dist/assets` immutable, everything else `no-cache`) and maps `dist/index.html` as the fallback for `/` and the SPA prefixes only. `/api`, health checks and unknown paths never get the SPA, and the deny-by-default policy still applies to them.
+
 ## API contract → TypeScript
 
 `OpenApiContractTests` requires `web/src/api/openapi.json` to equal the API's `/openapi/v1.json` (server URLs removed). `npm run api:types` generates `web/src/api/schema.d.ts` from it; CI fails if either is stale. Update flow after an API change:

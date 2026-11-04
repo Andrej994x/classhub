@@ -56,6 +56,8 @@ if (!app.Environment.IsDevelopment() && !app.Environment.IsEnvironment("Testing"
 
 app.UseMiddleware<SecurityHeadersMiddleware>();
 app.UseSerilogRequestLogging();
+// The built SPA (wwwroot/dist) is static and public; the data it shows comes from protected APIs.
+app.UseClassHubStaticFiles();
 app.UseRouting();
 app.UseAuthentication();
 // Before authorization: requests that authorization rejects (401/403, unknown routes) still count
@@ -90,6 +92,9 @@ if (app.Environment.IsDevelopment())
 {
     app.MapScalarApiReference().AllowAnonymous();
 }
+
+// Last: the SPA's own areas fall back to index.html (never /api or health checks).
+app.MapClassHubSpa();
 
 await app.RunAsync();
 
