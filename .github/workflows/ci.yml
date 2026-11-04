@@ -163,6 +163,10 @@ jobs:
       - name: Install
         run: npm ci
 
+      - name: PR gate and Codex evidence generator tests
+        working-directory: .
+        run: node --test scripts/ci/pr-gate.test.mjs
+
       - name: Lint (oxlint)
         run: npm run lint
 

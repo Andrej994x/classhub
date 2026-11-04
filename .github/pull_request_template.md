@@ -19,23 +19,24 @@
 
 ## Codex review
 
-<!-- codex-review -->
-Codex review: completed
-Reviewed commit: <sha>
+### Review history
 
-| # | Severity | Finding | Resolution |
-|---|---|---|---|
+<!-- One row per round and finding: commit, severity, finding, resolution (fixed in <sha> / rejected). -->
 
-Unresolved critical/high: 0
+| # | Round / commit | Severity | Finding | Resolution |
+|---|---|---|---|---|
 
-<details><summary>Raw Codex output</summary>
-
-<!-- codex-raw-output:start -->
-```text
-(paste the full `codex review --base origin/main` output here)
-```
-<!-- codex-raw-output:end -->
-
-</details>
+<!--
+The evidence block below is GENERATED, never typed by hand. After the final commit:
+  node scripts/codex-review.mjs review                 # runs codex review --base origin/main on HEAD
+  node scripts/codex-review.mjs apply --body <this file> --evidence .codex-review/<head-sha>.evidence.md
+or, for an open PR:
+  node scripts/codex-review.mjs apply --pr <number> --evidence .codex-review/<head-sha>.evidence.md
+If a final-round P0/P1 finding is rejected, pass --rejected <n> to `review`/`evidence` and add a
+"### Rejected findings" section with the technical reasoning. The PR gate rejects anything else.
+-->
+<!-- codex-review:start -->
+(generated Codex evidence goes here)
+<!-- codex-review:end -->
 
 ## Security considerations / Remaining risks
