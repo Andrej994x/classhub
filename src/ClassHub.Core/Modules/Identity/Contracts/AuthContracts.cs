@@ -19,5 +19,8 @@ public sealed record MeResponse(
     string TimeZone,
     IReadOnlyList<string> PlatformRoles);
 
+/// <summary>Account preferences; omitted fields stay unchanged.</summary>
+public sealed record UpdateMeRequest(string? Locale, string? TimeZone);
+
 /// <summary>Generic acknowledgement that never reveals whether an account exists.</summary>
 public sealed record AcceptedResponse(string Message);

@@ -1,4 +1,5 @@
 using ClassHub.Core.Modules.Identity.Contracts;
+using ClassHub.Core.SharedKernel.Globalization;
 using FluentValidation;
 
 namespace ClassHub.Core.Modules.Identity.Application;
@@ -15,6 +16,19 @@ internal static class AuthRules
 
     public static IRuleBuilderOptions<T, string?> ValidNewPassword<T>(this IRuleBuilder<T, string?> rule) =>
         rule.NotEmpty().MinimumLength(PasswordMinLength).MaximumLength(PasswordMaxLength);
+}
+
+internal sealed class UpdateMeRequestValidator : AbstractValidator<UpdateMeRequest>
+{
+    public UpdateMeRequestValidator()
+    {
+        RuleFor(x => x.Locale)
+            .Must(SupportedLocales.IsSupported).WithMessage("Locale must be 'mk' or 'en'.")
+            .When(x => x.Locale is not null);
+        RuleFor(x => x.TimeZone)
+            .Must(id => id!.Length <= AppUser.TimeZoneMaxLength && TimeZones.IsIanaId(id)).WithMessage("Unknown time zone.")
+            .When(x => x.TimeZone is not null);
+    }
 }
 
 internal sealed class RegisterRequestValidator : AbstractValidator<RegisterRequest>

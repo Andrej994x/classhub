@@ -11,7 +11,10 @@ internal static class SpaHosting
 {
     /// <summary>Path prefixes owned by the SPA (must match web/src/app/routes.tsx and the reserved slugs).</summary>
     public static readonly string[] Prefixes =
-        ["/app", "/student", "/admin", "/login", "/register", "/verify-email", "/forgot-password", "/reset-password", "/dev/mailbox"];
+        ["/app", "/student", "/admin", "/login", "/register", "/verify-email", "/forgot-password", "/reset-password"];
+
+    /// <summary>The dev mailbox page; mapped only where the dev mailbox API exists (Development, Testing, E2E).</summary>
+    public const string DevMailboxPrefix = "/dev/mailbox";
 
     public const string IndexFile = "dist/index.html";
 
@@ -34,7 +37,11 @@ internal static class SpaHosting
     public static WebApplication MapClassHubSpa(this WebApplication app)
     {
         app.MapFallbackToFile("/", IndexFile, NoCache()).AllowAnonymous();
-        foreach (var prefix in Prefixes)
+        var environment = app.Environment;
+        var prefixes = environment.IsDevelopment() || environment.IsEnvironment("Testing") || environment.IsEnvironment("E2E")
+            ? [.. Prefixes, DevMailboxPrefix]
+            : Prefixes;
+        foreach (var prefix in prefixes)
         {
             app.MapFallbackToFile($"{prefix}/{{**path}}", IndexFile, NoCache()).AllowAnonymous();
         }

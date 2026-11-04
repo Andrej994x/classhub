@@ -8,5 +8,6 @@ import { i18n } from '../i18n/index.ts';
 export async function renderRoute(path: string, language: 'mk' | 'en' = 'mk') {
   await i18n.changeLanguage(language);
   const router = createMemoryRouter(routes, { initialEntries: [path] });
-  return { router, ...render(<Providers queryClient={createQueryClient()}><RouterProvider router={router} /></Providers>) };
+  const queryClient = createQueryClient();
+  return { router, queryClient, ...render(<Providers queryClient={queryClient}><RouterProvider router={router} /></Providers>) };
 }

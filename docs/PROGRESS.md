@@ -7,10 +7,10 @@ This is the live status of the autonomous implementation loop ([ROADMAP.md](ROAD
 | Field | Value |
 |---|---|
 | Release | R0 — Foundation |
-| Current phase | R0-P6 — Web foundation & localization |
-| Branch | `feature/r0-p6-web-foundation` (from `main` @ `22f1158`) |
+| Current phase | R0-P7 — Auth UI & first E2E |
+| Branch | `feature/r0-p7-auth-ui` (from `main` @ `eab9c19`) |
 | Workflow step | 5 — commit-bound Codex review, then PR |
-| Next action | R0-P6 PR; then R0-P7 (committed locally on `feature/r0-p7-auth-ui`, stacked on R0-P6; Playwright green locally) and add `e2e` to the required checks after its first run |
+| Next action | R0-P7 PR; after the first `e2e` run add `e2e` to the ruleset's required checks (ROADMAP R0-P7 acceptance: "the `e2e` job is green and required"); then R0-P8 |
 | Open blockers | None |
 
 ## Phase status
@@ -25,8 +25,8 @@ Status values: `not started`, `in progress`, `in review` (PR open), `merged`, `b
 | R0-P3 | API platform baseline | merged | `chore/r0-p3-api-platform-baseline` | [#5](https://github.com/Andrej994x/classhub/pull/5) | `293ae76` | 5 rounds: 3 × P2 (forwarded headers fail-open, missing default rate limit, limiter after authorization) fixed; rounds 4–5 clean; CodeQL HttpOnly finding fixed | 9/9 green | Blocked once by an outdated CodeQL review thread (resolved after the fix) |
 | R0-P4 | Authentication (Identity) | merged | `feature/r0-p4-authentication` | [#6](https://github.com/Andrej994x/classhub/pull/6) | `5203a72` | 3 rounds: 4 findings fixed (atomic registration, confirmation token check, reset enumeration, READCOMMITTEDLOCK), 1 P1 rejected with evidence | 9/9 green | |
 | R0-P5 | Workspaces, roles & tenancy | merged | `feature/r0-p5-workspace-tenancy` | [#8](https://github.com/Andrej994x/classhub/pull/8) | `22f1158` | Pre-review + 4 rounds: 8 × P2 fixed (owner grant atomic + serialized, IANA time zones, ISO 4217 currencies, workspace backfill migration, OpenAPI route parameters, async raw-SQL detection, no-op audit); round 4 clean | 9/9 green | First PR checked by the corrected `pr-gate` (generated evidence of `6dabf9b`); migration applied to local `ClassHubDb` |
-| R0-P6 | Web foundation & localization | in review | `feature/r0-p6-web-foundation` | | | | | |
-| R0-P7 | Auth UI & first E2E | not started | | | | | | |
+| R0-P6 | Web foundation & localization | merged | `feature/r0-p6-web-foundation` | [#9](https://github.com/Andrej994x/classhub/pull/9) | `eab9c19` | 3 rounds: 3 × P2 fixed (antiforgery fetch network errors, auth shell at `/login`, `<html lang>` at startup); round 3 clean | 9/9 green | |
+| R0-P7 | Auth UI & first E2E | in review | `feature/r0-p7-auth-ui` | | | | | Playwright 12/12 locally |
 | R0-P8 | Foundation hardening & closeout | not started | | | | | | |
 
 Releases 1–3 and Beta are listed in [ROADMAP.md](ROADMAP.md) section D. They are added to this table when Release 0 is complete.
@@ -52,6 +52,11 @@ Releases 1–3 and Beta are listed in [ROADMAP.md](ROADMAP.md) section D. They a
 - **Gate passed:** `dotnet ef database update` created `ClassHubDb` on `.\SQLEXPRESS` via Windows authentication. The running API connects as `EFCore/10.0.14` over **Shared memory**, `NTLM`. Collation `Macedonian_FYROM_100_CI_AS_SC`, RCSI on, migrations `InitialTechnical` + `EnableReadCommittedSnapshot` applied. No SQL Server configuration was changed.
 - Local tests: 49/49 green (unit 5, architecture 1, integration 43 on Testcontainers SQL Server 2022).
 - CI `migrations` job sequence verified locally against a throwaway container.
+
+### R0-P6 — Web foundation & localization (merged, PR #9, `eab9c19`)
+
+- React Router data router with teacher/student/admin/auth layouts (responsive shell, mobile drawer), shadcn-style primitives on Tailwind v4 tokens, i18next mk/en (remembered choice, `<html lang>`), `openapi-fetch` client (cookies, in-memory antiforgery token, ProblemDetails → translated messages), Intl helpers; production build served by the API from `wwwroot/dist` (SPA fallback only for its prefixes).
+- Local tests: 234/234 backend, 30/30 Vitest; manual check of the API serving the built SPA.
 
 ### R0-P5 — Workspaces, roles & tenancy (merged, PR #8, `22f1158`)
 

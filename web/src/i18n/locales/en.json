@@ -22,7 +22,8 @@
     "studentHome": "My lessons",
     "adminHome": "Administration",
     "signIn": "Sign in",
-    "register": "Sign up"
+    "register": "Sign up",
+    "openWorkspace": "Open my workspace"
   },
   "layout": {
     "teacherArea": "Teacher workspace",
@@ -35,7 +36,8 @@
   },
   "dashboard": {
     "title": "Home",
-    "empty": "Your workspace is ready. Soon you will see your next lessons and new requests here."
+    "empty": "Your workspace is ready. Soon you will see your next lessons and new requests here.",
+    "noWorkspace": "No workspace is linked to this account."
   },
   "student": {
     "title": "My lessons",
@@ -74,10 +76,71 @@
       "NETWORK_ERROR": "Cannot reach the server. Check your internet connection."
     }
   },
-  "authShell": {
-    "verifyEmail": "Email confirmation",
-    "forgotPassword": "Forgot your password?",
-    "resetPassword": "Choose a new password",
-    "soon": "This form is coming soon."
+  "auth": {
+    "logout": "Sign out",
+    "backToLogin": "Back to sign in",
+    "fields": {
+      "email": "Email",
+      "password": "Password",
+      "newPassword": "New password",
+      "confirmPassword": "Repeat the password",
+      "rememberMe": "Keep me signed in on this device",
+      "passwordHint": "At least {{min}} characters. A phrase of a few words works well."
+    },
+    "validation": {
+      "emailRequired": "Enter your email address.",
+      "emailInvalid": "Enter a valid email address.",
+      "passwordRequired": "Enter your password.",
+      "passwordTooShort": "The password must have at least {{min}} characters.",
+      "passwordTooLong": "The password is too long.",
+      "passwordsDiffer": "The passwords do not match.",
+      "passwordRejected": "Choose a stronger password: avoid common passwords and parts of your email address."
+    },
+    "login": {
+      "title": "Sign in",
+      "lead": "Welcome back to ClassHub.",
+      "submit": "Sign in",
+      "forgot": "Forgot your password?",
+      "noAccount": "No account yet?"
+    },
+    "register": {
+      "title": "Create your teacher account",
+      "lead": "Your workspace is created automatically.",
+      "submit": "Create account",
+      "haveAccount": "Already have an account?",
+      "sentTitle": "Check your email",
+      "sent": "If {{email}} can receive email, a confirmation link is on its way. Open it to confirm your address."
+    },
+    "verify": {
+      "title": "Email confirmation",
+      "done": "Your email address is confirmed.",
+      "continue": "Continue to ClassHub"
+    },
+    "forgot": {
+      "title": "Forgot your password?",
+      "lead": "Enter your email and we will send you a link to choose a new password.",
+      "submit": "Send link",
+      "sent": "If an account exists for this address, a link to reset the password is on its way."
+    },
+    "reset": {
+      "title": "Choose a new password",
+      "submit": "Save the new password",
+      "done": "Your password was changed. You were signed out everywhere; sign in with the new password."
+    },
+    "unconfirmed": {
+      "message": "Please confirm your email address. Some features (such as publishing your site) need it.",
+      "resend": "Send the link again",
+      "resent": "A new confirmation link is on its way."
+    },
+    "logoutFailed": "Signing out failed: {{reason}} You are still signed in."
+  },
+  "devMailbox": {
+    "title": "Dev mailbox",
+    "lead": "Emails the application sent in development. Nothing here leaves this computer.",
+    "to": "Recipient",
+    "show": "Show",
+    "messages": "Messages",
+    "empty": "No messages.",
+    "unavailable": "The dev mailbox is not available in this environment."
   }
 }

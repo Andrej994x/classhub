@@ -41,7 +41,7 @@ The SPA areas are `/app` (teacher), `/student`, `/admin` and the auth pages. Lan
 
 ## Email in development
 
-Emails (account confirmation, password reset) go to the **dev mailbox**: the `DevMailbox` table in `ClassHubDb`, readable at `GET http://localhost:5080/api/dev/mailbox?to=<email>` (Development only; a page for it comes in R0-P7). Links point to `App:PublicBaseUrl` (`http://localhost:5173` in Development). No email leaves the machine.
+Emails (account confirmation, password reset) go to the **dev mailbox**: the `DevMailbox` table in `ClassHubDb`, readable at `GET http://localhost:5080/api/dev/mailbox?to=<email>` (Development, Testing and E2E only), and as a page at `/dev/mailbox` (links in the messages are clickable). Links point to `App:PublicBaseUrl` (`http://localhost:5173` in Development). No email leaves the machine.
 
 ## Checks (run before every commit)
 

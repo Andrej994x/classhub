@@ -29,6 +29,8 @@ export default defineConfig(({ command }) => ({
   },
   test: {
     environment: 'jsdom',
+    // Playwright specs live in e2e/ and run with Playwright, not Vitest.
+    include: ['src/**/*.test.{ts,tsx}'],
     setupFiles: ['./src/test/setup.ts'],
     css: false,
     restoreMocks: true,

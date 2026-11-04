@@ -79,7 +79,16 @@ Details and tests: [SECURITY.md](SECURITY.md#tenant-isolation-r0-p5).
 - API access: `src/api/client.ts` wraps `openapi-fetch` with the generated types. It sends cookies, keeps the antiforgery request token in memory, fetches it from `GET /api/auth/antiforgery` before the first unsafe request, adopts tokens re-issued in the `X-XSRF-TOKEN` response header, retries once on `ANTIFORGERY_INVALID`, and turns ProblemDetails into `ApiError`. `errorMessage()` shows only translated messages for error codes, never server text. TanStack Query is provided in `src/app/Providers.tsx`.
 - Hosting: `npm run build` writes to `src/ClassHub.Api/wwwroot/dist` (git-ignored, base `/dist/`). `Platform/SpaHosting.cs` serves static files before routing (hashed `/dist/assets` immutable, everything else `no-cache`) and maps `dist/index.html` as the fallback for `/` and the SPA prefixes only. `/api`, health checks and unknown paths never get the SPA, and the deny-by-default policy still applies to them.
 
-## API contract → TypeScript
+## Auth UI and session (R0-P7)
+
+- Screens (`src/app/pages/auth`): sign in, register, verify email, forgot and reset password, with React Hook Form + Zod (`src/auth/schemas.ts` mirrors the API rules; the API stays authoritative). Field errors from the API are shown as translated messages, never as server text.
+- Session (`src/auth/session.ts`): `useMe()` (`GET /api/auth/me`, `null` on 401), sign-in/sign-out mutations that clear the query cache, and the account language: after sign-in the account's language wins; switching language while signed in saves it with `PATCH /api/auth/me` (`locale`, `timeZone`).
+- `RequireAuth` guards `/app`, `/student` and `/admin` (UX only) and sends visitors to `/login?returnTo=…`; `safeReturnTo` accepts only same-site paths (no open redirect).
+- Teacher area: `/app` opens `/app/w/{workspaceId}`; a workspace the user is not a member of shows "not found" (the API answers 404). The header shows the account and sign-out; unconfirmed accounts see a banner with "send again".
+- Tokens from email links are read from the URL fragment once and removed from the address bar.
+- OpenAPI: `RouteParameterOperationTransformer` documents route parameters that handlers do not bind (workspace routes), so the generated client can fill them.
+
+
 
 `OpenApiContractTests` requires `web/src/api/openapi.json` to equal the API's `/openapi/v1.json` (server URLs removed). `npm run api:types` generates `web/src/api/schema.d.ts` from it; CI fails if either is stale. Update flow after an API change:
 

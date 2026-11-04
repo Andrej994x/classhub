@@ -211,6 +211,45 @@
             }
           }
         }
+      },
+      "patch": {
+        "tags": [
+          "Auth"
+        ],
+        "summary": "Update the account's language and time zone.",
+        "operationId": "UpdateMe",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateMeRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MeResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpValidationProblemDetails"
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/api/auth/forgot-password": {
@@ -623,6 +662,27 @@
             ]
           },
           "newPassword": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "UpdateMeRequest": {
+        "required": [
+          "locale",
+          "timeZone"
+        ],
+        "type": "object",
+        "properties": {
+          "locale": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "timeZone": {
             "type": [
               "null",
               "string"

@@ -115,7 +115,8 @@ export interface paths {
         delete?: never;
         options?: never;
         head?: never;
-        patch?: never;
+        /** Update the account's language and time zone. */
+        patch: operations["UpdateMe"];
         trace?: never;
     };
     "/api/auth/forgot-password": {
@@ -240,6 +241,10 @@ export interface components {
             email: null | string;
             token: null | string;
             newPassword: null | string;
+        };
+        UpdateMeRequest: {
+            locale: null | string;
+            timeZone: null | string;
         };
         UpdateWorkspaceRequest: {
             name: null | string;
@@ -451,6 +456,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["MeResponse"];
+                };
+            };
+        };
+    };
+    UpdateMe: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateMeRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MeResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["HttpValidationProblemDetails"];
                 };
             };
         };

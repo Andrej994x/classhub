@@ -5,7 +5,10 @@ import { Link, NavLink, Outlet } from 'react-router';
 import { Button } from '../../components/ui/button.tsx';
 import { Sheet } from '../../components/ui/sheet.tsx';
 import { cn } from '../../lib/utils.ts';
+import { RequireAuth } from '../../auth/RequireAuth.tsx';
+import { useMyWorkspaces } from '../../auth/session.ts';
 import { LanguageSwitcher } from '../components/LanguageSwitcher.tsx';
+import { AccountMenu, UnconfirmedEmailBanner } from '../components/SessionControls.tsx';
 
 export interface NavItem {
   to: string;
@@ -56,6 +59,7 @@ export function AppShell({ areaKey, nav, actions }: { areaKey: string; nav: NavI
         <div className="ml-auto flex items-center gap-2">
           {actions}
           <LanguageSwitcher />
+          <AccountMenu />
         </div>
       </header>
 
@@ -64,6 +68,7 @@ export function AppShell({ areaKey, nav, actions }: { areaKey: string; nav: NavI
           <NavLinks items={nav} />
         </nav>
         <main className="min-w-0 flex-1 p-4 md:p-8">
+          <UnconfirmedEmailBanner />
           <Outlet />
         </main>
       </div>
@@ -77,19 +82,37 @@ export function AppShell({ areaKey, nav, actions }: { areaKey: string; nav: NavI
   );
 }
 
+function TeacherShell() {
+  const workspaces = useMyWorkspaces();
+  const first = workspaces.data?.[0];
+  return (
+    <AppShell
+      areaKey="layout.teacherArea"
+      nav={[
+        { to: first ? `/app/w/${first.id}` : '/app', labelKey: 'nav.dashboard', end: true },
+        { to: '/app/settings', labelKey: 'nav.settings' },
+      ]}
+    />
+  );
+}
+
 export const TeacherLayout = () => (
-  <AppShell
-    areaKey="layout.teacherArea"
-    nav={[
-      { to: '/app', labelKey: 'nav.dashboard', end: true },
-      { to: '/app/settings', labelKey: 'nav.settings' },
-    ]}
-  />
+  <RequireAuth>
+    <TeacherShell />
+  </RequireAuth>
 );
 
-export const StudentLayout = () => <AppShell areaKey="layout.studentArea" nav={[{ to: '/student', labelKey: 'nav.studentHome', end: true }]} />;
+export const StudentLayout = () => (
+  <RequireAuth>
+    <AppShell areaKey="layout.studentArea" nav={[{ to: '/student', labelKey: 'nav.studentHome', end: true }]} />
+  </RequireAuth>
+);
 
-export const AdminLayout = () => <AppShell areaKey="layout.adminArea" nav={[{ to: '/admin', labelKey: 'nav.adminHome', end: true }]} />;
+export const AdminLayout = () => (
+  <RequireAuth>
+    <AppShell areaKey="layout.adminArea" nav={[{ to: '/admin', labelKey: 'nav.adminHome', end: true }]} />
+  </RequireAuth>
+);
 
 /** Centered card layout for sign-in, registration and password screens. */
 export function AuthLayout() {

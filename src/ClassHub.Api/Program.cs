@@ -42,6 +42,9 @@ if (await PlatformCommands.TryRunAsync(app, args))
     return;
 }
 
+// E2E only: migrate the disposable Playwright database (guarded; never ClassHubDb).
+await E2EDatabase.MigrateIfE2EAsync(app);
+
 if (app.Services.GetRequiredService<ForwardedHeadersSettings>().Enabled)
 {
     app.UseForwardedHeaders();
