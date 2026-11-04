@@ -2,40 +2,71 @@ import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
 import { i18n } from '../i18n/index.ts';
+import { fakeApi, teacher, WORKSPACE_ID } from '../test/fakeApi.ts';
 import { renderRoute } from '../test/render.tsx';
 
 describe('routes and layouts', () => {
   it('renders the home page in Macedonian by default', async () => {
+    fakeApi();
     await renderRoute('/');
     expect(screen.getByRole('heading', { level: 1, name: 'Добредојдовте во ClassHub' })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Регистрација' })).toHaveAttribute('href', '/register');
+    expect(await screen.findByRole('link', { name: 'Регистрација' })).toHaveAttribute('href', '/register');
   });
 
   it('renders the home page in English', async () => {
+    fakeApi();
     await renderRoute('/', 'en');
     expect(screen.getByRole('heading', { level: 1, name: 'Welcome to ClassHub' })).toBeInTheDocument();
   });
 
+  it('offers the workspace instead of sign-up when signed in', async () => {
+    fakeApi({ me: teacher() });
+    await renderRoute('/');
+    expect(await screen.findByRole('link', { name: 'Отвори го мојот простор' })).toHaveAttribute('href', '/app');
+  });
+
   it.each([
-    ['/app', 'Почетна', 'Наставнички простор'],
     ['/student', 'Мои часови', 'Ученички простор'],
     ['/admin', 'Администрација', 'Администрација на платформата'],
   ])('renders the %s area shell with its navigation', async (path, title, area) => {
+    fakeApi({ me: teacher() });
     await renderRoute(path);
-    expect(screen.getByRole('heading', { level: 1, name: title })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { level: 1, name: title })).toBeInTheDocument();
     expect(screen.getAllByText(new RegExp(area)).length).toBeGreaterThan(0);
     expect(screen.getByRole('navigation', { name: 'Главна навигација' })).toBeInTheDocument();
   });
 
-  it('marks the active navigation item', async () => {
-    await renderRoute('/app');
+  it('opens the teacher workspace from /app and shows its name', async () => {
+    fakeApi({ me: teacher() });
+    const { router } = await renderRoute('/app');
+
+    expect(await screen.findByRole('heading', { level: 1, name: 'Математика со Ана' })).toBeInTheDocument();
+    expect(router.state.location.pathname).toBe(`/app/w/${WORKSPACE_ID}`);
     const nav = screen.getByRole('navigation', { name: 'Главна навигација' });
     expect(within(nav).getByRole('link', { name: 'Почетна' })).toHaveClass('text-primary');
   });
 
+  it("shows 'not found' for a workspace the teacher is not a member of", async () => {
+    fakeApi({ me: teacher() });
+    await renderRoute('/app/w/99999999-9999-4999-8999-999999999999');
+
+    expect(await screen.findByRole('heading', { level: 1, name: 'Страницата не е пронајдена' })).toBeInTheDocument();
+  });
+
+  it('sends anonymous visitors to sign in and remembers where they wanted to go', async () => {
+    fakeApi();
+    const { router } = await renderRoute('/app/w/abc?tab=1');
+
+    expect(await screen.findByRole('heading', { level: 1, name: 'Најава' })).toBeInTheDocument();
+    expect(router.state.location.pathname).toBe('/login');
+    expect(new URLSearchParams(router.state.location.search).get('returnTo')).toBe('/app/w/abc?tab=1');
+  });
+
   it('opens the mobile navigation drawer and closes it after navigating', async () => {
     const user = userEvent.setup();
+    fakeApi({ me: teacher() });
     await renderRoute('/app');
+    await screen.findByRole('heading', { level: 1, name: 'Математика со Ана' });
 
     await user.click(screen.getByRole('button', { name: 'Отвори мени' }));
     const drawer = await screen.findByRole('dialog', { name: 'Наставнички простор' });
@@ -46,6 +77,7 @@ describe('routes and layouts', () => {
 
   it('switches the UI language and remembers it', async () => {
     const user = userEvent.setup();
+    const api = fakeApi();
     await renderRoute('/');
 
     await user.selectOptions(screen.getByRole('combobox', { name: 'Јазик' }), 'en');
@@ -53,6 +85,32 @@ describe('routes and layouts', () => {
     expect(await screen.findByRole('heading', { level: 1, name: 'Welcome to ClassHub' })).toBeInTheDocument();
     expect(window.localStorage.getItem('classhub.language')).toBe('en');
     expect(document.documentElement.lang).toBe('en');
+    expect(api.to('/api/auth/me', 'PATCH')).toHaveLength(0); // anonymous: nothing saved on the server
+    await i18n.changeLanguage('mk');
+  });
+
+  it('saves the language on the account when signed in', async () => {
+    const user = userEvent.setup();
+    const api = fakeApi({
+      me: teacher(),
+      extra: [(call) => (call.method === 'PATCH' && call.path === '/api/auth/me' ? new Response(JSON.stringify(teacher({ locale: 'en' })), { status: 200, headers: { 'content-type': 'application/json' } }) : undefined)],
+    });
+    await renderRoute('/app');
+    await screen.findByRole('heading', { level: 1, name: 'Математика со Ана' });
+
+    await user.selectOptions(screen.getByRole('combobox', { name: 'Јазик' }), 'en');
+
+    await screen.findByRole('heading', { level: 1, name: 'Математика со Ана' });
+    await expect.poll(() => api.to('/api/auth/me', 'PATCH').length).toBe(1);
+    expect(api.to('/api/auth/me', 'PATCH')[0]).toMatchObject({ body: { locale: 'en' }, xsrf: 'xsrf' });
+    await i18n.changeLanguage('mk');
+  });
+
+  it('adopts the account language after loading the session', async () => {
+    fakeApi({ me: teacher({ locale: 'en' }) });
+    await renderRoute('/app');
+
+    expect(await screen.findByRole('navigation', { name: 'Main navigation' })).toBeInTheDocument();
     await i18n.changeLanguage('mk');
   });
 
@@ -76,6 +134,7 @@ describe('routes and layouts', () => {
   });
 
   it('renders a localized not-found page for unknown paths', async () => {
+    fakeApi();
     await renderRoute('/does-not-exist');
     expect(screen.getByRole('heading', { name: /Страницата не е пронајдена/ })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Назад кон почетната страница' })).toHaveAttribute('href', '/');

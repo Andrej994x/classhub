@@ -15,7 +15,8 @@ export interface ApiClientOptions {
   fetch?: typeof globalThis.fetch;
 }
 
-export function createApiClient({ baseUrl = '', fetch: fetchImpl = globalThis.fetch.bind(globalThis) }: ApiClientOptions = {}) {
+// The default looks up globalThis.fetch on every call, so tests can stub it after this module loaded.
+export function createApiClient({ baseUrl = '', fetch: fetchImpl = (input, init) => globalThis.fetch(input, init) }: ApiClientOptions = {}) {
   let token: string | null = null;
   let pending: Promise<string> | null = null;
 
@@ -93,4 +94,5 @@ export function createApiClient({ baseUrl = '', fetch: fetchImpl = globalThis.fe
   };
 }
 
-export const api = createApiClient();
+// Absolute same-origin base: Request() needs an absolute URL outside browsers (tests); same result in the app.
+export const api = createApiClient({ baseUrl: typeof window === 'undefined' ? '' : window.location.origin });
