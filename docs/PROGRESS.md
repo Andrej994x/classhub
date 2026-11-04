@@ -7,10 +7,10 @@ This is the live status of the autonomous implementation loop ([ROADMAP.md](ROAD
 | Field | Value |
 |---|---|
 | Release | R0 — Foundation |
-| Current phase | R0-P2 — EF Core & SQL Server foundation |
-| Branch | `chore/r0-p2-database-foundation` (from `main` @ `2e3c225`) |
+| Current phase | R0-P3 — API platform baseline |
+| Branch | `chore/r0-p3-api-platform-baseline` (from `main` @ `63d189d`) |
 | Workflow step | 5 — implementation and local checks done; Codex review next |
-| Next action | Codex review → PR → add `migrations` to the ruleset → auto-merge → R0-P3 |
+| Next action | Codex review → PR → auto-merge → R0-P4 |
 | Open blockers | None |
 
 ## Phase status
@@ -21,8 +21,8 @@ Status values: `not started`, `in progress`, `in review` (PR open), `merged`, `b
 |---|---|---|---|---|---|---|---|---|
 | R0-P0 | Local & GitHub prerequisites | merged (direct bootstrap) | `main` | — | `53d3f15` | n/a (no code) | n/a | Repo created and configured |
 | R0-P1 | Repository foundation & CI | merged | `chore/r0-p1-repository-foundation` | [#1](https://github.com/Andrej994x/classhub/pull/1) | `2e3c225` | 2 rounds: 1 × P2 (i18n check ignored a missing locale) fixed; round 2 clean | 8/8 green | Ruleset `main protection` created and verified |
-| R0-P2 | EF Core & SQL Server foundation | in progress | `chore/r0-p2-database-foundation` | | | | | Windows-auth gate passed (Shared memory, NTLM) |
-| R0-P3 | API platform baseline | not started | | | | | | |
+| R0-P2 | EF Core & SQL Server foundation | merged | `chore/r0-p2-database-foundation` | [#4](https://github.com/Andrej994x/classhub/pull/4) | `63d189d` | 1 round: no actionable defects | 9/9 green | Windows-auth gate passed (Shared memory, NTLM); `migrations` added to the ruleset |
+| R0-P3 | API platform baseline | in progress | `chore/r0-p3-api-platform-baseline` | | | | | |
 | R0-P4 | Authentication (Identity) | not started | | | | | | |
 | R0-P5 | Workspaces, roles & tenancy | not started | | | | | | |
 | R0-P6 | Web foundation & localization | not started | | | | | | |
@@ -41,7 +41,13 @@ Releases 1–3 and Beta are listed in [ROADMAP.md](ROADMAP.md) section D. They a
 - Ruleset **main protection** (id 26526706): active on the default branch; PR required (squash only, review threads resolved); required checks = the 7 above from GitHub Actions (app 15368), strict (branch up to date); linear history; no deletion or force push; **no bypass actors** (`current_user_can_bypass: never`). Verified via `GET /repos/.../rules/branches/main`.
 - Tests: 3 backend + 2 frontend, all green locally and in CI.
 
-### R0-P2 — EF Core & SQL Server foundation (in progress)
+### R0-P3 — API platform baseline (in progress)
+
+- ProblemDetails with stable `code` + `traceId`; `ClassHubException` hierarchy; FluentValidation filter; Serilog request logging with redaction; security headers/CSP; HSTS outside dev; forwarded headers (off by default); named rate limits (validated options); cookie auth scheme (Identity application scheme, 401/403 without redirect); deny-by-default fallback policy + endpoint-metadata test; antiforgery for JSON (`GET /api/auth/antiforgery`, `X-XSRF-TOKEN`); module discovery under `/api`; module-boundary architecture tests; OpenAPI contract → TypeScript types with CI drift checks.
+- Local tests: 105/105 backend green, web lint/i18n/tests/build green.
+- Dependabot: TypeScript and `@types/node` majors ignored; PRs #2 (TypeScript 7) and #3 (`@types/node` 26) closed with an explanation (D-04, Node 22 runtime).
+
+### R0-P2 — EF Core & SQL Server foundation (merged, PR #4, `63d189d`)
 
 - **Gate passed:** `dotnet ef database update` created `ClassHubDb` on `.\SQLEXPRESS` via Windows authentication. The running API connects as `EFCore/10.0.14` over **Shared memory**, `NTLM`. Collation `Macedonian_FYROM_100_CI_AS_SC`, RCSI on, migrations `InitialTechnical` + `EnableReadCommittedSnapshot` applied. No SQL Server configuration was changed.
 - Local tests: 49/49 green (unit 5, architecture 1, integration 43 on Testcontainers SQL Server 2022).

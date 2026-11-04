@@ -1,0 +1,28 @@
+{
+  "openapi": "3.1.1",
+  "info": {
+    "title": "ClassHub.Api | v1",
+    "version": "1.0.0"
+  },
+  "paths": {
+    "/api/auth/antiforgery": {
+      "get": {
+        "tags": [
+          "Auth"
+        ],
+        "summary": "Issue antiforgery tokens (XSRF-TOKEN cookie).",
+        "operationId": "GetAntiforgeryToken",
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        }
+      }
+    }
+  },
+  "tags": [
+    {
+      "name": "Auth"
+    }
+  ]
+}

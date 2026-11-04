@@ -7,6 +7,8 @@
 
   <ItemGroup>
     <PackageReference Include="Serilog.AspNetCore" />
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" />
+    <PackageReference Include="Scalar.AspNetCore" />
     <!-- Design-time services for `dotnet ef` (startup project). Not shipped with the app. -->
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design">
       <PrivateAssets>all</PrivateAssets>
@@ -20,6 +22,7 @@
 
   <ItemGroup>
     <InternalsVisibleTo Include="ClassHub.IntegrationTests" />
+    <InternalsVisibleTo Include="ClassHub.UnitTests" />
   </ItemGroup>
 
 </Project>
