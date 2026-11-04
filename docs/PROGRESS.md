@@ -10,7 +10,7 @@ This is the live status of the autonomous implementation loop ([ROADMAP.md](ROAD
 | Current phase | R0-P8 — Foundation hardening & closeout |
 | Branch | `chore/r0-p8-foundation-hardening` (from `main` @ `8d02b1f`) |
 | Workflow step | 5 — signed Codex review of the branch, then PR |
-| Next action | R0-P8 PR (still checked by the old `pull_request` gate). After the merge: require the status `classhub/codex-evidence` in the ruleset, verify the new trusted gate on the next PR, mark Release 0 complete |
+| Next action | R0-P8 PR (still checked by the old `pull_request` gate). After the merge: in the ruleset replace the required `pr-gate` job name with the status `classhub/codex-evidence`, verify the new trusted gate on the next PR, mark Release 0 complete |
 | Open blockers | None. User action (optional): the direct-push probe (see R0-P8 results) |
 
 ## Phase status
