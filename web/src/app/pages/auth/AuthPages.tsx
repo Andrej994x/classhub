@@ -276,6 +276,7 @@ export function ForgotPasswordPage() {
 
 export function ResetPasswordPage() {
   const { t } = useTranslation();
+  const queryClient = useQueryClient();
   const link = useFragmentOnce(['email', 'token'] as const);
   const form = useForm<ResetForm>({ resolver: zodResolver(resetSchema), defaultValues: { password: '', confirmPassword: '' } });
   const { errors, isSubmitting } = form.formState;
@@ -283,6 +284,12 @@ export function ResetPasswordPage() {
     mutationFn: async (values: ResetForm) => {
       if (!link.email || !link.token) throw new ApiError(400, 'INVALID_TOKEN', 'missing link data');
       await api.client.POST('/api/auth/reset-password', { body: { email: link.email, token: link.token, newPassword: values.password } });
+    },
+    // The reset ended every session of the account (security stamp), including one in this tab.
+    onSuccess: () => {
+      api.resetToken();
+      queryClient.clear();
+      queryClient.setQueryData(meQueryKey, null);
     },
     onError: (error) => applyServerFieldErrors(error, form.setError, { newPassword: { field: 'password', message: 'auth.validation.passwordRejected' } }),
   });

@@ -1,4 +1,4 @@
-import { screen } from '@testing-library/react';
+import { act, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
 import { safeReturnTo } from '../../../auth/session.ts';
@@ -152,6 +152,29 @@ describe('email confirmation and password reset links', () => {
     expect(await screen.findByText(/Лозинката е променета/)).toBeInTheDocument();
     expect(api.to('/api/auth/reset-password')[0]?.body).toEqual({ email: 'ana@example.com', token: 't/1', newPassword: PASSWORD });
     expect(window.location.hash).toBe('');
+  });
+
+  it('forgets a session in this tab after a reset, so the user can sign in with the new password', async () => {
+    const user = userEvent.setup();
+    const api = fakeApi({
+      me: teacher(),
+      extra: [(call) => (call.path === '/api/auth/reset-password' ? (api.state.me = null, new Response(null, { status: 204 })) : undefined)],
+    });
+    // Signed in and the account cached, then the reset link is opened in the same tab.
+    const { router } = await renderRoute('/student');
+    await screen.findByRole('heading', { level: 1, name: 'Мои часови' });
+    window.history.replaceState(null, '', '/reset-password#email=ana%40example.com&token=t1');
+    await act(() => router.navigate('/reset-password'));
+
+    await user.type(await screen.findByLabelText('Нова лозинка'), PASSWORD);
+    await user.type(screen.getByLabelText('Повторете ја лозинката'), PASSWORD);
+    await user.click(screen.getByRole('button', { name: 'Зачувај ја новата лозинка' }));
+    await user.click(await screen.findByRole('link', { name: 'Најави се' }));
+
+    expect(await screen.findByRole('heading', { level: 1, name: 'Најава' })).toBeInTheDocument();
+    expect(router.state.location.pathname).toBe('/login');
+    // The ended session is never used: no bounce into the teacher area with stale data.
+    expect(api.to('/api/me/workspaces')).toHaveLength(0);
   });
 
   it('answers the forgot-password request the same way for every address', async () => {
