@@ -311,6 +311,60 @@ public sealed class AuthFlowTests(ClassHubApiFixture fixture)
     }
 
     [Fact]
+    public async Task Account_language_and_time_zone_can_be_changed_without_ending_the_session()
+    {
+        using var client = await ApiClient.CreateAsync(fixture);
+        var email = ApiTestExtensions.UniqueEmail();
+        await RegisterAsync(client, email);
+        (await LoginAsync(client, email, Password)).Locale.ShouldBe("mk");
+
+        using (var response = await client.PatchAsync("/api/auth/me", new { locale = "en", timeZone = "UTC" }))
+        {
+            response.StatusCode.ShouldBe(HttpStatusCode.OK);
+            var me = await response.Content.ReadFromJsonAsync<MeResponse>(Ct);
+            me!.Locale.ShouldBe("en");
+            me.TimeZone.ShouldBe("UTC");
+        }
+
+        // Omitted fields stay unchanged; the session is still valid.
+        using (var response = await client.PatchAsync("/api/auth/me", new { locale = "mk" }))
+        {
+            response.StatusCode.ShouldBe(HttpStatusCode.OK);
+        }
+
+        var current = await client.GetJsonAsync<MeResponse>("/api/auth/me");
+        current.Locale.ShouldBe("mk");
+        current.TimeZone.ShouldBe("UTC");
+    }
+
+    [Theory]
+    [InlineData("locale", "de")]
+    [InlineData("timeZone", "Central European Standard Time")]
+    [InlineData("timeZone", "Mars/Olympus")]
+    public async Task Invalid_account_preferences_are_rejected(string field, string value)
+    {
+        using var client = await ApiClient.CreateAsync(fixture);
+        var email = ApiTestExtensions.UniqueEmail();
+        await RegisterAsync(client, email);
+        await LoginAsync(client, email, Password);
+
+        using var response = await client.PatchAsync("/api/auth/me", new Dictionary<string, string> { [field] = value });
+
+        response.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
+        (await response.ReadJsonAsync()).GetProperty("errors").TryGetProperty(field, out _).ShouldBeTrue();
+    }
+
+    [Fact]
+    public async Task Account_preferences_require_a_session()
+    {
+        using var client = await ApiClient.CreateAsync(fixture);
+
+        using var response = await client.PatchAsync("/api/auth/me", new { locale = "en" });
+
+        response.StatusCode.ShouldBe(HttpStatusCode.Unauthorized);
+    }
+
+    [Fact]
     public async Task Authenticated_callers_get_404_for_unknown_api_routes()
     {
         using var client = await ApiClient.CreateAsync(fixture);

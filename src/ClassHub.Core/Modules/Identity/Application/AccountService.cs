@@ -182,6 +182,29 @@ internal sealed partial class AccountService(
         return await ToMeAsync(user);
     }
 
+    public async Task<MeResponse> UpdateMeAsync(ClaimsPrincipal principal, UpdateMeRequest request)
+    {
+        var user = await users.GetUserAsync(principal) ?? throw new AuthenticationFailedException("You are not signed in.", ErrorCodes.Unauthorized);
+        if (request.Locale is not null)
+        {
+            user.Locale = request.Locale;
+        }
+
+        if (request.TimeZone is not null)
+        {
+            user.TimeZone = request.TimeZone;
+        }
+
+        // UpdateAsync keeps the security stamp: a preference change does not end other sessions.
+        var result = await users.UpdateAsync(user);
+        if (!result.Succeeded)
+        {
+            throw new InvalidOperationException(string.Join("; ", result.Errors.Select(e => e.Description)));
+        }
+
+        return await ToMeAsync(user);
+    }
+
     public async Task ForgotPasswordAsync(EmailRequest request, CancellationToken cancellationToken)
     {
         var user = await users.FindByEmailAsync(NormalizeEmail(request.Email!));

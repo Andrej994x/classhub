@@ -134,6 +134,13 @@ public sealed class IdentityModule : IModule
             .RequireAuthorization(ClassHubPolicies.Authenticated)
             .WithName("GetMe");
 
+        auth.MapPatch("/me", async (UpdateMeRequest request, HttpContext http, AccountService accounts) =>
+                TypedResults.Ok(await accounts.UpdateMeAsync(http.User, request)))
+            .WithValidation<UpdateMeRequest>()
+            .RequireAuthorization(ClassHubPolicies.Authenticated)
+            .WithName("UpdateMe")
+            .WithSummary("Update the account's language and time zone.");
+
         auth.MapPost("/forgot-password", async (EmailRequest request, AccountService accounts, CancellationToken ct) =>
             {
                 await accounts.ForgotPasswordAsync(request, ct);
