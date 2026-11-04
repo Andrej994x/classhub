@@ -1,4 +1,6 @@
+using ClassHub.Core.Infrastructure.Persistence;
 using ClassHub.Core.Infrastructure.Web;
+using Microsoft.AspNetCore.DataProtection;
 using ClassHub.Core.SharedKernel.Security;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authorization;
@@ -30,20 +32,44 @@ internal static class SecuritySetup
     public static IServiceCollection AddClassHubSecurity(
         this IServiceCollection services, IConfiguration configuration, IHostEnvironment environment)
     {
+        var securePolicy = environment.IsDevelopment() || environment.IsEnvironment("Testing") || environment.IsEnvironment("E2E")
+            ? CookieSecurePolicy.SameAsRequest
+            : CookieSecurePolicy.Always;
+
+        void ConfigureCompanionCookie(CookieAuthenticationOptions options, string name, TimeSpan lifetime)
+        {
+            options.Cookie.Name = name;
+            options.Cookie.HttpOnly = true;
+            options.Cookie.SameSite = SameSiteMode.Strict;
+            options.Cookie.SecurePolicy = securePolicy;
+            options.ExpireTimeSpan = lifetime;
+            options.Events = new CookieAuthenticationEvents
+            {
+                OnRedirectToLogin = context => { context.Response.StatusCode = StatusCodes.Status401Unauthorized; return Task.CompletedTask; },
+                OnRedirectToAccessDenied = context => { context.Response.StatusCode = StatusCodes.Status403Forbidden; return Task.CompletedTask; },
+            };
+        }
+
         services.AddAuthentication(IdentityConstants.ApplicationScheme)
+            // Identity's companion schemes: SignInManager and the security stamp validator sign out of
+            // them, and two-factor sign-in (R1-P9) uses them. They never authenticate API requests.
+            .AddCookie(IdentityConstants.ExternalScheme, o => ConfigureCompanionCookie(o, ".ClassHub.External", TimeSpan.FromMinutes(5)))
+            .AddCookie(IdentityConstants.TwoFactorUserIdScheme, o => ConfigureCompanionCookie(o, ".ClassHub.TwoFactorUserId", TimeSpan.FromMinutes(5)))
+            .AddCookie(IdentityConstants.TwoFactorRememberMeScheme, o => ConfigureCompanionCookie(o, ".ClassHub.TwoFactorRememberMe", TimeSpan.FromDays(14)))
             .AddCookie(IdentityConstants.ApplicationScheme, options =>
             {
                 options.Cookie.Name = AuthCookieName;
                 options.Cookie.HttpOnly = true;
                 options.Cookie.SameSite = SameSiteMode.Lax;
-                options.Cookie.SecurePolicy = environment.IsDevelopment() || environment.IsEnvironment("Testing") || environment.IsEnvironment("E2E")
-                    ? CookieSecurePolicy.SameAsRequest
-                    : CookieSecurePolicy.Always;
+                options.Cookie.SecurePolicy = securePolicy;
                 options.SlidingExpiration = true;
                 options.ExpireTimeSpan = TimeSpan.FromDays(30);
                 // An API never redirects to a login page: 401/403 with ProblemDetails (status code pages).
                 options.Events = new CookieAuthenticationEvents
                 {
+                    // Re-checks the cookie against the user's security stamp (password reset, suspension,
+                    // sign-out everywhere) every SecurityStampValidatorOptions.ValidationInterval.
+                    OnValidatePrincipal = SecurityStampValidator.ValidatePrincipalAsync,
                     OnRedirectToLogin = context =>
                     {
                         context.Response.StatusCode = StatusCodes.Status401Unauthorized;
@@ -60,6 +86,16 @@ internal static class SecuritySetup
         services.AddAuthorizationBuilder()
             .SetFallbackPolicy(new AuthorizationPolicyBuilder().RequireAuthenticatedUser().Build())
             .AddPolicy(ClassHubPolicies.Authenticated, policy => policy.RequireAuthenticatedUser());
+
+        // Keys protect auth cookies, antiforgery and Identity tokens; stored in the database so they
+        // survive restarts (D-52). On Windows (development) they are additionally encrypted with DPAPI.
+        var dataProtection = services.AddDataProtection()
+            .SetApplicationName("ClassHub")
+            .PersistKeysToDbContext<ClassHubDbContext>();
+        if (OperatingSystem.IsWindows() && environment.IsDevelopment())
+        {
+            dataProtection.ProtectKeysWithDpapi();
+        }
 
         services.AddAntiforgery(options =>
         {

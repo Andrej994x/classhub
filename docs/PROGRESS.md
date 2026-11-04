@@ -7,11 +7,11 @@ This is the live status of the autonomous implementation loop ([ROADMAP.md](ROAD
 | Field | Value |
 |---|---|
 | Release | R0 — Foundation |
-| Current phase | R0-P3 — API platform baseline |
-| Branch | `chore/r0-p3-api-platform-baseline` (from `main` @ `63d189d`) |
-| Workflow step | 5 — implementation and local checks done; Codex review next |
-| Next action | Codex review → PR → auto-merge → R0-P4 |
-| Open blockers | None |
+| Current phase | R0-P4 — Authentication (Identity), implemented locally; R0-P3 PR #5 waiting to merge |
+| Branch | `feature/r0-p4-authentication` (from the R0-P3 head `fd1526e`; rebase onto `main` once #5 merges) |
+| Workflow step | 4 — implementation and local checks done (149/149); Codex review after the rebase |
+| Next action | User resolves the outdated CodeQL review thread on PR #5 → #5 auto-merges → rebase R0-P4 → Codex → PR |
+| Open blockers | **PR #5 blocked by one unresolved (outdated) review thread** (see Blockers) |
 
 ## Phase status
 
@@ -75,6 +75,7 @@ Releases 1–3 and Beta are listed in [ROADMAP.md](ROADMAP.md) section D. They a
 | Blocker | Affects | Action needed |
 |---|---|---|
 | ~~Docker engine not responding~~ **Resolved 2026-11-04** | R0-P2 onward | Docker Desktop restarted at the user's request; verified with a disposable SQL Server container |
+| **Unresolved review thread on PR #5** | Merge of R0-P3 (and everything after it) | CodeQL posted "Cookie 'HttpOnly' attribute is not set" as a review comment. Fixed in `fd1526e` (no readable cookie; code scanning shows no open alerts); the thread is now outdated but unresolved, and the ruleset requires resolved threads. Resolving it from here was blocked by the auto-mode permission check. **User action:** resolve the thread on PR #5 (or allow `gh api graphql … resolveReviewThread`). |
 
 ## Decisions taken during execution
 

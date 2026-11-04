@@ -8,7 +8,9 @@ fail() {
   exit 1
 }
 
-body="${PR_BODY:-}"
+# Read the current PR body from the API: a re-run reuses the original event payload, which may hold an
+# outdated body. Fall back to the event's body only if the API is unavailable.
+body="$(gh api "repos/$REPO/pulls/$PR_NUMBER" --jq '.body // ""' 2>/dev/null || printf '%s' "${PR_BODY:-}")"
 body="${body//$'\r'/}"
 
 # 1. Branch naming: feature/*, fix/*, chore/* (Dependabot branches are allowed but still need a review).

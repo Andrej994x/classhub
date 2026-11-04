@@ -43,6 +43,13 @@ public sealed class ClassHubApiFactory : WebApplicationFactory<Program>
         builder.UseSetting("RateLimiting:PublicFormPermitLimit", "100000");
         builder.UseSetting("RateLimiting:PublicReadPermitLimit", "100000");
 
+        // Emails are delivered to the dev mailbox table quickly so tests can read links from them.
+        builder.UseSetting("Email:Provider", "DevMailbox");
+        builder.UseSetting("Email:DispatchIntervalMilliseconds", "100");
+        builder.UseSetting("App:PublicBaseUrl", "http://classhub.test");
+        // Re-validate session cookies on every request so suspension/reset tests need no waiting.
+        builder.UseSetting("Identity:SecurityStampValidationIntervalSeconds", "0");
+
         builder.ConfigureTestServices(services =>
         {
             // Replace the DbContext configuration outright, so no other configuration source can

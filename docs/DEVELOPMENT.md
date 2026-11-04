@@ -36,6 +36,10 @@ Creates or updates `ClassHubDb` on `.\SQLEXPRESS` with Windows authentication. D
 | API + (later) Razor public pages | `dotnet run --project src/ClassHub.Api` | http://localhost:5080 (`/health`, `/health/live`, `/health/ready`) |
 | React SPA (dev server, proxies `/api` to 5080) | `cd web; npm run dev` | http://localhost:5173 |
 
+## Email in development
+
+Emails (account confirmation, password reset) go to the **dev mailbox**: the `DevMailbox` table in `ClassHubDb`, readable at `GET http://localhost:5080/api/dev/mailbox?to=<email>` (Development only; a page for it comes in R0-P7). Links point to `App:PublicBaseUrl` (`http://localhost:5173` in Development). No email leaves the machine.
+
 ## Checks (run before every commit)
 
 ```powershell

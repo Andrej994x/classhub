@@ -37,16 +37,18 @@ internal sealed partial class ClassHubExceptionHandler(
         }
 
         httpContext.Response.StatusCode = status;
+        ProblemDetails problem = exception is RequestValidationException validation
+            ? new HttpValidationProblemDetails(validation.Errors.ToDictionary(e => e.Key, e => e.Value, StringComparer.Ordinal))
+            : new ProblemDetails();
+        problem.Status = status;
+        problem.Title = title;
+        problem.Extensions["code"] = code;
+
         return await problemDetailsService.TryWriteAsync(new ProblemDetailsContext
         {
             HttpContext = httpContext,
             Exception = exception,
-            ProblemDetails = new ProblemDetails
-            {
-                Status = status,
-                Title = title,
-                Extensions = { ["code"] = code },
-            },
+            ProblemDetails = problem,
         });
     }
 
