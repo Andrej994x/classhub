@@ -13,6 +13,13 @@ on:
   pull_request_target:
     branches: [main]
     types: [opened, edited, synchronize, reopened, ready_for_review]
+  # TRANSITION ONLY (R0-P8): the PR that introduces pull_request_target is itself evaluated by the PR's own
+  # workflow for `pull_request` events, and main's old workflow does not listen to pull_request_target, so
+  # without this trigger no gate would run on it at all. The follow-up PR removes this trigger; from then on
+  # only the base-branch definition runs.
+  pull_request:
+    branches: [main]
+    types: [opened, edited, synchronize, reopened, ready_for_review]
 
 permissions:
   contents: read
@@ -22,7 +29,7 @@ permissions:
 # A newer run for the same PR (new commit or body edit) supersedes older ones, so a stale result can
 # never be the latest one.
 concurrency:
-  group: pr-gate-${{ github.event.pull_request.number }}
+  group: pr-gate-${{ github.event_name }}-${{ github.event.pull_request.number }}
   cancel-in-progress: true
 
 env:
