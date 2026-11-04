@@ -26,7 +26,7 @@
 // reasoning (a "### Rejected findings" section in the PR body is then required by the PR gate).
 import { createHash, generateKeyPairSync } from 'node:crypto';
 import { execFileSync, spawn } from 'node:child_process';
-import { chmodSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { closeSync, existsSync, fchmodSync, mkdirSync, openSync, readFileSync, writeFileSync, writeSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -216,17 +216,29 @@ function loadPrivateKey() {
 
 function keygen() {
   const path = privateKeyPath();
-  if (existsSync(path) && !process.argv.includes('--force')) {
-    throw new Error(`${path} already exists. Pass --force to replace it (then the public key must be replaced in a PR, see docs/RECOVERY.md).`);
-  }
   if (resolve(path).startsWith(ROOT)) throw new Error('The private evidence key must be stored outside the repository.');
   const { privateKey, publicKey } = generateKeyPairSync('ed25519');
   mkdirSync(dirname(path), { recursive: true });
-  writeFileSync(path, privateKey.export({ type: 'pkcs8', format: 'pem' }), { mode: 0o600 });
+  // One open with exclusive create ('wx'): no window between "does it exist?" and writing (no clobbering a key
+  // that appeared meanwhile). --force replaces an existing key deliberately.
+  let fd;
   try {
-    chmodSync(path, 0o600);
-  } catch {
-    // Windows: the file is in the user profile, readable only by the user by default.
+    fd = openSync(path, process.argv.includes('--force') ? 'w' : 'wx', 0o600);
+  } catch (error) {
+    if (error.code === 'EEXIST') {
+      throw new Error(`${path} already exists. Pass --force to replace it (then the public key must be replaced in a PR, see docs/RECOVERY.md).`);
+    }
+    throw error;
+  }
+  try {
+    writeSync(fd, privateKey.export({ type: 'pkcs8', format: 'pem' }));
+    try {
+      fchmodSync(fd, 0o600);
+    } catch {
+      // Windows: the file is in the user profile, readable only by the user by default.
+    }
+  } finally {
+    closeSync(fd);
   }
   const publicPem = publicKey.export({ type: 'spki', format: 'pem' });
   writeFileSync(PUBLIC_KEY_PATH, publicPem);
