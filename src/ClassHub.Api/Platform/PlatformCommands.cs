@@ -68,19 +68,30 @@ public static class PlatformCommands
             return 2;
         }
 
-        var result = await users.AddToRoleAsync(user, PlatformRoles.Owner);
+        // One transaction: the grant, the session revocation and the audit entry commit together or not at all
+        // (the Identity store saves on its own, so without it a later failure would leave an unaudited owner).
+        var db = services.GetRequiredService<ClassHubDbContext>();
+        await using (var transaction = await db.Database.BeginTransactionAsync())
+        {
+            ThrowIfFailed(await users.AddToRoleAsync(user, PlatformRoles.Owner));
+
+            // Role changes end existing sessions, so the new role applies at the next sign-in.
+            ThrowIfFailed(await users.UpdateSecurityStampAsync(user));
+
+            services.GetRequiredService<IAuditLog>().Record("platform.role.granted", "User", user.Id.ToString(), after: new { role = PlatformRoles.Owner, via = "cli" });
+            await db.SaveChangesAsync();
+            await transaction.CommitAsync();
+        }
+
+        await output.WriteLineAsync("Platform Owner role granted.");
+        return 0;
+    }
+
+    private static void ThrowIfFailed(IdentityResult result)
+    {
         if (!result.Succeeded)
         {
             throw new InvalidOperationException(string.Join("; ", result.Errors.Select(e => e.Description)));
         }
-
-        // Role changes end existing sessions, so the new role applies at the next sign-in.
-        await users.UpdateSecurityStampAsync(user);
-
-        services.GetRequiredService<IAuditLog>().Record("platform.role.granted", "User", user.Id.ToString(), after: new { role = PlatformRoles.Owner, via = "cli" });
-        await services.GetRequiredService<ClassHubDbContext>().SaveChangesAsync();
-
-        await output.WriteLineAsync("Platform Owner role granted.");
-        return 0;
     }
 }

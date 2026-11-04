@@ -1,4 +1,5 @@
 using ClassHub.Api.Platform;
+using ClassHub.Core.Infrastructure.Audit;
 using ClassHub.Core.Modules.Identity.Contracts;
 using ClassHub.Core.SharedKernel.Security;
 using ClassHub.IntegrationTests.Infrastructure;
@@ -44,6 +45,24 @@ public sealed class PlatformOwnerCommandTests(ClassHubApiFixture fixture)
     }
 
     [Fact]
+    public async Task A_failure_before_the_audit_entry_is_saved_grants_nothing()
+    {
+        using var teacher = await fixture.CreateTeacherAsync();
+        var stampBefore = await SecurityStampAsync(teacher.Me.Id);
+
+        await using (var scope = fixture.Factory.Services.CreateAsyncScope())
+        {
+            var services = new FailingAuditServices(scope.ServiceProvider);
+            await Should.ThrowAsync<InvalidOperationException>(() => PlatformCommands.GrantPlatformOwnerAsync(services, teacher.Email, forceAdd: true, TextWriter.Null));
+        }
+
+        (await IsOwnerAsync(teacher.Me.Id)).ShouldBeFalse();
+        (await SecurityStampAsync(teacher.Me.Id)).ShouldBe(stampBefore);
+        await using var db = fixture.CreateDbContext();
+        (await db.AuditLog.CountAsync(a => a.Action == "platform.role.granted" && a.TargetId == teacher.Me.Id.ToString(), Ct)).ShouldBe(0);
+    }
+
+    [Fact]
     public void The_command_is_not_reachable_over_http()
     {
         using var factory = new PlatformApiFactory(includeProbeModule: false);
@@ -64,6 +83,25 @@ public sealed class PlatformOwnerCommandTests(ClassHubApiFixture fixture)
     {
         await using var scope = fixture.Factory.Services.CreateAsyncScope();
         return (await scope.ServiceProvider.GetRequiredService<UserManager<AppUser>>().GetUsersInRoleAsync(PlatformRoles.Owner)).Count;
+    }
+
+    private async Task<string?> SecurityStampAsync(Guid userId)
+    {
+        await using var db = fixture.CreateDbContext();
+        return await db.Users.Where(u => u.Id == userId).Select(u => u.SecurityStamp).SingleAsync(Ct);
+    }
+
+    /// <summary>The real scope, except that recording the audit entry fails (after the role was added).</summary>
+    private sealed class FailingAuditServices(IServiceProvider inner) : IServiceProvider
+    {
+        public object? GetService(Type serviceType) =>
+            serviceType == typeof(IAuditLog) ? new ThrowingAuditLog() : inner.GetService(serviceType);
+    }
+
+    private sealed class ThrowingAuditLog : IAuditLog
+    {
+        public void Record(string action, string targetType, string targetId, Guid? workspaceId = null, object? before = null, object? after = null, Guid? actorUserId = null) =>
+            throw new InvalidOperationException("audit store unavailable");
     }
 
     private async Task<bool> IsOwnerAsync(Guid userId)

@@ -4,6 +4,7 @@ using ClassHub.Core.Modules.Identity.Contracts;
 using ClassHub.Core.Modules.Workspaces.Contracts;
 using ClassHub.Core.Modules.Workspaces.Domain;
 using ClassHub.Core.SharedKernel.Errors;
+using ClassHub.Core.SharedKernel.Globalization;
 using ClassHub.Core.SharedKernel.Tenancy;
 using FluentValidation;
 using Microsoft.EntityFrameworkCore;
@@ -104,14 +105,12 @@ internal sealed class UpdateWorkspaceRequestValidator : AbstractValidator<Update
             .Must(BeAnIanaTimeZone).WithMessage("Unknown time zone.")
             .When(x => x.TimeZone is not null);
         RuleFor(x => x.Currency!)
-            .Matches("^[A-Za-z]{3}$").WithMessage("Currency must be a 3-letter ISO 4217 code.")
+            .Must(Currencies.IsActiveIsoCode).WithMessage("Currency must be an active ISO 4217 code.")
             .When(x => x.Currency is not null);
         RuleFor(x => x.Locale)
             .Must(SupportedLocales.IsSupported).WithMessage("Locale must be 'mk' or 'en'.")
             .When(x => x.Locale is not null);
     }
 
-    internal static bool BeAnIanaTimeZone(string id) =>
-        !string.IsNullOrWhiteSpace(id) && id.Length <= Workspace.TimeZoneMaxLength && id.Contains('/', StringComparison.Ordinal) &&
-        TimeZoneInfo.TryFindSystemTimeZoneById(id, out _);
+    internal static bool BeAnIanaTimeZone(string id) => id.Length <= Workspace.TimeZoneMaxLength && TimeZones.IsIanaId(id);
 }

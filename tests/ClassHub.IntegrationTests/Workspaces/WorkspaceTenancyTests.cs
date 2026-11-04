@@ -72,9 +72,25 @@ public sealed class WorkspaceTenancyTests(ClassHubApiFixture fixture)
     }
 
     [Theory]
+    [InlineData("timeZone", "UTC", "UTC")]
+    [InlineData("timeZone", "America/Argentina/Buenos_Aires", "America/Argentina/Buenos_Aires")]
+    [InlineData("currency", "usd", "USD")]
+    public async Task Valid_settings_without_the_usual_shape_are_accepted(string field, string value, string stored)
+    {
+        using var teacher = await fixture.CreateTeacherAsync();
+
+        using var response = await teacher.Client.PatchAsync($"/api/w/{teacher.WorkspaceId}", new Dictionary<string, string> { [field] = value });
+
+        response.StatusCode.ShouldBe(HttpStatusCode.OK);
+        (await response.ReadJsonAsync()).GetProperty(field).GetString().ShouldBe(stored);
+    }
+
+    [Theory]
     [InlineData("timeZone", "Mars/Olympus")]
     [InlineData("timeZone", "UTC+1")]
     [InlineData("currency", "EURO")]
+    [InlineData("currency", "ABC")]
+    [InlineData("timeZone", "Central European Standard Time")]
     [InlineData("locale", "de")]
     [InlineData("name", "")]
     public async Task Invalid_settings_are_rejected(string field, string value)
