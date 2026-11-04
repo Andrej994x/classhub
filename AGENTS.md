@@ -29,6 +29,9 @@ If code and documents disagree, the documents win, unless `PROGRESS.md` records 
 | Run API | `dotnet run --project src/ClassHub.Api` → http://localhost:5080 |
 | Web install / dev | `cd web && npm ci && npm run dev` → http://localhost:5173 |
 | Web checks | `cd web && npm run lint && npm run i18n:check && npm test && npm run build` |
+| Update API contract | `CLASSHUB_UPDATE_OPENAPI=1` + `dotnet test --project tests/ClassHub.IntegrationTests`, then `cd web && npm run api:types` (see docs/ARCHITECTURE.md) |
+
+Every new endpoint must declare `.AllowAnonymous()` or `.RequireAuthorization(<named ClassHub policy>)`; cookie-authenticated unsafe endpoints also use `.RequireAntiforgeryHeader()`; expected errors are thrown as `ClassHubException` subtypes with a stable code.
 
 ## Codex review guidelines
 

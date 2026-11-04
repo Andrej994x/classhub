@@ -14,6 +14,13 @@ updates:
     schedule:
       interval: weekly
     open-pull-requests-limit: 5
+    ignore:
+      # D-04: TypeScript stays on 6.0 until the toolchain is re-evaluated for 7.x.
+      - dependency-name: typescript
+        update-types: [version-update:semver-major]
+      # Node typings follow the Node runtime major (22 LTS now; 24 before Beta, D-03).
+      - dependency-name: '@types/node'
+        update-types: [version-update:semver-major]
     groups:
       npm-minor-patch:
         update-types: [minor, patch]

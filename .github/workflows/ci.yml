@@ -169,6 +169,13 @@ jobs:
       - name: i18n parity (mk/en)
         run: npm run i18n:check
 
+      # The backend test OpenApiContractTests keeps src/api/openapi.json equal to the API's document;
+      # this step keeps the generated TypeScript types equal to that document.
+      - name: API types are generated from the committed OpenAPI document
+        run: |
+          npm run api:types
+          git diff --exit-code -- src/api/schema.d.ts
+
       - name: Unit and component tests (Vitest)
         run: npm test
 

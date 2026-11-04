@@ -61,7 +61,7 @@ NuGet packages are versioned centrally in `Directory.Packages.props` with lock f
 | `backend` | `ci.yml` | locked restore, Release build with warnings as errors, unit + architecture tests |
 | `integration` | `ci.yml` | integration tests on a Testcontainers SQL Server 2022 |
 | `migrations` | `ci.yml` | no model changes without a migration; all migrations apply to an empty SQL Server 2022; idempotent script re-applies as a no-op; collation and RCSI verified |
-| `frontend` | `ci.yml` | `npm ci`, oxlint, i18n parity, Vitest, type-check + build |
+| `frontend` | `ci.yml` | `npm ci`, oxlint, i18n parity, API types current with `openapi.json`, Vitest, type-check + build |
 | `security` | `security.yml` | gitleaks (full history), vulnerable NuGet packages, `npm audit`, dependency review |
 | `codeql (csharp)`, `codeql (javascript-typescript)` | `codeql.yml` | CodeQL security-extended analysis |
 | `pr-gate` | `pr-gate.yml` | branch name, Codex review section with raw output, reviewed commit in the PR, 0 unresolved critical/high |

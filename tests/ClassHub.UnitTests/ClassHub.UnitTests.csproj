@@ -12,6 +12,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\src\ClassHub.Api\ClassHub.Api.csproj" />
     <ProjectReference Include="..\..\src\ClassHub.Core\ClassHub.Core.csproj" />
   </ItemGroup>
 

@@ -37,6 +37,12 @@ public sealed class ClassHubApiFactory : WebApplicationFactory<Program>
         // Program.cs reads the connection string while building services, so it is a host setting.
         builder.UseSetting($"ConnectionStrings:{PersistenceServiceCollectionExtensions.ConnectionStringName}", _connectionString);
 
+        // All requests share one partition in TestServer (no client IP); rate limits have their own tests.
+        builder.UseSetting("RateLimiting:DefaultPermitLimit", "1000000");
+        builder.UseSetting("RateLimiting:AuthPermitLimit", "100000");
+        builder.UseSetting("RateLimiting:PublicFormPermitLimit", "100000");
+        builder.UseSetting("RateLimiting:PublicReadPermitLimit", "100000");
+
         builder.ConfigureTestServices(services =>
         {
             // Replace the DbContext configuration outright, so no other configuration source can
