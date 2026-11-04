@@ -1,0 +1,68 @@
+# Database
+
+ClassHub uses **SQL Server 2022 Express** through **EF Core 10** (`Microsoft.EntityFrameworkCore.SqlServer`). There is one database, one `ClassHubDbContext` (`src/ClassHub.Core/Infrastructure/Persistence`), and one migration history (`.../Persistence/Migrations`).
+
+## Local connection (Windows authentication)
+
+`src/ClassHub.Api/appsettings.Development.json` (no secret, safe to commit):
+
+```
+Server=.\SQLEXPRESS;Database=ClassHubDb;Integrated Security=True;Encrypt=True;TrustServerCertificate=True
+```
+
+- Override per machine with the environment variable `ConnectionStrings__ClassHub` or `dotnet user-secrets` (`ConnectionStrings:ClassHub`).
+- No SQL Server configuration changes are needed: Mixed Mode stays off, TCP/IP stays off, no SQL logins.
+- The API refuses to start without `ConnectionStrings:ClassHub` (outside Development there is no default).
+
+**Verified on 2026-11-04 (R0-P2):** `dotnet ef database update` created `ClassHubDb` with Windows authentication. The running API connects as `EFCore/10.0.14` over **Shared memory** with `NTLM`:
+
+```sql
+SELECT DB_NAME() AS db, SUSER_SNAME() AS login, c.net_transport, c.auth_scheme, s.program_name
+FROM sys.dm_exec_connections c JOIN sys.dm_exec_sessions s ON s.session_id = c.session_id
+WHERE s.database_id = DB_ID('ClassHubDb');
+```
+
+Accepted local risk: in development the app runs under the developer's Windows account (sysadmin). A least-privilege runtime identity is defined together with hosting (ROADMAP D-28, B-P2).
+
+## Migrations
+
+```powershell
+dotnet tool restore                                          # pinned dotnet-ef 10.0.14
+$ef = '--project', 'src/ClassHub.Core', '--startup-project', 'src/ClassHub.Api'
+dotnet tool run dotnet-ef migrations add <Name> @ef --output-dir Infrastructure/Persistence/Migrations
+dotnet tool run dotnet-ef database update @ef                # apply to the local ClassHubDb
+dotnet tool run dotnet-ef database update <Previous> @ef     # roll back locally
+dotnet tool run dotnet-ef migrations script --idempotent @ef # review SQL
+```
+
+Rules:
+- Migrations are **never applied on application startup** (D-50). Locally they are applied explicitly; automated tests migrate their own disposable databases.
+- Every migration has a working `Down`. CI applies all migrations to an empty SQL Server, re-runs the idempotent script (must be a no-op), and fails if the model has changes without a migration. The integration tests revert all migrations and re-apply them.
+- Generated migration files are excluded from style analyzers (`.editorconfig`, `generated_code = true`); review their SQL in the PR.
+- Statements that cannot run in a transaction (for example `ALTER DATABASE`) use `migrationBuilder.Sql(..., suppressTransaction: true)`.
+
+## Database settings
+
+| Setting | Value | Where |
+|---|---|---|
+| Collation | `Macedonian_FYROM_100_CI_AS_SC` (case-insensitive, accent-sensitive, supplementary characters) | `UseCollation` in the model; EF applies it when it creates the database |
+| `READ_COMMITTED_SNAPSHOT` | `ON` | migration `EnableReadCommittedSnapshot` |
+| Migration history | `__EFMigrationsHistory` | EF default |
+
+## Modeling conventions (`ClassHubModelConventions`)
+
+| Topic | Convention |
+|---|---|
+| Text | `nvarchar` with an explicit `HasMaxLength` for every string column; indexed strings ≤ 450 characters |
+| Date/time | `DateTime` stored as UTC in `datetime2(3)` via `UtcDateTimeConverter`; values read back have `Kind = Utc`. Time zones (IANA) are stored separately where needed |
+| Deletes | ClassHub foreign keys use `DeleteBehavior.NoAction` (SQL Server rejects multiple cascade paths; ClassHub archives instead of deleting). ASP.NET Core Identity tables keep their own behavior |
+| Unique + NULL | EF adds `IS NOT NULL` filters to unique indexes on nullable columns, so many NULLs are allowed (verified by `ConventionProbeTests`) |
+| Keys | `Guid` keys use EF's SQL Server sequential GUID generation (from R0-P4/P5); technical tables may use `int` identity |
+| Money | `long` minor units + ISO 4217 `char(3)` currency (from R1-P2) |
+| Concurrency | `rowversion` on editable aggregates; `sp_getapplock` + unique constraints for critical invariants (from R2) |
+| Tenancy | every tenant-owned table has `WorkspaceId` and composite tenant foreign keys (from R0-P5) |
+| Retries | no `EnableRetryOnFailure` (it conflicts with explicit transactions); reconsider with cloud hosting |
+
+## Test databases
+
+Automated tests **never** use the local server. Integration tests create `ClassHubTest_<guid>` databases inside a disposable Testcontainers SQL Server 2022 container (see [TESTING.md](TESTING.md)). CI's `migrations` job uses its own throwaway container.
