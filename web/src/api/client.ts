@@ -26,7 +26,12 @@ export function createApiClient({ baseUrl = '', fetch: fetchImpl = globalThis.fe
 
   async function refreshToken(): Promise<string> {
     pending ??= (async () => {
-      const response = await fetchImpl(`${baseUrl}/api/auth/antiforgery`, { credentials: 'include', cache: 'no-store' });
+      let response: Response;
+      try {
+        response = await fetchImpl(`${baseUrl}/api/auth/antiforgery`, { credentials: 'include', cache: 'no-store' });
+      } catch {
+        throw ApiError.network();
+      }
       if (!response.ok) throw await toApiError(response);
       const body = (await response.json()) as { requestToken: string };
       token = body.requestToken;

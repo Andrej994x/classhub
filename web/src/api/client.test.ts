@@ -100,6 +100,35 @@ describe('api client', () => {
     expect(error).toMatchObject({ code: 'NETWORK_ERROR', status: 0 });
   });
 
+  it('reports a network failure while fetching the antiforgery token as NETWORK_ERROR', async () => {
+    const offline = vi.fn<() => Promise<Response>>(async () => {
+      throw new TypeError('Failed to fetch');
+    }) as unknown as typeof fetch;
+    const { client } = createApiClient({ baseUrl: 'http://localhost', fetch: offline });
+
+    const error = await client.POST('/api/auth/logout' as never, {} as never).catch((e: unknown) => e);
+
+    expect(error).toBeInstanceOf(ApiError);
+    expect(error).toMatchObject({ code: 'NETWORK_ERROR', status: 0 });
+  });
+
+  it('reports a network failure during the stale-token refresh as NETWORK_ERROR', async () => {
+    let online = true;
+    const server = fakeServer((call) => {
+      if (call.url === '/api/auth/antiforgery') {
+        if (!online) throw new TypeError('Failed to fetch');
+        return antiforgery('t1');
+      }
+      online = false; // the connection drops after the first rejection
+      return json(400, { code: 'ANTIFORGERY_INVALID', status: 400 });
+    });
+    const { client } = createApiClient({ baseUrl: 'http://localhost', fetch: server.fetch });
+
+    const error = await client.POST('/api/x' as never, {} as never).catch((e: unknown) => e);
+
+    expect(error).toMatchObject({ code: 'NETWORK_ERROR', status: 0 });
+  });
+
   it('always sends cookies', async () => {
     const server = fakeServer(() => json(200, {}));
     const { client } = createApiClient({ baseUrl: 'http://localhost', fetch: server.fetch });
