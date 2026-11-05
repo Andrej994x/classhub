@@ -228,6 +228,65 @@ public sealed class DiagnosticTestTests(ClassHubApiFixture fixture)
     }
 
     [Fact]
+    public async Task A_published_test_cannot_be_saved_into_a_state_that_could_not_be_published()
+    {
+        using var teacher = await fixture.CreateTeacherAsync();
+        var math = await SubjectAsync(teacher, "math");
+        var test = await CreateAsync(teacher, Body(math, "Објавен"));
+        var published = await ChangeAsync(teacher, test.Id, "publish", test.Version);
+
+        foreach (var (name, questions) in new (string, object[])[]
+                 {
+                     ("no questions", []),
+                     ("no correct option", [new { id = published.Questions[0].Id, text = "П", points = 2, options = new[] { new { id = (Guid?)published.Questions[0].Options[0].Id, text = "3/4", isCorrect = false }, new { id = (Guid?)published.Questions[0].Options[1].Id, text = "2/6", isCorrect = false } } }]),
+                 })
+        {
+            using var response = await teacher.Client.PutAsync($"{TestsPath(teacher)}/{test.Id}", new { title = "Објавен", subjectId = math, difficulty = "Beginner", questions, version = published.Version });
+            response.StatusCode.ShouldBe(HttpStatusCode.BadRequest, name);
+            (await response.ReadJsonAsync()).GetProperty("errors").EnumerateObject().Select(p => p.Name).ShouldContain(n => n.StartsWith("questions", StringComparison.Ordinal), name);
+        }
+
+        var unchanged = await GetAsync(teacher, test.Id);
+        (unchanged.Status, unchanged.Questions.Count, unchanged.Version).ShouldBe(("Published", 2, published.Version));
+
+        // Deactivated, it may be reworked freely again.
+        var inactive = await ChangeAsync(teacher, test.Id, "deactivate", published.Version);
+        (await UpdateAsync(teacher, test.Id, new { title = "Во работа", subjectId = math, difficulty = "Beginner", questions = Array.Empty<object>(), version = inactive.Version })).Questions.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task Repeated_question_or_option_ids_are_refused()
+    {
+        using var teacher = await fixture.CreateTeacherAsync();
+        var math = await SubjectAsync(teacher, "math");
+        var test = await CreateAsync(teacher, Body(math, "Со обиди"));
+        await using (var db = fixture.CreateDbContext())
+        {
+            await db.Database.ExecuteSqlAsync($"UPDATE DiagnosticTests SET AttemptCount = 1 WHERE Id = {test.Id}", Ct);
+        }
+
+        object Question(TestQuestionResponse q, TestOptionResponse[] options) =>
+            new { id = q.Id, text = q.Text, points = q.Points, options = options.Select(o => new { id = (Guid?)o.Id, text = o.Text, isCorrect = o.IsCorrect }).ToArray() };
+        var first = test.Questions[0];
+        var second = test.Questions[1];
+
+        foreach (var (name, questions) in new (string, object[])[]
+                 {
+                     // Same count as before, but the second question would silently disappear.
+                     ("question twice", [Question(first, [.. first.Options]), Question(first, [.. first.Options])]),
+                     // Three options as before, but option 3 would be replaced by a repeat of option 1.
+                     ("option twice", [Question(first, [.. first.Options]), Question(second, [second.Options[0], second.Options[1], second.Options[0]])]),
+                 })
+        {
+            using var response = await teacher.Client.PutAsync($"{TestsPath(teacher)}/{test.Id}", new { title = "Со обиди", slug = test.Slug, subjectId = math, difficulty = "Intermediate", questions, version = test.Version });
+            response.StatusCode.ShouldBe(HttpStatusCode.BadRequest, name);
+        }
+
+        var unchanged = await GetAsync(teacher, test.Id);
+        unchanged.Questions.Select(q => q.Options.Count).ShouldBe([2, 3]);
+    }
+
+    [Fact]
     public async Task Archived_tests_leave_the_list_and_keep_their_address()
     {
         using var teacher = await fixture.CreateTeacherAsync();

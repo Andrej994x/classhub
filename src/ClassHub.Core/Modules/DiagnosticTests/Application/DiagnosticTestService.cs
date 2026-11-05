@@ -74,6 +74,23 @@ internal sealed class DiagnosticTestService(
         var options = await db.Set<TestOption>().Where(o => questionIds.Contains(o.QuestionId)).ToListAsync(cancellationToken);
         var requested = request.Questions ?? [];
 
+        // Each id at most once: a repeated id would make one row stand in for another (and slip past the D-38 checks).
+        if (requested.Where(q => q.Id is not null).GroupBy(q => q.Id).Any(g => g.Count() > 1))
+        {
+            throw Invalid("questions", "A question appears more than once.");
+        }
+
+        if (requested.SelectMany(q => q.Options ?? []).Where(o => o.Id is not null).GroupBy(o => o.Id).Any(g => g.Count() > 1))
+        {
+            throw Invalid("questions", "An option appears more than once.");
+        }
+
+        // A published test must stay publishable: incomplete edits need deactivating first.
+        if (test.Status == TestStatus.Published && PublishProblems(Preview(requested)) is { Count: > 0 } notReady)
+        {
+            throw new RequestValidationException(notReady);
+        }
+
         // Ids must belong to this test (and options to their question): never adopt foreign rows.
         var known = questions.ToDictionary(q => q.Id);
         var knownOptions = options.ToDictionary(o => o.Id);
@@ -209,6 +226,18 @@ internal sealed class DiagnosticTestService(
 
         Touch(test);
         await SaveAsync(cancellationToken);
+    }
+
+    /// <summary>The requested questions as a response, for the readiness check before anything is written.</summary>
+    private static DiagnosticTestResponse Preview(IReadOnlyList<SaveTestQuestion> questions)
+    {
+        IReadOnlyList<TestQuestionResponse> items =
+        [
+            .. questions.Select(q => new TestQuestionResponse(q.Id ?? Guid.Empty, q.Text ?? string.Empty, q.Points,
+                [.. (q.Options ?? []).Select(o => new TestOptionResponse(o.Id ?? Guid.Empty, o.Text ?? string.Empty, o.IsCorrect))])),
+        ];
+        return new DiagnosticTestResponse(Guid.Empty, string.Empty, string.Empty, Guid.Empty, null, string.Empty, string.Empty, null, 0, false, items,
+            items.Sum(q => q.Points), DateTime.MinValue, 0);
     }
 
     /// <summary>Why the test cannot be published yet, by field (empty when it is ready).</summary>
