@@ -86,3 +86,9 @@ public sealed record ChangeLeadStatusRequest(string? Status, int? Version);
 public sealed record AddLeadNoteRequest(string? Text);
 
 public sealed record LeadVersionRequest(int? Version);
+
+/// <summary>Leads other modules may reference with (composite, same-workspace) database foreign keys.</summary>
+public static class LeadForeignKeyTargets
+{
+    public static readonly Type Lead = typeof(Domain.Lead);
+}

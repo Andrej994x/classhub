@@ -137,13 +137,6 @@ internal sealed partial class LeadIntake(
             CreatedAtUtc = now.UtcDateTime,
             UpdatedAtUtc = now.UtcDateTime,
         });
-        if (request.AttemptId is { } linkedAttempt)
-        {
-            // Same transaction: the attempt gets this lead (and the sharing consent) or nothing is written.
-            await scope.ServiceProvider.GetRequiredService<IDiagnosticAttemptLink>()
-                .LinkAsync(site.WorkspaceId, linkedAttempt, leadId, request.ShareResult, now.UtcDateTime, cancellationToken);
-        }
-
         var inbox = $"{links.Value.PublicBaseUrl.TrimEnd('/')}/app/w/{site.WorkspaceId}/leads";
         scope.ServiceProvider.GetRequiredService<IEmailOutbox>().Enqueue(LeadEmails.NewLead(owner.Email, owner.Locale, inbox, type));
         try
@@ -153,6 +146,14 @@ internal sealed partial class LeadIntake(
         catch (Microsoft.EntityFrameworkCore.DbUpdateException ex) when (SqlServerErrors.IsUniqueViolation(ex))
         {
             throw new ConflictException("A request was already sent for this result.");
+        }
+
+        if (request.AttemptId is { } linkedAttempt)
+        {
+            // After the lead exists (the attempt's composite FK needs it), in the same transaction: the attempt gets
+            // this lead and the sharing consent, or nothing is committed.
+            await scope.ServiceProvider.GetRequiredService<IDiagnosticAttemptLink>()
+                .LinkAsync(site.WorkspaceId, linkedAttempt, leadId, request.ShareResult, now.UtcDateTime, cancellationToken);
         }
         await transaction.CommitAsync(cancellationToken);
     }

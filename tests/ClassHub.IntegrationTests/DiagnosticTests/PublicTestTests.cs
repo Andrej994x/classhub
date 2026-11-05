@@ -298,6 +298,34 @@ public sealed class PublicTestTests(ClassHubApiFixture fixture)
     }
 
     [Fact]
+    public async Task The_database_keeps_an_attempt_and_its_request_in_one_workspace()
+    {
+        using var site = await PublishedTestAsync();
+        using var other = await PublishedTestAsync();
+        using var visitor = Visitor();
+        var attempt = await SubmitAsync(visitor, site);
+        // A plain message lead of the other workspace (linked to no attempt, so only the FK can refuse it).
+        using (var message = await visitor.PostAsJsonAsync($"/api/public/sites/{other.SiteSlug}/leads", new
+               {
+                   type = "Message", name = "Друг", email = "other@example.test", message = "Здраво", consent = true, ageConfirmed = true,
+                   consentVersion = LeadConsent.Version, formToken = await TokenAsync(other.SiteSlug), website = "",
+               }, Ct))
+        {
+            message.StatusCode.ShouldBe(HttpStatusCode.Accepted);
+        }
+
+        await using var db = fixture.CreateDbContext();
+        var foreignLead = await db.Database.SqlQuery<Guid>($"SELECT Id AS [Value] FROM Leads WHERE WorkspaceId = {other.Teacher.WorkspaceId}").SingleAsync(Ct);
+
+        foreach (var leadId in new[] { foreignLead, Guid.NewGuid() })
+        {
+            var error = await Should.ThrowAsync<Microsoft.Data.SqlClient.SqlException>(() =>
+                db.Database.ExecuteSqlAsync($"UPDATE TestAttempts SET LeadId = {leadId} WHERE Id = {attempt.AttemptId}", Ct));
+            error.Number.ShouldBe(547); // composite tenant FK
+        }
+    }
+
+    [Fact]
     public async Task Attempts_lock_destructive_edits_for_real()
     {
         using var site = await PublishedTestAsync();

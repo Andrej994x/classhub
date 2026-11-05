@@ -1,5 +1,6 @@
 using ClassHub.Core.Infrastructure.Tenancy;
 using ClassHub.Core.Modules.DiagnosticTests.Domain;
+using ClassHub.Core.Modules.Leads.Contracts;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -23,6 +24,11 @@ internal sealed class TestAttemptConfiguration : IEntityTypeConfiguration<TestAt
         builder.Property(x => x.AnswersJson).IsRequired();
         builder.HasIndex(x => new { x.WorkspaceId, x.TestId, x.CompletedAtUtc });
         builder.HasIndex(x => x.LeadId).IsUnique().HasFilter("[LeadId] IS NOT NULL");
+        // The attempt's request is a lead of the same workspace (and the lead points back with its own composite FK).
+        builder.HasOne(LeadForeignKeyTargets.Lead, navigationName: null).WithMany()
+            .HasForeignKey(nameof(TestAttempt.WorkspaceId), nameof(TestAttempt.LeadId))
+            .HasPrincipalKey("WorkspaceId", "Id")
+            .OnDelete(DeleteBehavior.NoAction);
         builder.HasTenantReference<TestAttempt, DiagnosticTest>(nameof(TestAttempt.TestId));
     }
 }

@@ -857,6 +857,8 @@ namespace ClassHub.Core.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("WorkspaceId");
 
+                    b.HasIndex("WorkspaceId", "LeadId");
+
                     b.HasIndex("WorkspaceId", "TestId", "CompletedAtUtc");
 
                     b.ToTable("TestAttempts", null, t =>
@@ -1778,6 +1780,12 @@ namespace ClassHub.Core.Infrastructure.Persistence.Migrations
 
             modelBuilder.Entity("ClassHub.Core.Modules.DiagnosticTests.Domain.TestAttempt", b =>
                 {
+                    b.HasOne("ClassHub.Core.Modules.Leads.Domain.Lead", null)
+                        .WithMany()
+                        .HasForeignKey("WorkspaceId", "LeadId")
+                        .HasPrincipalKey("WorkspaceId", "Id")
+                        .OnDelete(DeleteBehavior.NoAction);
+
                     b.HasOne("ClassHub.Core.Modules.DiagnosticTests.Domain.DiagnosticTest", null)
                         .WithMany()
                         .HasForeignKey("WorkspaceId", "TestId")

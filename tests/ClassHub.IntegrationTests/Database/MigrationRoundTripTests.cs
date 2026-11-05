@@ -61,9 +61,10 @@ public sealed class MigrationRoundTripTests(ClassHubApiFixture fixture)
             await db.Database.ExecuteSqlAsync(
                 $"INSERT INTO DiagnosticTests (Id, WorkspaceId, Title, Slug, SubjectId, Difficulty, Status, AttemptCount, CreatedAtUtc, UpdatedAtUtc, Version) VALUES ({test}, {workspace}, N'T', 'test-1', {subject}, 1, 1, 1, {now}, {now}, 0)", ct);
             await db.Database.ExecuteSqlAsync(
-                $"INSERT INTO TestAttempts (Id, WorkspaceId, TestId, AnswersJson, Points, MaxPoints, CorrectQuestions, TotalQuestions, CompletedAtUtc, LeadId) VALUES ({attempt}, {workspace}, {test}, '{{}}', 0, 0, 0, 0, {now}, {lead})", ct);
+                $"INSERT INTO TestAttempts (Id, WorkspaceId, TestId, AnswersJson, Points, MaxPoints, CorrectQuestions, TotalQuestions, CompletedAtUtc) VALUES ({attempt}, {workspace}, {test}, '{{}}', 0, 0, 0, 0, {now})", ct);
             await db.Database.ExecuteSqlAsync(
                 $"INSERT INTO Leads (Id, WorkspaceId, Type, Status, Name, Email, AttemptId, ConsentVersion, ConsentedAtUtc, CreatedAtUtc, UpdatedAtUtc, Version) VALUES ({lead}, {workspace}, 3, 1, N'Марија', 'm@example.test', {attempt}, 'v1', {now}, {now}, {now}, 0)", ct);
+            await db.Database.ExecuteSqlAsync($"UPDATE TestAttempts SET LeadId = {lead} WHERE Id = {attempt}", ct);
 
             await db.GetService<IMigrator>().MigrateAsync("20261105131423_AddDiagnosticTests", cancellationToken: ct);
 
