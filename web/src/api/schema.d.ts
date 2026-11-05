@@ -37,6 +37,92 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/w/{workspaceId}/tests": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["ListDiagnosticTests"];
+        put?: never;
+        /** Create a draft test with its questions and options. 409 TEST_SLUG_TAKEN for a used address. */
+        post: operations["CreateDiagnosticTest"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/w/{workspaceId}/tests/{testId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The whole test including the correct options (teacher only). */
+        get: operations["GetDiagnosticTest"];
+        /** Replace the test (questions keep their ids). 409 on a stale version; 409 TEST_HAS_ATTEMPTS for destructive edits after attempts (D-38). */
+        put: operations["UpdateDiagnosticTest"];
+        post?: never;
+        /** Archive: hidden from the list and the public; attempts and the address are kept. */
+        delete: operations["ArchiveDiagnosticTest"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/w/{workspaceId}/tests/{testId}/publish": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Publish after the checks: a question, two options and a correct answer each, points. 400 lists what is missing. */
+        post: operations["PublishDiagnosticTest"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/w/{workspaceId}/tests/{testId}/deactivate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["DeactivateDiagnosticTest"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/w/{workspaceId}/tests/{testId}/duplicate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** An editable draft copy with new ids and no attempts (D-38: "duplicate as new version"). */
+        post: operations["DuplicateDiagnosticTest"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/auth/antiforgery": {
         parameters: {
             query?: never;
@@ -567,6 +653,47 @@ export interface components {
             userId: string;
             token: null | string;
         };
+        DiagnosticTestListItem: {
+            /** Format: uuid */
+            id: string;
+            title: string;
+            slug: string;
+            /** Format: uuid */
+            subjectId: string;
+            difficulty: string;
+            status: string;
+            /** Format: int32 */
+            questionCount: number | string;
+            /** Format: int32 */
+            totalPoints: number | string;
+            /** Format: int32 */
+            attemptCount: number | string;
+            /** Format: date-time */
+            updatedAtUtc: string;
+        };
+        DiagnosticTestResponse: {
+            /** Format: uuid */
+            id: string;
+            title: string;
+            slug: string;
+            /** Format: uuid */
+            subjectId: string;
+            description: null | string;
+            difficulty: string;
+            status: string;
+            /** Format: date-time */
+            publishedAtUtc: null | string;
+            /** Format: int32 */
+            attemptCount: number | string;
+            archived: boolean;
+            questions: components["schemas"]["TestQuestionResponse"][];
+            /** Format: int32 */
+            totalPoints: number | string;
+            /** Format: date-time */
+            updatedAtUtc: string;
+            /** Format: int32 */
+            version: number | string;
+        };
         EmailRequest: {
             email: null | string;
         };
@@ -743,6 +870,17 @@ export interface components {
             token: null | string;
             newPassword: null | string;
         };
+        SaveDiagnosticTestRequest: {
+            title: null | string;
+            slug: null | string;
+            /** Format: uuid */
+            subjectId: null | string;
+            description: null | string;
+            difficulty: null | string;
+            questions: null | components["schemas"]["SaveTestQuestion"][];
+            /** Format: int32 */
+            version?: null | number | string;
+        };
         SaveOfferRequest: {
             kind: null | string;
             title: null | string;
@@ -772,6 +910,20 @@ export interface components {
             draft: null | components["schemas"]["SiteContent"];
             /** Format: int32 */
             version?: null | number | string;
+        };
+        SaveTestOption: {
+            /** Format: uuid */
+            id: null | string;
+            text: null | string;
+            isCorrect: boolean;
+        };
+        SaveTestQuestion: {
+            /** Format: uuid */
+            id: null | string;
+            text: null | string;
+            /** Format: int32 */
+            points: number | string;
+            options: null | components["schemas"]["SaveTestOption"][];
         };
         SiteContent: {
             sections: null | components["schemas"]["SiteSection"][];
@@ -847,6 +999,24 @@ export interface components {
             photoVersion: null | string;
             /** Format: date-time */
             updatedAtUtc: null | string;
+            /** Format: int32 */
+            version: null | number | string;
+        };
+        TestOptionResponse: {
+            /** Format: uuid */
+            id: string;
+            text: string;
+            isCorrect: boolean;
+        };
+        TestQuestionResponse: {
+            /** Format: uuid */
+            id: string;
+            text: string;
+            /** Format: int32 */
+            points: number | string;
+            options: components["schemas"]["TestOptionResponse"][];
+        };
+        TestVersionRequest: {
             /** Format: int32 */
             version: null | number | string;
         };
@@ -930,6 +1100,238 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["MyWorkspaceResponse"][];
+                };
+            };
+        };
+    };
+    ListDiagnosticTests: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DiagnosticTestListItem"][];
+                };
+            };
+        };
+    };
+    CreateDiagnosticTest: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SaveDiagnosticTestRequest"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DiagnosticTestResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["HttpValidationProblemDetails"];
+                };
+            };
+        };
+    };
+    GetDiagnosticTest: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                testId: string;
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DiagnosticTestResponse"];
+                };
+            };
+        };
+    };
+    UpdateDiagnosticTest: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                testId: string;
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SaveDiagnosticTestRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DiagnosticTestResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["HttpValidationProblemDetails"];
+                };
+            };
+        };
+    };
+    ArchiveDiagnosticTest: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                testId: string;
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PublishDiagnosticTest: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                testId: string;
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TestVersionRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DiagnosticTestResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["HttpValidationProblemDetails"];
+                };
+            };
+        };
+    };
+    DeactivateDiagnosticTest: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                testId: string;
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TestVersionRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DiagnosticTestResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["HttpValidationProblemDetails"];
+                };
+            };
+        };
+    };
+    DuplicateDiagnosticTest: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                testId: string;
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DiagnosticTestResponse"];
                 };
             };
         };

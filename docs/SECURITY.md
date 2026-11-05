@@ -80,6 +80,11 @@ ASP.NET Core Identity with cookie sessions. See [ARCHITECTURE.md](ARCHITECTURE.m
 - Policies: `Authenticated`; workspace policies `ws:<permission>` (for example `ws:workspace.read`). Permissions are code constants (`WorkspacePermissions`), mapped from workspace roles (`WorkspaceRolePermissions`; today `Owner` has all workspace permissions). Unknown permission names fail when the policy is resolved.
 - Platform roles (`PlatformOwner`, `PlatformAdmin`) are Identity roles. **They grant no workspace access**: a platform admin without membership gets 404 on workspace routes (tested). The first Platform Owner is created only with the local CLI `dotnet run --project src/ClassHub.Api -- grant-platform-owner <email> [--force-add]` (audited, never exposed over HTTP). The owner check, the grant, the session revocation and the audit entry run in one transaction under an application lock (`sp_getapplock`), so concurrent bootstraps cannot both add an owner without `--force-add`.
 
+## Diagnostic tests (R1-P6)
+
+- Correct options are only in the teacher's workspace-scoped endpoints. `PublicProjectionTests` (architecture) fails if any public projection could carry an answer-revealing member or a domain entity; scoring happens on the server only (`TestScoring`).
+- Saves accept question and option ids only when they belong to this test (no adopting rows of other tests or workspaces); the database enforces the same with composite tenant FKs.
+
 ## Public leads (R1-P5)
 
 - The public endpoints are anonymous and use no cookies (the island sends `credentials: 'omit'`); the answer is always `202 {received: true}`, so nothing submitted is reflected, and spam gets the same answer (no oracle).

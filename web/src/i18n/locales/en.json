@@ -25,7 +25,8 @@
     "profile": "Profile",
     "offers": "Offers",
     "site": "Website",
-    "leads": "Requests"
+    "leads": "Requests",
+    "tests": "Tests"
   },
   "layout": {
     "teacherArea": "Teacher workspace",
@@ -78,7 +79,9 @@
       "EMAIL_NOT_CONFIRMED": "Confirm your email address first (see the link in the email we sent you).",
       "INVALID_STATUS_TRANSITION": "This status change is not possible.",
       "FORM_EXPIRED": "The form has expired. Reload the page.",
-      "LEADS_UNAVAILABLE": "Requests cannot be received at the moment."
+      "LEADS_UNAVAILABLE": "Requests cannot be received at the moment.",
+      "TEST_SLUG_TAKEN": "Another of your tests already uses this address. Choose another one.",
+      "TEST_HAS_ATTEMPTS": "This test already has attempts: questions, options, correct answers, points and subject cannot change. Duplicate it to edit a new version."
     }
   },
   "auth": {
@@ -434,5 +437,87 @@
     "noNotes": "No notes yet. Only you see notes.",
     "addNote": "Add a note",
     "saveNote": "Save note"
+  },
+  "tests": {
+    "title": "Diagnostic tests",
+    "lead": "Free multiple-choice tests that help visitors find out where they stand.",
+    "create": "New test",
+    "empty": "No tests yet. Create one to attract new students.",
+    "newTitle": "New test",
+    "editorLead": "Questions with several options; mark the correct ones and give points.",
+    "details": "About the test",
+    "questionsTitle": "Questions",
+    "fields": {
+      "title": "Title",
+      "slug": "Address",
+      "slugHint": "Optional: made from the title. Lowercase letters, digits and hyphens.",
+      "subject": "Subject",
+      "chooseSubject": "Choose a subject",
+      "difficulty": "Difficulty",
+      "description": "Description",
+      "questionText": "Question {{number}}",
+      "points": "Points for question {{number}}"
+    },
+    "difficulties": {
+      "Beginner": "Beginner",
+      "Intermediate": "Intermediate",
+      "Advanced": "Advanced"
+    },
+    "statuses": {
+      "Draft": "Draft",
+      "Published": "Published",
+      "Inactive": "Inactive"
+    },
+    "statusHints": {
+      "Draft": "Visitors cannot see it yet. Publish it when it is ready.",
+      "Published": "Visitors can take this test (public test pages come next).",
+      "Inactive": "Taken offline. Publish it again to reopen it."
+    },
+    "questionCount_one": "{{count}} question",
+    "questionCount_other": "{{count}} questions",
+    "points_one": "{{count}} point",
+    "points_other": "{{count}} points",
+    "attempts_one": "{{count}} attempt",
+    "attempts_other": "{{count}} attempts",
+    "questionLabel": "Question {{number}}",
+    "moveUp": "Move question {{number}} up",
+    "moveDown": "Move question {{number}} down",
+    "removeQuestion": "Remove question {{number}}",
+    "addQuestion": "Add question",
+    "optionsLegend": "Options of question {{number}}",
+    "optionLabel": "Question {{number}}, option {{option}}",
+    "correctLabel": "Question {{number}}, option {{option}} is correct",
+    "correct": "Correct",
+    "removeOption": "Remove option {{option}} of question {{number}}",
+    "addOption": "Add option",
+    "noCorrectHint": "Mark at least one correct option before publishing.",
+    "save": "Save test",
+    "createDraft": "Create draft",
+    "saved": "Test saved.",
+    "checkFields": "Check the marked fields.",
+    "changedElsewhere": "The test was changed elsewhere. Reload the page and apply your changes again.",
+    "status": "Status",
+    "publish": "Publish",
+    "deactivate": "Deactivate",
+    "duplicate": "Duplicate as new version",
+    "archive": "Archive",
+    "confirmArchive": "Archive this test? It disappears from the list and from the public.",
+    "archiveConfirm": "Yes, archive",
+    "cancel": "Cancel",
+    "saveFirst": "Save your changes before publishing.",
+    "locked_one": "This test has {{count}} attempt: you can still fix texts, the title and the description, but questions, options, correct answers, points and subject are fixed. Duplicate it to change them.",
+    "locked_other": "This test has {{count}} attempts: you can still fix texts, the title and the description, but questions, options, correct answers, points and subject are fixed. Duplicate it to change them.",
+    "problems": {
+      "questions": "Add at least one question that is worth points.",
+      "options": "Question {{number}} needs at least two options and a correct one.",
+      "field": "Check “{{field}}”."
+    },
+    "validation": {
+      "required": "Fill in this field.",
+      "tooLong": "This is too long.",
+      "slug": "Use 3–60 lowercase letters, digits and single hyphens.",
+      "subjectRequired": "Choose a subject.",
+      "points": "Use a whole number from 0 to 100."
+    }
   }
 }

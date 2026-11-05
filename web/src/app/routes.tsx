@@ -3,6 +3,8 @@ import { AdminLayout, AuthLayout, StudentLayout, TeacherLayout } from './layouts
 import { DevMailboxPage } from './pages/DevMailboxPage.tsx';
 import { LeadDetailPage } from './pages/leads/LeadDetailPage.tsx';
 import { LeadsPage } from './pages/leads/LeadsPage.tsx';
+import { TestEditPage } from './pages/tests/TestEditPage.tsx';
+import { TestsPage } from './pages/tests/TestsPage.tsx';
 import { ForgotPasswordPage, LoginPage, RegisterPage, ResetPasswordPage, VerifyEmailPage } from './pages/auth/AuthPages.tsx';
 import { OfferEditPage } from './pages/offers/OfferEditPage.tsx';
 import { OffersPage } from './pages/offers/OffersPage.tsx';
@@ -50,6 +52,9 @@ export const routes: RouteObject[] = [
       { path: 'w/:workspaceId/site', element: <SiteEditorPage /> },
       { path: 'w/:workspaceId/leads', element: <LeadsPage /> },
       { path: 'w/:workspaceId/leads/:leadId', element: <LeadDetailPage /> },
+      { path: 'w/:workspaceId/tests', element: <TestsPage /> },
+      { path: 'w/:workspaceId/tests/new', element: <TestEditPage /> },
+      { path: 'w/:workspaceId/tests/:testId', element: <TestEditPage /> },
       { path: '*', element: <NotFoundContent /> },
     ],
   },

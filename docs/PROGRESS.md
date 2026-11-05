@@ -7,10 +7,10 @@ This is the live status of the autonomous implementation loop ([ROADMAP.md](ROAD
 | Field | Value |
 |---|---|
 | Release | R1 — Teacher presence (R0 complete) |
-| Current phase | R1-P5 — Leads management |
-| Branch | `feature/r1-p5-leads` (from `main` @ `f78ecc8`) |
+| Current phase | R1-P6 — Diagnostic test builder |
+| Branch | `feature/r1-p6-diagnostic-builder` (from `main` @ `9a948f1`) |
 | Workflow step | 5 — signed Codex review, then PR |
-| Next action | R1-P5 PR; then R1-P6 (diagnostic test builder) |
+| Next action | R1-P6 PR; then R1-P7 (public test taking & results) |
 | Open blockers | None. User actions (optional): direct-push probe (R0-P8); remove the now redundant required `pr-gate` check (see Decisions) |
 
 ## Phase status
@@ -34,8 +34,8 @@ Status values: `not started`, `in progress`, `in review` (PR open), `merged`, `b
 | R1-P2 | Offers & programs | merged | `feature/r1-p2-offers` | [#14](https://github.com/Andrej994x/classhub/pull/14) | `465d9e4` | 3 rounds: 3 × P2 fixed (form version binding, NULL-proof CHECKs, stale version after reorder); final clean | green | Migration applied to local `ClassHubDb` |
 | R1-P3 | Public site model & editor | merged | `feature/r1-p3-site-editor` | [#15](https://github.com/Andrej994x/classhub/pull/15) | `ebb075b` | 5 rounds: 7 × P2 fixed (Vite preview proxy, null sections, no-referrer kept, item errors, slug newline, preview photo, token redaction); final clean | green | Migration applied to local `ClassHubDb` |
 | R1-P4 | Public site rendering, SEO & islands | merged | `feature/r1-p4-public-site` | [#16](https://github.com/Andrej994x/classhub/pull/16) | `f78ecc8` | 5 rounds: 2 × P2 fixed (unsaved edits on unpublish, query-string cache poisoning of `/`); final clean | green after 2 fix cycles (currency digits vs CLDR, sign-out race) | Migration applied to local `ClassHubDb` |
-| R1-P5 | Leads management | in progress | `feature/r1-p5-leads` | | | | | Plan: public intake island with spam rules and consent, inbox with statuses/notes/archive, teacher email, D-10b |
-| R1-P6 | Diagnostic test builder | not started | | | | | | |
+| R1-P5 | Leads management | merged | `feature/r1-p5-leads` | [#17](https://github.com/Andrej994x/classhub/pull/17) | `9a948f1` | 5 rounds: 5 × P2 fixed (atomic per-site quota, consent version change, localized server errors, retry after token renewal, debounced search vs filters); final clean | green | Migration applied to local `ClassHubDb` |
+| R1-P6 | Diagnostic test builder | in progress | `feature/r1-p6-diagnostic-builder` | | | | | Plan: tests/questions/options, whole-test saves with stable ids, publish readiness, D-38 lock + duplicate, scoring, public projection arch test |
 | R1-P7 | Public test taking & results | not started | | | | | | |
 | R1-P8 | Basic teacher dashboard | not started | | | | | | |
 | R1-P9 | Platform admin foundation | not started | | | | | | |
@@ -75,6 +75,10 @@ Definition of Done (ROADMAP E) demonstrated:
 - **Gate passed:** `dotnet ef database update` created `ClassHubDb` on `.\SQLEXPRESS` via Windows authentication. The running API connects as `EFCore/10.0.14` over **Shared memory**, `NTLM`. Collation `Macedonian_FYROM_100_CI_AS_SC`, RCSI on, migrations `InitialTechnical` + `EnableReadCommittedSnapshot` applied. No SQL Server configuration was changed.
 - Local tests: 49/49 green (unit 5, architecture 1, integration 43 on Testcontainers SQL Server 2022).
 - CI `migrations` job sequence verified locally against a throwaway container.
+
+### R1-P5 — Leads management (merged, PR #17, `9a948f1`)
+
+- Public contact/lesson-request island with signed form tokens, honeypot, fill time, per-IP and atomic per-site limits, versioned consent (D-18); D-10b for publishing and leads; minimal teacher email; inbox with statuses, notes, archive, filters; 468 backend / 120 Vitest / 20 Playwright tests.
 
 ### R1-P4 — Public site rendering, SEO & islands (merged, PR #16, `f78ecc8`)
 
