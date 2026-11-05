@@ -23,6 +23,9 @@ public sealed class ClassHubApiFactory : WebApplicationFactory<Program>
     private readonly string _connectionString;
     private readonly string _expectedDataSource;
 
+    /// <summary>Per-run folder for uploaded files (deleted with the factory).</summary>
+    public string FileRoot { get; } = Path.Combine(Path.GetTempPath(), "classhub-tests", Guid.NewGuid().ToString("N"));
+
     public ClassHubApiFactory(string connectionString, string expectedDataSource)
     {
         TestDatabaseGuard.AssertIsolated(connectionString, expectedDataSource);
@@ -49,6 +52,8 @@ public sealed class ClassHubApiFactory : WebApplicationFactory<Program>
         builder.UseSetting("App:PublicBaseUrl", "http://classhub.test");
         // Re-validate session cookies on every request so suspension/reset tests need no waiting.
         builder.UseSetting("Identity:SecurityStampValidationIntervalSeconds", "0");
+        // Uploaded files go to a per-run temporary folder, never into the repository's App_Data.
+        builder.UseSetting("Files:RootPath", FileRoot);
 
         builder.ConfigureTestServices(services =>
         {
@@ -58,6 +63,15 @@ public sealed class ClassHubApiFactory : WebApplicationFactory<Program>
             services.RemoveAll<IDbContextOptionsConfiguration<ClassHubDbContext>>();
             services.AddDbContext<ClassHubDbContext>(options => options.UseSqlServer(_connectionString));
         });
+    }
+
+    protected override void Dispose(bool disposing)
+    {
+        base.Dispose(disposing);
+        if (disposing && Directory.Exists(FileRoot))
+        {
+            Directory.Delete(FileRoot, recursive: true);
+        }
     }
 
     /// <summary>

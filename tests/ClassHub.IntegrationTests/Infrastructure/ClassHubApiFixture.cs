@@ -83,7 +83,12 @@ public sealed class ClassHubApiFixture : IAsyncLifetime
         _respawner ??= await Respawner.CreateAsync(connection, new RespawnerOptions
         {
             DbAdapter = DbAdapter.SqlServer,
-            TablesToIgnore = [new Table("__EFMigrationsHistory"), new Table("SchemaInfo"), new Table("DataProtectionKeys"), new Table("AspNetRoles")],
+            // Seeded reference data stays (the catalog is part of the migrations, like the platform roles).
+            TablesToIgnore =
+            [
+                new Table("__EFMigrationsHistory"), new Table("SchemaInfo"), new Table("DataProtectionKeys"), new Table("AspNetRoles"),
+                new Table("SubjectCategories"), new Table("Subjects"), new Table("EducationLevels"),
+            ],
         });
         await _respawner.ResetAsync(connection);
     }

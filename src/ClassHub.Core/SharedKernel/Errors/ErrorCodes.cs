@@ -27,6 +27,9 @@ public static class ErrorCodes
     public const string InvalidToken = "INVALID_TOKEN";
     public const string EmailAlreadyConfirmed = "EMAIL_ALREADY_CONFIRMED";
 
+    // Files
+    public const string ImageInvalid = "IMAGE_INVALID";
+
     /// <summary>Default code for an HTTP status when no specific code was set.</summary>
     public static string ForStatus(int statusCode) => statusCode switch
     {

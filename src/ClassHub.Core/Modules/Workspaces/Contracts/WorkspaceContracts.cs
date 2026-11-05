@@ -12,3 +12,9 @@ public sealed record MyWorkspaceResponse(Guid Id, string Name, string Role);
 public sealed record WorkspaceResponse(Guid Id, string Name, string TimeZone, string Currency, string Locale, string Role, DateTime CreatedAtUtc);
 
 public sealed record UpdateWorkspaceRequest(string? Name, string? TimeZone, string? Currency, string? Locale);
+
+/// <summary>The workspace entity, for database foreign keys from other modules (as a Type).</summary>
+public static class WorkspaceForeignKeyTargets
+{
+    public static readonly Type Workspace = typeof(Domain.Workspace);
+}

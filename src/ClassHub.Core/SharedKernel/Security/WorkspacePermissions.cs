@@ -10,11 +10,15 @@ public static class WorkspacePermissions
 {
     public const string WorkspaceRead = "workspace.read";
     public const string WorkspaceManage = "workspace.manage";
+    public const string ProfileRead = "profile.read";
+    public const string ProfileManage = "profile.manage";
 
     public static IReadOnlySet<string> All { get; } = new HashSet<string>(StringComparer.Ordinal)
     {
         WorkspaceRead,
         WorkspaceManage,
+        ProfileRead,
+        ProfileManage,
     };
 }
 

@@ -176,6 +176,63 @@ namespace ClassHub.Core.Infrastructure.Persistence.Migrations
                     b.ToTable("EmailOutbox", (string)null);
                 });
 
+            modelBuilder.Entity("ClassHub.Core.Infrastructure.Files.StoredFile", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("ContentType")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(100)");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasPrecision(3)
+                        .HasColumnType("datetime2(3)");
+
+                    b.Property<int?>("Height")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Purpose")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(50)");
+
+                    b.Property<string>("Sha256")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .IsUnicode(false)
+                        .HasColumnType("char(64)")
+                        .IsFixedLength();
+
+                    b.Property<long>("SizeBytes")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("StorageKey")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(300)");
+
+                    b.Property<int?>("Width")
+                        .HasColumnType("int");
+
+                    b.Property<Guid>("WorkspaceId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("StorageKey")
+                        .IsUnique();
+
+                    b.HasIndex("WorkspaceId");
+
+                    b.ToTable("StoredFiles", (string)null);
+                });
+
             modelBuilder.Entity("ClassHub.Core.Infrastructure.Persistence.Technical.SchemaInfo", b =>
                 {
                     b.Property<int>("Id")
@@ -212,6 +269,465 @@ namespace ClassHub.Core.Infrastructure.Persistence.Migrations
                             Key = "schema.foundation",
                             UpdatedAtUtc = new DateTime(2026, 11, 4, 0, 0, 0, 0, DateTimeKind.Utc),
                             Value = "R0-P2"
+                        });
+                });
+
+            modelBuilder.Entity("ClassHub.Core.Modules.Catalog.Domain.EducationLevel", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(50)");
+
+                    b.Property<string>("NameEn")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("NameMk")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Code")
+                        .IsUnique();
+
+                    b.ToTable("EducationLevels", (string)null);
+
+                    b.HasData(
+                        new
+                        {
+                            Id = new Guid("966c9507-81fe-84d8-83da-eaee33bf0590"),
+                            Code = "preschool",
+                            NameEn = "Preschool",
+                            NameMk = "Предучилишно",
+                            SortOrder = 10
+                        },
+                        new
+                        {
+                            Id = new Guid("ba74857e-c742-8be2-a7ac-2e76cbd34bd1"),
+                            Code = "primary-lower",
+                            NameEn = "Primary (grades 1–5)",
+                            NameMk = "Основно (1–5 одд.)",
+                            SortOrder = 20
+                        },
+                        new
+                        {
+                            Id = new Guid("6c4d75c8-e8ce-85b2-855d-76a5de06548a"),
+                            Code = "primary-upper",
+                            NameEn = "Primary (grades 6–9)",
+                            NameMk = "Основно (6–9 одд.)",
+                            SortOrder = 30
+                        },
+                        new
+                        {
+                            Id = new Guid("9b6309c4-477c-8e90-8a3a-0d54e1072b33"),
+                            Code = "secondary",
+                            NameEn = "Secondary",
+                            NameMk = "Средно",
+                            SortOrder = 40
+                        },
+                        new
+                        {
+                            Id = new Guid("cef3e47e-3c42-88ec-be62-23fab9fabae8"),
+                            Code = "university",
+                            NameEn = "University",
+                            NameMk = "Факултет",
+                            SortOrder = 50
+                        },
+                        new
+                        {
+                            Id = new Guid("f8a251b8-dc51-84a0-9928-176ee8f36666"),
+                            Code = "adults",
+                            NameEn = "Adults",
+                            NameMk = "Возрасни",
+                            SortOrder = 60
+                        });
+                });
+
+            modelBuilder.Entity("ClassHub.Core.Modules.Catalog.Domain.Subject", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("CategoryId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(50)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("NameEn")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("NameMk")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CategoryId");
+
+                    b.HasIndex("Code")
+                        .IsUnique();
+
+                    b.ToTable("Subjects", (string)null);
+
+                    b.HasData(
+                        new
+                        {
+                            Id = new Guid("66a59e90-fb33-8e6d-a2bb-4ca4402b4689"),
+                            CategoryId = new Guid("397ff651-6b09-8299-9d88-c774a8cf0469"),
+                            Code = "english",
+                            IsActive = true,
+                            NameEn = "English",
+                            NameMk = "Англиски јазик",
+                            SortOrder = 10
+                        },
+                        new
+                        {
+                            Id = new Guid("ad13da06-1670-825b-9fd0-1b8031114c4f"),
+                            CategoryId = new Guid("397ff651-6b09-8299-9d88-c774a8cf0469"),
+                            Code = "german",
+                            IsActive = true,
+                            NameEn = "German",
+                            NameMk = "Германски јазик",
+                            SortOrder = 20
+                        },
+                        new
+                        {
+                            Id = new Guid("31b544c6-94e4-8bae-bf7c-56ba892b1de7"),
+                            CategoryId = new Guid("397ff651-6b09-8299-9d88-c774a8cf0469"),
+                            Code = "french",
+                            IsActive = true,
+                            NameEn = "French",
+                            NameMk = "Француски јазик",
+                            SortOrder = 30
+                        },
+                        new
+                        {
+                            Id = new Guid("e7ca8aa4-367e-8530-abbc-fa822e0ff2bb"),
+                            CategoryId = new Guid("397ff651-6b09-8299-9d88-c774a8cf0469"),
+                            Code = "italian",
+                            IsActive = true,
+                            NameEn = "Italian",
+                            NameMk = "Италијански јазик",
+                            SortOrder = 40
+                        },
+                        new
+                        {
+                            Id = new Guid("e2df4b0d-4a97-8de4-96b6-9555ade37dd9"),
+                            CategoryId = new Guid("397ff651-6b09-8299-9d88-c774a8cf0469"),
+                            Code = "spanish",
+                            IsActive = true,
+                            NameEn = "Spanish",
+                            NameMk = "Шпански јазик",
+                            SortOrder = 50
+                        },
+                        new
+                        {
+                            Id = new Guid("5b7474b5-b568-80c3-8cf3-2f39eafc8e8d"),
+                            CategoryId = new Guid("397ff651-6b09-8299-9d88-c774a8cf0469"),
+                            Code = "russian",
+                            IsActive = true,
+                            NameEn = "Russian",
+                            NameMk = "Руски јазик",
+                            SortOrder = 60
+                        },
+                        new
+                        {
+                            Id = new Guid("b7d70e13-7227-8cb3-95b9-7f20f341ec69"),
+                            CategoryId = new Guid("397ff651-6b09-8299-9d88-c774a8cf0469"),
+                            Code = "macedonian",
+                            IsActive = true,
+                            NameEn = "Macedonian",
+                            NameMk = "Македонски јазик",
+                            SortOrder = 70
+                        },
+                        new
+                        {
+                            Id = new Guid("ba982c45-97a6-8984-a2c3-b02a98b58cd6"),
+                            CategoryId = new Guid("397ff651-6b09-8299-9d88-c774a8cf0469"),
+                            Code = "albanian",
+                            IsActive = true,
+                            NameEn = "Albanian",
+                            NameMk = "Албански јазик",
+                            SortOrder = 80
+                        },
+                        new
+                        {
+                            Id = new Guid("0d00074d-d9e7-81d3-a0bc-d13c93f0fa34"),
+                            CategoryId = new Guid("397ff651-6b09-8299-9d88-c774a8cf0469"),
+                            Code = "turkish",
+                            IsActive = true,
+                            NameEn = "Turkish",
+                            NameMk = "Турски јазик",
+                            SortOrder = 90
+                        },
+                        new
+                        {
+                            Id = new Guid("44136582-6911-86d2-93a3-6313a3781ba5"),
+                            CategoryId = new Guid("1e9da771-d8b2-82d1-9472-14cdae52ce29"),
+                            Code = "math",
+                            IsActive = true,
+                            NameEn = "Mathematics",
+                            NameMk = "Математика",
+                            SortOrder = 100
+                        },
+                        new
+                        {
+                            Id = new Guid("3669c55e-f275-87a0-9cd8-a34178c16196"),
+                            CategoryId = new Guid("1e9da771-d8b2-82d1-9472-14cdae52ce29"),
+                            Code = "physics",
+                            IsActive = true,
+                            NameEn = "Physics",
+                            NameMk = "Физика",
+                            SortOrder = 110
+                        },
+                        new
+                        {
+                            Id = new Guid("e962a711-7192-8d10-be32-bdcb2ce2b979"),
+                            CategoryId = new Guid("1e9da771-d8b2-82d1-9472-14cdae52ce29"),
+                            Code = "chemistry",
+                            IsActive = true,
+                            NameEn = "Chemistry",
+                            NameMk = "Хемија",
+                            SortOrder = 120
+                        },
+                        new
+                        {
+                            Id = new Guid("31006688-ac16-8b8b-bee9-870edeb892cf"),
+                            CategoryId = new Guid("1e9da771-d8b2-82d1-9472-14cdae52ce29"),
+                            Code = "biology",
+                            IsActive = true,
+                            NameEn = "Biology",
+                            NameMk = "Биологија",
+                            SortOrder = 130
+                        },
+                        new
+                        {
+                            Id = new Guid("bbf625a2-9ed1-8c29-8c05-f91ea2724a20"),
+                            CategoryId = new Guid("1315844f-76fb-8559-b56d-229e113ea93f"),
+                            Code = "geography",
+                            IsActive = true,
+                            NameEn = "Geography",
+                            NameMk = "Географија",
+                            SortOrder = 140
+                        },
+                        new
+                        {
+                            Id = new Guid("bd53e27a-292f-819c-830c-044a87f17a93"),
+                            CategoryId = new Guid("1315844f-76fb-8559-b56d-229e113ea93f"),
+                            Code = "history",
+                            IsActive = true,
+                            NameEn = "History",
+                            NameMk = "Историја",
+                            SortOrder = 150
+                        },
+                        new
+                        {
+                            Id = new Guid("19ec2c1e-a48e-8488-8b97-625280eaf355"),
+                            CategoryId = new Guid("1315844f-76fb-8559-b56d-229e113ea93f"),
+                            Code = "philosophy",
+                            IsActive = true,
+                            NameEn = "Philosophy",
+                            NameMk = "Филозофија",
+                            SortOrder = 160
+                        },
+                        new
+                        {
+                            Id = new Guid("5cabbe08-fbdd-811b-be9d-3090efd1ad12"),
+                            CategoryId = new Guid("1315844f-76fb-8559-b56d-229e113ea93f"),
+                            Code = "economics",
+                            IsActive = true,
+                            NameEn = "Economics",
+                            NameMk = "Економија",
+                            SortOrder = 170
+                        },
+                        new
+                        {
+                            Id = new Guid("37a95e21-70b3-8471-b6f4-ce6e4370474a"),
+                            CategoryId = new Guid("17e6cd67-6a49-8e7f-bf93-696f0aec817c"),
+                            Code = "programming",
+                            IsActive = true,
+                            NameEn = "Programming",
+                            NameMk = "Програмирање",
+                            SortOrder = 180
+                        },
+                        new
+                        {
+                            Id = new Guid("8530ece7-51ee-86c5-9ecc-c0277671356f"),
+                            CategoryId = new Guid("17e6cd67-6a49-8e7f-bf93-696f0aec817c"),
+                            Code = "computer-basics",
+                            IsActive = true,
+                            NameEn = "Computer basics",
+                            NameMk = "Основи на информатиката",
+                            SortOrder = 190
+                        },
+                        new
+                        {
+                            Id = new Guid("56ce51d5-0549-80d9-9d30-cc5e0d68a8a6"),
+                            CategoryId = new Guid("ea8e5715-d388-84ac-a08b-7be3ec73ccc5"),
+                            Code = "music",
+                            IsActive = true,
+                            NameEn = "Music",
+                            NameMk = "Музика",
+                            SortOrder = 200
+                        },
+                        new
+                        {
+                            Id = new Guid("db91ddbd-a0ce-8b66-afa0-31ef0ec19d1f"),
+                            CategoryId = new Guid("ea8e5715-d388-84ac-a08b-7be3ec73ccc5"),
+                            Code = "piano",
+                            IsActive = true,
+                            NameEn = "Piano",
+                            NameMk = "Пијано",
+                            SortOrder = 210
+                        },
+                        new
+                        {
+                            Id = new Guid("9c5fdb7d-2ffa-8b2e-9cf3-3335bb4791ac"),
+                            CategoryId = new Guid("ea8e5715-d388-84ac-a08b-7be3ec73ccc5"),
+                            Code = "guitar",
+                            IsActive = true,
+                            NameEn = "Guitar",
+                            NameMk = "Гитара",
+                            SortOrder = 220
+                        },
+                        new
+                        {
+                            Id = new Guid("44868a03-7772-8927-b212-bccb752ebe01"),
+                            CategoryId = new Guid("ea8e5715-d388-84ac-a08b-7be3ec73ccc5"),
+                            Code = "art",
+                            IsActive = true,
+                            NameEn = "Visual arts",
+                            NameMk = "Ликовна уметност",
+                            SortOrder = 230
+                        },
+                        new
+                        {
+                            Id = new Guid("9581b632-3535-8ea8-9f05-8bd8fc2a3961"),
+                            CategoryId = new Guid("0db075ef-30e5-8580-be5f-7b3ca817e879"),
+                            Code = "state-matura",
+                            IsActive = true,
+                            NameEn = "State matura",
+                            NameMk = "Државна матура",
+                            SortOrder = 240
+                        },
+                        new
+                        {
+                            Id = new Guid("195f634e-5090-813b-bbd9-2d61eb8f786c"),
+                            CategoryId = new Guid("0db075ef-30e5-8580-be5f-7b3ca817e879"),
+                            Code = "language-certificates",
+                            IsActive = true,
+                            NameEn = "Language certificates",
+                            NameMk = "Јазични сертификати",
+                            SortOrder = 250
+                        });
+                });
+
+            modelBuilder.Entity("ClassHub.Core.Modules.Catalog.Domain.SubjectCategory", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(50)");
+
+                    b.Property<string>("NameEn")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("NameMk")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Code")
+                        .IsUnique();
+
+                    b.ToTable("SubjectCategories", (string)null);
+
+                    b.HasData(
+                        new
+                        {
+                            Id = new Guid("397ff651-6b09-8299-9d88-c774a8cf0469"),
+                            Code = "languages",
+                            NameEn = "Languages",
+                            NameMk = "Јазици",
+                            SortOrder = 10
+                        },
+                        new
+                        {
+                            Id = new Guid("1e9da771-d8b2-82d1-9472-14cdae52ce29"),
+                            Code = "math-science",
+                            NameEn = "Mathematics & science",
+                            NameMk = "Математика и природни науки",
+                            SortOrder = 20
+                        },
+                        new
+                        {
+                            Id = new Guid("1315844f-76fb-8559-b56d-229e113ea93f"),
+                            Code = "social",
+                            NameEn = "Humanities & social sciences",
+                            NameMk = "Општествени науки",
+                            SortOrder = 30
+                        },
+                        new
+                        {
+                            Id = new Guid("17e6cd67-6a49-8e7f-bf93-696f0aec817c"),
+                            Code = "it",
+                            NameEn = "Computing",
+                            NameMk = "Информатика",
+                            SortOrder = 40
+                        },
+                        new
+                        {
+                            Id = new Guid("ea8e5715-d388-84ac-a08b-7be3ec73ccc5"),
+                            Code = "arts",
+                            NameEn = "Arts & music",
+                            NameMk = "Уметност и музика",
+                            SortOrder = 50
+                        },
+                        new
+                        {
+                            Id = new Guid("0db075ef-30e5-8580-be5f-7b3ca817e879"),
+                            Code = "exams",
+                            NameEn = "Exam preparation",
+                            NameMk = "Подготовка за испити",
+                            SortOrder = 60
                         });
                 });
 
@@ -348,6 +864,133 @@ namespace ClassHub.Core.Infrastructure.Persistence.Migrations
                         .HasFilter("[NormalizedUserName] IS NOT NULL");
 
                     b.ToTable("AspNetUsers", (string)null);
+                });
+
+            modelBuilder.Entity("ClassHub.Core.Modules.Teachers.Domain.TeacherProfile", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Bio")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<string>("CountryCode")
+                        .HasMaxLength(2)
+                        .IsUnicode(false)
+                        .HasColumnType("char(2)")
+                        .IsFixedLength();
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasPrecision(3)
+                        .HasColumnType("datetime2(3)");
+
+                    b.Property<string>("FirstName")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("LastName")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<Guid?>("PhotoFileId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<string>("TeachingMode")
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<DateTime>("UpdatedAtUtc")
+                        .HasPrecision(3)
+                        .HasColumnType("datetime2(3)");
+
+                    b.Property<Guid>("WorkspaceId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("WorkspaceId")
+                        .IsUnique();
+
+                    b.HasIndex("WorkspaceId", "PhotoFileId");
+
+                    b.ToTable("TeacherProfiles", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_TeacherProfiles_CountryCode", "[CountryCode] IS NULL OR [CountryCode] LIKE '[A-Z][A-Z]'");
+                        });
+                });
+
+            modelBuilder.Entity("ClassHub.Core.Modules.Teachers.Domain.TeacherProfileLanguage", b =>
+                {
+                    b.Property<Guid>("ProfileId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("LanguageCode")
+                        .HasMaxLength(10)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(10)");
+
+                    b.Property<Guid>("WorkspaceId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("ProfileId", "LanguageCode");
+
+                    b.HasIndex("WorkspaceId");
+
+                    b.HasIndex("WorkspaceId", "ProfileId");
+
+                    b.ToTable("TeacherProfileLanguages", (string)null);
+                });
+
+            modelBuilder.Entity("ClassHub.Core.Modules.Teachers.Domain.TeacherProfileLevel", b =>
+                {
+                    b.Property<Guid>("ProfileId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("LevelId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("WorkspaceId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("ProfileId", "LevelId");
+
+                    b.HasIndex("LevelId");
+
+                    b.HasIndex("WorkspaceId");
+
+                    b.HasIndex("WorkspaceId", "ProfileId");
+
+                    b.ToTable("TeacherProfileLevels", (string)null);
+                });
+
+            modelBuilder.Entity("ClassHub.Core.Modules.Teachers.Domain.TeacherProfileSubject", b =>
+                {
+                    b.Property<Guid>("ProfileId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("SubjectId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("WorkspaceId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("ProfileId", "SubjectId");
+
+                    b.HasIndex("SubjectId");
+
+                    b.HasIndex("WorkspaceId");
+
+                    b.HasIndex("WorkspaceId", "ProfileId");
+
+                    b.ToTable("TeacherProfileSubjects", (string)null);
                 });
 
             modelBuilder.Entity("ClassHub.Core.Modules.Workspaces.Domain.Workspace", b =>
@@ -554,6 +1197,72 @@ namespace ClassHub.Core.Infrastructure.Persistence.Migrations
                     b.HasKey("UserId", "LoginProvider", "Name");
 
                     b.ToTable("AspNetUserTokens", (string)null);
+                });
+
+            modelBuilder.Entity("ClassHub.Core.Modules.Catalog.Domain.Subject", b =>
+                {
+                    b.HasOne("ClassHub.Core.Modules.Catalog.Domain.SubjectCategory", null)
+                        .WithMany()
+                        .HasForeignKey("CategoryId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("ClassHub.Core.Modules.Teachers.Domain.TeacherProfile", b =>
+                {
+                    b.HasOne("ClassHub.Core.Modules.Workspaces.Domain.Workspace", null)
+                        .WithMany()
+                        .HasForeignKey("WorkspaceId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.HasOne("ClassHub.Core.Infrastructure.Files.StoredFile", null)
+                        .WithMany()
+                        .HasForeignKey("WorkspaceId", "PhotoFileId")
+                        .HasPrincipalKey("WorkspaceId", "Id")
+                        .OnDelete(DeleteBehavior.NoAction);
+                });
+
+            modelBuilder.Entity("ClassHub.Core.Modules.Teachers.Domain.TeacherProfileLanguage", b =>
+                {
+                    b.HasOne("ClassHub.Core.Modules.Teachers.Domain.TeacherProfile", null)
+                        .WithMany()
+                        .HasForeignKey("WorkspaceId", "ProfileId")
+                        .HasPrincipalKey("WorkspaceId", "Id")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("ClassHub.Core.Modules.Teachers.Domain.TeacherProfileLevel", b =>
+                {
+                    b.HasOne("ClassHub.Core.Modules.Catalog.Domain.EducationLevel", null)
+                        .WithMany()
+                        .HasForeignKey("LevelId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.HasOne("ClassHub.Core.Modules.Teachers.Domain.TeacherProfile", null)
+                        .WithMany()
+                        .HasForeignKey("WorkspaceId", "ProfileId")
+                        .HasPrincipalKey("WorkspaceId", "Id")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("ClassHub.Core.Modules.Teachers.Domain.TeacherProfileSubject", b =>
+                {
+                    b.HasOne("ClassHub.Core.Modules.Catalog.Domain.Subject", null)
+                        .WithMany()
+                        .HasForeignKey("SubjectId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.HasOne("ClassHub.Core.Modules.Teachers.Domain.TeacherProfile", null)
+                        .WithMany()
+                        .HasForeignKey("WorkspaceId", "ProfileId")
+                        .HasPrincipalKey("WorkspaceId", "Id")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("ClassHub.Core.Modules.Workspaces.Domain.WorkspaceMember", b =>
