@@ -76,7 +76,9 @@ export function OfferEditPage() {
   const workspace = useWorkspace(workspaceId);
   const catalog = useCatalog();
 
-  if ((offerId && offer.isPending) || workspace.isPending || catalog.isPending) return <output className="block">{t('common.loading')}</output>;
+  // Wait for the offer fetched now (not a cached copy): its version is the one the form will submit.
+  const offerLoading = offerId !== undefined && (offer.isPending || (!offer.isFetchedAfterMount && !offer.isError));
+  if (offerLoading || workspace.isPending || catalog.isPending) return <output className="block">{t('common.loading')}</output>;
   const failed = (offerId ? offer.error : null) ?? workspace.error ?? catalog.error;
   if (failed) return failed instanceof ApiError && failed.status === 404 ? <NotFoundContent /> : <Alert variant="error">{errorMessage(failed, t)}</Alert>;
 

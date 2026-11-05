@@ -25,10 +25,12 @@ export function useOffers(workspaceId: string) {
   });
 }
 
+/** For the editor: always refetched on mount, so a form never starts from a stale cached version. */
 export function useOffer(workspaceId: string, offerId: string | undefined) {
   return useQuery({
     queryKey: keys.one(workspaceId, offerId ?? 'new'),
     enabled: offerId !== undefined,
+    refetchOnMount: 'always',
     queryFn: async () =>
       (await api.client.GET('/api/w/{workspaceId}/offers/{offerId}', { params: { path: { workspaceId, offerId: offerId! } } })).data!,
   });
@@ -71,6 +73,10 @@ export function useReorderOffers(workspaceId: string) {
   return useMutation({
     mutationFn: async (offerIds: string[]) =>
       (await api.client.PUT('/api/w/{workspaceId}/offers/order', { params: { path: { workspaceId } }, body: { offerIds } })).data!,
-    onSuccess: (offers) => queryClient.setQueryData(keys.list(workspaceId), offers),
+    // The reorder changed versions: refresh every offer's own cache too.
+    onSuccess: (offers) => {
+      queryClient.setQueryData(keys.list(workspaceId), offers);
+      for (const offer of offers) queryClient.setQueryData(keys.one(workspaceId, offer.id), offer);
+    },
   });
 }

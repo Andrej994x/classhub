@@ -1,4 +1,4 @@
-import { screen, within } from '@testing-library/react';
+import { act, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
 import { moneyInput, parseMoney } from '../../../lib/format.ts';
@@ -118,6 +118,27 @@ describe('offers page', () => {
 
     expect(await screen.findByText(/Понудата е променета на друго место/)).toBeInTheDocument();
     expect(api.to(`${API}/offer-1`, 'PUT')[0]?.body).toMatchObject({ title: 'Мој наслов', version: 4 });
+  });
+
+  it('opens the editor with the current version after a reorder (no spurious conflict)', async () => {
+    const user = userEvent.setup();
+    const api = fakeApi({ me: teacher() });
+    api.state.offers = [offer({ id: 'a', title: 'A' }), offer({ id: 'b', title: 'B', displayOrder: 2 })];
+    const { router } = await renderRoute(`${OFFERS}/b`);
+    await screen.findByLabelText('Наслов');
+    await act(() => router.navigate(OFFERS));
+
+    // The reorder bumps versions on the server (as the API does).
+    api.state.offers = api.state.offers.map((o) => ({ ...o, version: o.version + 1 }));
+    await user.click(await screen.findByRole('button', { name: 'Помести „B“ нагоре' }));
+    await expect.poll(() => api.to(`${API}/order`, 'PUT').length).toBe(1);
+
+    await act(() => router.navigate(`${OFFERS}/b`));
+    await user.type(await screen.findByLabelText('Наслов'), ' 2');
+    await user.click(screen.getByRole('button', { name: 'Зачувај понуда' }));
+
+    await screen.findByRole('heading', { level: 1, name: 'Понуди' });
+    expect(api.to(`${API}/b`, 'PUT')[0]?.body).toMatchObject({ title: 'B 2', version: 1 });
   });
 
   it('reorders and archives (with confirmation)', async () => {
