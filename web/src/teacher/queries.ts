@@ -48,20 +48,13 @@ export function useOnboarding(workspaceId: string) {
   });
 }
 
-/** Saves the profile and, when they changed, the workspace's time zone and currency (audited by the API). */
+/** Saves the profile and, when they changed, the workspace's time zone and currency (atomically, audited by the API). */
 export function useSaveProfile(workspaceId: string) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async ({ profile, settings }: { profile: UpdateTeacherProfile; settings?: { timeZone: string; currency: string } }) => {
-      const saved = (await api.client.PUT('/api/w/{workspaceId}/profile', { params: { path: { workspaceId } }, body: profile })).data!;
-      if (settings) {
-        await api.client.PATCH('/api/w/{workspaceId}', {
-          params: { path: { workspaceId } },
-          body: { name: null, locale: null, timeZone: settings.timeZone, currency: settings.currency },
-        });
-      }
-      return saved;
-    },
+    // One request: the API saves the profile and the (optional) time zone/currency in one transaction.
+    mutationFn: async (profile: UpdateTeacherProfile) =>
+      (await api.client.PUT('/api/w/{workspaceId}/profile', { params: { path: { workspaceId } }, body: profile })).data!,
     onSuccess: async (saved) => {
       queryClient.setQueryData(keys.profile(workspaceId), saved);
       await Promise.all([

@@ -4,6 +4,7 @@ using ClassHub.Core.Infrastructure.Persistence;
 using ClassHub.Core.Modules.Catalog.Contracts;
 using ClassHub.Core.Modules.Teachers.Contracts;
 using ClassHub.Core.Modules.Teachers.Domain;
+using ClassHub.Core.Modules.Workspaces.Contracts;
 using ClassHub.Core.SharedKernel.Errors;
 using ClassHub.Core.SharedKernel.Globalization;
 using ClassHub.Core.SharedKernel.Tenancy;
@@ -18,6 +19,7 @@ internal sealed partial class TeacherProfileService(
     ClassHubDbContext db,
     ITenantContext tenant,
     ICatalogLookup catalog,
+    IWorkspaceSettings workspaceSettings,
     IFileStorage files,
     TimeProvider clock,
     ILogger<TeacherProfileService> logger)
@@ -74,6 +76,8 @@ internal sealed partial class TeacherProfileService(
         db.RemoveRange(currentLanguages.Where(x => !languages.Contains(x.LanguageCode)));
         db.AddRange(languages.Except(currentLanguages.Select(x => x.LanguageCode), StringComparer.Ordinal).Select(code => new TeacherProfileLanguage { ProfileId = profile.Id, LanguageCode = code }));
 
+        // Time zone and currency: same unit of work, so profile and settings commit together or not at all.
+        await workspaceSettings.ApplyAsync(request.TimeZone, request.Currency?.ToUpperInvariant(), cancellationToken);
         await db.SaveChangesAsync(cancellationToken);
         return await ToResponseAsync(profile, cancellationToken);
     }
@@ -257,6 +261,8 @@ internal sealed class UpdateTeacherProfileRequestValidator : AbstractValidator<U
             .WithMessage("Teaching mode must be Online, InPerson or Hybrid.")
             .When(x => x.TeachingMode is not null);
         RuleFor(x => x.CountryCode).Must(Countries.IsIsoCode).WithMessage("Unknown country.").When(x => !string.IsNullOrWhiteSpace(x.CountryCode));
+        RuleFor(x => x.TimeZone).Must(TimeZones.IsIanaId).WithMessage("Unknown time zone.").When(x => x.TimeZone is not null);
+        RuleFor(x => x.Currency).Must(Currencies.IsActiveIsoCode).WithMessage("Currency must be an active ISO 4217 code.").When(x => x.Currency is not null);
         RuleFor(x => x.SubjectIds).Must(ids => ids!.Count <= TeacherProfile.MaxSubjects).WithMessage($"At most {TeacherProfile.MaxSubjects} subjects.").When(x => x.SubjectIds is not null);
         RuleFor(x => x.LevelIds).Must(ids => ids!.Count <= TeacherProfile.MaxLevels).WithMessage($"At most {TeacherProfile.MaxLevels} education levels.").When(x => x.LevelIds is not null);
         RuleFor(x => x.Languages)

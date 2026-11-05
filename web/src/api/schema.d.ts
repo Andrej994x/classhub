@@ -378,6 +378,8 @@ export interface components {
             subjectIds: null | string[];
             levelIds: null | string[];
             languages: null | string[];
+            timeZone?: null | string;
+            currency?: null | string;
         };
         UpdateWorkspaceRequest: {
             name: null | string;

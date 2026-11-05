@@ -29,7 +29,6 @@ describe('profile page', () => {
       me: teacher(),
       extra: [
         (call) => (call.method === 'PUT' && call.path === PROFILE_PATH ? json(200, { ...EMPTY_PROFILE, ...(call.body as object) }) : undefined),
-        (call) => (call.method === 'PATCH' && call.path === `/api/w/${WORKSPACE_ID}` ? json(200, {}) : undefined),
       ],
     });
     await renderRoute(`/app/w/${WORKSPACE_ID}/profile`);
@@ -57,9 +56,12 @@ describe('profile page', () => {
         subjectIds: [SUBJECT_MATH],
         levelIds: [LEVEL_SECONDARY],
         languages: ['mk'],
+        timeZone: 'Europe/Skopje',
+        currency: 'EUR',
       },
     });
-    expect(api.to(`/api/w/${WORKSPACE_ID}`, 'PATCH')[0]?.body).toEqual({ name: null, locale: null, timeZone: 'Europe/Skopje', currency: 'EUR' });
+    // One request, so the API can save profile and settings atomically.
+    expect(api.to(`/api/w/${WORKSPACE_ID}`, 'PATCH')).toHaveLength(0);
   });
 
   it('does not touch the workspace settings when only the profile changed', async () => {
@@ -74,7 +76,7 @@ describe('profile page', () => {
     await user.click(screen.getByRole('button', { name: 'Зачувај профил' }));
 
     expect(await screen.findByText('Профилот е зачуван.')).toBeInTheDocument();
-    expect(api.to(`/api/w/${WORKSPACE_ID}`, 'PATCH')).toHaveLength(0);
+    expect(api.to(PROFILE_PATH, 'PUT')[0]?.body).toMatchObject({ timeZone: null, currency: null });
   });
 
   it('rejects other file types in the browser and uploads a photo as multipart with the antiforgery header', async () => {

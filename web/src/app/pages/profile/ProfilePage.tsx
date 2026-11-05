@@ -195,17 +195,16 @@ function ProfileFormCard({ workspaceId, profile, workspace, catalog }: { workspa
     const settingsChanged = values.timeZone !== workspace.timeZone || values.currency !== workspace.currency;
     await save
       .mutateAsync({
-        profile: {
-          firstName: empty(values.firstName),
-          lastName: empty(values.lastName),
-          bio: empty(values.bio),
-          teachingMode: values.teachingMode === '' ? null : values.teachingMode,
-          countryCode: empty(values.countryCode),
-          subjectIds: values.subjectIds,
-          levelIds: values.levelIds,
-          languages: values.languages,
-        },
-        settings: settingsChanged ? { timeZone: values.timeZone, currency: values.currency } : undefined,
+        firstName: empty(values.firstName),
+        lastName: empty(values.lastName),
+        bio: empty(values.bio),
+        teachingMode: values.teachingMode === '' ? null : values.teachingMode,
+        countryCode: empty(values.countryCode),
+        subjectIds: values.subjectIds,
+        levelIds: values.levelIds,
+        languages: values.languages,
+        timeZone: settingsChanged ? values.timeZone : null,
+        currency: settingsChanged ? values.currency : null,
       })
       .then((saved) => form.reset(toForm(saved, { ...workspace, timeZone: values.timeZone, currency: values.currency })))
       .catch(() => undefined);

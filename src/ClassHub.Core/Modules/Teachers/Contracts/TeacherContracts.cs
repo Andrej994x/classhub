@@ -14,7 +14,10 @@ public sealed record TeacherProfileResponse(
     string? PhotoVersion,
     DateTime? UpdatedAtUtc);
 
-/// <summary>Replaces the whole profile (omitted lists become empty).</summary>
+/// <summary>
+/// Replaces the whole profile (omitted lists become empty). <c>TimeZone</c> and <c>Currency</c> are workspace
+/// settings: when given, they are changed (and audited) in the same transaction as the profile.
+/// </summary>
 public sealed record UpdateTeacherProfileRequest(
     string? FirstName,
     string? LastName,
@@ -23,7 +26,9 @@ public sealed record UpdateTeacherProfileRequest(
     string? CountryCode,
     IReadOnlyList<Guid>? SubjectIds,
     IReadOnlyList<Guid>? LevelIds,
-    IReadOnlyList<string>? Languages);
+    IReadOnlyList<string>? Languages,
+    string? TimeZone = null,
+    string? Currency = null);
 
 /// <summary>An onboarding step. <c>Available</c> is false while the feature arrives in a later phase.</summary>
 public sealed record OnboardingStep(string Key, bool Completed, bool Available);

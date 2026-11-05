@@ -92,6 +92,34 @@ public sealed class TeacherProfileTests(ClassHubApiFixture fixture)
         Step(await Onboarding(teacher), OnboardingSteps.Subjects).Completed.ShouldBeFalse();
     }
 
+    [Fact]
+    public async Task Time_zone_and_currency_are_saved_with_the_profile_in_one_audited_transaction()
+    {
+        using var teacher = await fixture.CreateTeacherAsync();
+
+        var saved = await PutProfileAsync(teacher, new { firstName = "Ана", timeZone = "Europe/Berlin", currency = "eur" });
+
+        saved.FirstName.ShouldBe("Ана");
+        var workspace = await teacher.Client.GetJsonAsync<ClassHub.Core.Modules.Workspaces.Contracts.WorkspaceResponse>($"/api/w/{teacher.WorkspaceId}");
+        (workspace.TimeZone, workspace.Currency).ShouldBe(("Europe/Berlin", "EUR"));
+        await using var db = fixture.CreateDbContext();
+        (await db.AuditLog.CountAsync(a => a.Action == "workspace.settings.updated" && a.WorkspaceId == teacher.WorkspaceId, Ct)).ShouldBe(1);
+    }
+
+    [Theory]
+    [InlineData("timeZone", "Mars/Olympus")]
+    [InlineData("currency", "ABC")]
+    public async Task Invalid_settings_reject_the_whole_profile_change(string field, string value)
+    {
+        using var teacher = await fixture.CreateTeacherAsync();
+
+        using var response = await teacher.Client.PutAsync(ProfilePath(teacher.WorkspaceId), new Dictionary<string, object> { ["firstName"] = "Ана", [field] = value });
+
+        response.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
+        (await response.ReadJsonAsync()).GetProperty("errors").TryGetProperty(field, out _).ShouldBeTrue();
+        (await teacher.Client.GetJsonAsync<TeacherProfileResponse>(ProfilePath(teacher.WorkspaceId))).FirstName.ShouldBeNull();
+    }
+
     [Theory]
     [InlineData("teachingMode", "Telepathy")]
     [InlineData("teachingMode", "1")]

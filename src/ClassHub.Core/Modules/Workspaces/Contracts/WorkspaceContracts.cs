@@ -18,3 +18,12 @@ public static class WorkspaceForeignKeyTargets
 {
     public static readonly Type Workspace = typeof(Domain.Workspace);
 }
+
+/// <summary>
+/// Changes the current workspace's time zone and currency inside the caller's unit of work (audited); the caller's
+/// <c>SaveChangesAsync</c> commits them together with its own changes. Null values are left unchanged.
+/// </summary>
+public interface IWorkspaceSettings
+{
+    Task ApplyAsync(string? timeZone, string? currency, CancellationToken cancellationToken);
+}

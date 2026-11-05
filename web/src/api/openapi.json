@@ -1233,6 +1233,18 @@
             "items": {
               "type": "string"
             }
+          },
+          "timeZone": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "currency": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
