@@ -146,6 +146,63 @@ public sealed class PublicTestTests(ClassHubApiFixture fixture)
     }
 
     [Fact]
+    public async Task Attempts_and_structural_edits_never_interleave()
+    {
+        for (var round = 0; round < 3; round++)
+        {
+            using var site = await PublishedTestAsync();
+            var test = site.Test;
+            var answers = test.Questions.Select(q => new { questionId = q.Id, optionIds = new[] { q.Options[0].Id } }).ToArray();
+
+            // A destructive edit (all questions replaced) races with parallel attempts on the current version.
+            var submissions = Enumerable.Range(0, 10).Select(async _ =>
+            {
+                using var visitor = fixture.Factory.CreateClient();
+                using var response = await visitor.PostAsJsonAsync($"{site.Path}/attempts", new { answers }, Ct);
+                return response.StatusCode;
+            }).ToList();
+            var edit = Task.Run(async () =>
+            {
+                using var response = await site.Teacher.Client.PutAsync($"{TestsPath(site.Teacher)}/{test.Id}", new
+                {
+                    title = test.Title,
+                    subjectId = test.SubjectId,
+                    difficulty = test.Difficulty,
+                    questions = new[] { new { text = "Ново прашање?", points = 1, options = new[] { new { text = "Да", isCorrect = true }, new { text = "Не", isCorrect = false } } } },
+                    version = test.Version,
+                });
+                return response.StatusCode;
+            });
+            var statuses = await Task.WhenAll(submissions);
+            var editStatus = await edit;
+
+            // Every outcome is clean: attempts were counted (edit refused) or refused because the test changed.
+            statuses.ShouldAllBe(s => s == HttpStatusCode.OK || s == HttpStatusCode.Conflict);
+            var current = await site.Teacher.Client.GetJsonAsync<DiagnosticTestResponse>($"{TestsPath(site.Teacher)}/{test.Id}");
+            if (editStatus == HttpStatusCode.OK)
+            {
+                statuses.ShouldAllBe(s => s == HttpStatusCode.Conflict); // nothing was scored on the replaced questions
+                current.AttemptCount.ShouldBe(0);
+            }
+            else
+            {
+                editStatus.ShouldBe(HttpStatusCode.Conflict);
+                current.AttemptCount.ShouldBe(statuses.Count(s => s == HttpStatusCode.OK));
+                current.Questions.Select(q => q.Id).ShouldBe(test.Questions.Select(q => q.Id));
+            }
+
+            // Stored attempts only ever refer to questions the test still has.
+            await using var db = fixture.CreateDbContext();
+            var stored = await db.Database.SqlQuery<string>($"SELECT AnswersJson AS [Value] FROM TestAttempts WHERE TestId = {test.Id}").ToListAsync(Ct);
+            var questionIds = current.Questions.Select(q => q.Id.ToString()).ToHashSet(StringComparer.OrdinalIgnoreCase);
+            foreach (var json in stored)
+            {
+                System.Text.Json.JsonDocument.Parse(json).RootElement.EnumerateObject().ShouldAllBe(p => questionIds.Contains(p.Name));
+            }
+        }
+    }
+
+    [Fact]
     public async Task A_visitor_sends_a_request_with_the_result_and_the_teacher_sees_it_only_when_shared()
     {
         using var site = await PublishedTestAsync();

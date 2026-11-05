@@ -95,6 +95,11 @@ internal sealed class PublicTestService(
         var attempts = scope.ServiceProvider.GetRequiredService<TestAttemptQueries>();
         await using var transaction = await writer.Database.BeginTransactionAsync(cancellationToken);
         await attempts.LockAttemptsAsync(resolved.Test.Id, cancellationToken);
+        // Scored against the version read above: if the teacher changed the test meanwhile, this score is not valid.
+        if (await attempts.PublishedVersionAsync(resolved.WorkspaceId, resolved.Test.Id, cancellationToken) != resolved.Test.Version)
+        {
+            throw new ConflictException("The test was changed meanwhile. Reload the page and take it again.", ErrorCodes.TestChanged);
+        }
         if (await attempts.CountAttemptsSinceAsync(resolved.WorkspaceId, resolved.Test.Id, now.AddHours(-1), cancellationToken) >= options.Value.MaxAttemptsPerTestPerHour)
         {
             throw new TooManyRequestsException("This test has been taken very often in the last hour. Please try again later.");

@@ -33,6 +33,7 @@ const TEXT = {
     submitting: 'Се пресметува…',
     failed: 'Резултатот не можеше да се пресмета. Обидете се повторно.',
     tooMany: 'Тестот е решаван многу пати во последниот час. Обидете се повторно подоцна.',
+    changed: 'Наставникот штотуку го промени тестот. Освежете ја страницата и решете го повторно.',
     resultTitle: 'Вашиот резултат',
     score: '{points} од {max} бода',
     correct: 'Точно одговорени прашања: {correct} од {total}.',
@@ -50,6 +51,7 @@ const TEXT = {
     submitting: 'Scoring…',
     failed: 'The result could not be calculated. Please try again.',
     tooMany: 'This test was taken very often in the last hour. Please try again later.',
+    changed: 'The teacher just changed this test. Reload the page and take it again.',
     resultTitle: 'Your result',
     score: '{points} of {max} points',
     correct: 'Questions answered correctly: {correct} of {total}.',
@@ -120,7 +122,7 @@ export function DiagnosticTest({ siteSlug = '', testSlug = '', language = 'mk' }
         }),
       });
       if (!response.ok) {
-        setError(response.status === 429 ? t('tooMany') : t('failed'));
+        setError(response.status === 429 ? t('tooMany') : response.status === 409 ? t('changed') : t('failed'));
         return;
       }
       setResult((await response.json()) as Result);

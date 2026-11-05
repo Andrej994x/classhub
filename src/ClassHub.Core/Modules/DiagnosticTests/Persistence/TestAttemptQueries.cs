@@ -20,6 +20,13 @@ internal sealed class TestAttemptQueries(ClassHubDbContext db)
             cancellationToken);
     }
 
+    /// <summary>The test's version while it is still published and not archived (under the attempt lock), or null.</summary>
+    public async Task<int?> PublishedVersionAsync(Guid workspaceId, Guid testId, CancellationToken cancellationToken) =>
+        await db.Set<DiagnosticTest>().IgnoreQueryFilters().AsNoTracking()
+            .Where(t => t.WorkspaceId == workspaceId && t.Id == testId && t.Status == TestStatus.Published && t.ArchivedAtUtc == null)
+            .Select(t => (int?)t.Version)
+            .SingleOrDefaultAsync(cancellationToken);
+
     public Task<int> CountAttemptsSinceAsync(Guid workspaceId, Guid testId, DateTime sinceUtc, CancellationToken cancellationToken) =>
         db.Set<TestAttempt>().IgnoreQueryFilters().AsNoTracking()
             .CountAsync(a => a.WorkspaceId == workspaceId && a.TestId == testId && a.CompletedAtUtc >= sinceUtc, cancellationToken);

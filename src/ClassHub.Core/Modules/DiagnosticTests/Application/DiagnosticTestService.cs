@@ -20,6 +20,7 @@ namespace ClassHub.Core.Modules.DiagnosticTests.Application;
 internal sealed class DiagnosticTestService(
     ClassHubDbContext db,
     DiagnosticTestQueries queries,
+    TestAttemptQueries attemptLock,
     ITenantContext tenant,
     ICatalogLookup catalog,
     IPublishedTestQuota quota,
@@ -69,6 +70,10 @@ internal sealed class DiagnosticTestService(
 
     public async Task<DiagnosticTestResponse> UpdateAsync(Guid testId, SaveDiagnosticTestRequest request, CancellationToken cancellationToken)
     {
+        // The same per-test lock as attempt submission: either an attempt is counted first (and the D-38 check below
+        // sees it), or this edit saves first (and the attempt, scored on the old version, is refused).
+        await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
+        await attemptLock.LockAttemptsAsync(testId, cancellationToken);
         var test = await LoadForChangeAsync(testId, request.Version, cancellationToken);
         await ThrowIfUnknownSubjectAsync(request.SubjectId!.Value, cancellationToken);
         var questions = await db.Set<TestQuestion>().Where(q => q.TestId == test.Id).ToListAsync(cancellationToken);
@@ -161,6 +166,7 @@ internal sealed class DiagnosticTestService(
 
         Touch(test);
         await SaveAsync(cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
         return await GetAsync(test.Id, cancellationToken);
     }
 

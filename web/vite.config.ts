@@ -26,9 +26,10 @@ const islands = Object.fromEntries(
 
 /**
  * Paths of the Razor public pages that the dev server forwards to ASP.NET Core: the landing page (/ and /en), sitemap,
- * robots, the built public assets and every slug-shaped top-level path except the SPA areas (/{slug}, /{slug}/photo).
+ * robots, the built public assets and every slug-shaped top-level path except the SPA areas (/{slug}, /{slug}/photo,
+ * /{slug}/tests/{testSlug}).
  */
-const publicPages = String.raw`^/(?:$|\?|en(?:$|\?)|sitemap\.xml|robots\.txt|dist/|(?!(?:app|student|admin|login|register|verify-email|forgot-password|reset-password|dev)(?:[/?#]|$))[a-z0-9][a-z0-9-]{1,38}[a-z0-9](?:/photo)?(?:[?#]|$))`;
+const publicPages = String.raw`^/(?:$|\?|en(?:$|\?)|sitemap\.xml|robots\.txt|dist/|(?!(?:app|student|admin|login|register|verify-email|forgot-password|reset-password|dev)(?:[/?#]|$))[a-z0-9][a-z0-9-]{1,38}[a-z0-9](?:/photo|/tests/[a-z0-9][a-z0-9-]{1,58}[a-z0-9])?(?:[?#]|$))`;
 
 export default defineConfig(({ command }) => ({
   base: command === 'build' ? '/dist/' : '/',

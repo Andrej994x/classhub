@@ -43,6 +43,7 @@ public static class ErrorCodes
     // Diagnostic tests (R1-P6)
     public const string TestSlugTaken = "TEST_SLUG_TAKEN";
     public const string TestHasAttempts = "TEST_HAS_ATTEMPTS";
+    public const string TestChanged = "TEST_CHANGED";
 
     /// <summary>Default code for an HTTP status when no specific code was set.</summary>
     public static string ForStatus(int statusCode) => statusCode switch
