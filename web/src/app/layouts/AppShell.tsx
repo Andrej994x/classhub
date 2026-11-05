@@ -92,6 +92,7 @@ function TeacherShell() {
         { to: first ? `/app/w/${first.id}` : '/app', labelKey: 'nav.dashboard', end: true },
         ...(first
           ? [
+              { to: `/app/w/${first.id}/leads`, labelKey: 'nav.leads' },
               { to: `/app/w/${first.id}/offers`, labelKey: 'nav.offers' },
               { to: `/app/w/${first.id}/site`, labelKey: 'nav.site' },
               { to: `/app/w/${first.id}/profile`, labelKey: 'nav.profile' },

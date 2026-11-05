@@ -37,7 +37,7 @@ public sealed partial class PublicSiteTests(ClassHubApiFixture fixture)
             await AssertNotFoundPageAsync(unknown);
         }
 
-        using var teacher = await fixture.CreateTeacherAsync();
+        using var teacher = await fixture.CreateTeacherAsync(confirmEmail: true);
         var slug = UniqueSlug();
         await SaveAsync(teacher, Body(slug));
         using var unpublished = await visitor.GetAsync($"/{slug}", Ct);
@@ -47,7 +47,7 @@ public sealed partial class PublicSiteTests(ClassHubApiFixture fixture)
     [Fact]
     public async Task A_published_site_renders_complete_html_with_meta_tags_and_json_ld()
     {
-        using var teacher = await fixture.CreateTeacherAsync();
+        using var teacher = await fixture.CreateTeacherAsync(confirmEmail: true);
         var math = await SubjectAsync(teacher, "math");
         await ProfileAsync(teacher, "Ана", "Петровска", [math]);
         await CreateOfferAsync(teacher, math, "Јавен час", price: 120_000);
@@ -113,7 +113,7 @@ public sealed partial class PublicSiteTests(ClassHubApiFixture fixture)
     [Fact]
     public async Task Teacher_text_is_encoded_and_cannot_break_out_of_the_json_ld_block()
     {
-        using var teacher = await fixture.CreateTeacherAsync();
+        using var teacher = await fixture.CreateTeacherAsync(confirmEmail: true);
         const string attack = "</script><script>alert(1)</script><b onmouseover=alert(2)>";
         var slug = UniqueSlug();
         var saved = await SaveAsync(teacher, Body(slug, sections: Sections("mk", hero: (attack, attack))));
@@ -134,7 +134,7 @@ public sealed partial class PublicSiteTests(ClassHubApiFixture fixture)
     [Fact]
     public async Task Draft_changes_stay_private_until_published_again_and_unpublishing_takes_the_page_offline()
     {
-        using var teacher = await fixture.CreateTeacherAsync();
+        using var teacher = await fixture.CreateTeacherAsync(confirmEmail: true);
         var slug = UniqueSlug();
         var saved = await SaveAsync(teacher, Body(slug, sections: Sections("mk", hero: ("Прва верзија", null))));
         var published = await PublishAsync(teacher, saved.Version);
@@ -168,7 +168,7 @@ public sealed partial class PublicSiteTests(ClassHubApiFixture fixture)
     [Fact]
     public async Task Cached_pages_are_served_until_a_change_that_shows_on_them_evicts_them()
     {
-        using var teacher = await fixture.CreateTeacherAsync();
+        using var teacher = await fixture.CreateTeacherAsync(confirmEmail: true);
         var math = await SubjectAsync(teacher, "math");
         await ProfileAsync(teacher, "Ана", "Петровска", [math]);
         var slug = UniqueSlug();
@@ -194,7 +194,7 @@ public sealed partial class PublicSiteTests(ClassHubApiFixture fixture)
     [Fact]
     public async Task A_suspended_owner_site_is_hidden_and_returns_after_reactivation()
     {
-        using var teacher = await fixture.CreateTeacherAsync();
+        using var teacher = await fixture.CreateTeacherAsync(confirmEmail: true);
         var slug = UniqueSlug();
         await PublishAsync(teacher, (await SaveAsync(teacher, Body(slug))).Version);
         using var visitor = Visitor();
@@ -216,10 +216,10 @@ public sealed partial class PublicSiteTests(ClassHubApiFixture fixture)
     [Fact]
     public async Task The_sitemap_lists_published_sites_and_robots_keeps_crawlers_out_of_the_app()
     {
-        using var teacher = await fixture.CreateTeacherAsync();
+        using var teacher = await fixture.CreateTeacherAsync(confirmEmail: true);
         var published = UniqueSlug();
         await PublishAsync(teacher, (await SaveAsync(teacher, Body(published))).Version);
-        using var other = await fixture.CreateTeacherAsync();
+        using var other = await fixture.CreateTeacherAsync(confirmEmail: true);
         var draftOnly = UniqueSlug();
         await SaveAsync(other, Body(draftOnly));
 
@@ -244,7 +244,7 @@ public sealed partial class PublicSiteTests(ClassHubApiFixture fixture)
     [Fact]
     public async Task Only_visitor_page_views_are_counted_also_when_served_from_the_cache()
     {
-        using var teacher = await fixture.CreateTeacherAsync();
+        using var teacher = await fixture.CreateTeacherAsync(confirmEmail: true);
         var slug = UniqueSlug();
         await PublishAsync(teacher, (await SaveAsync(teacher, Body(slug))).Version);
 
@@ -273,7 +273,7 @@ public sealed partial class PublicSiteTests(ClassHubApiFixture fixture)
     [Fact]
     public async Task Concurrent_first_views_of_the_day_are_all_counted()
     {
-        using var teacher = await fixture.CreateTeacherAsync();
+        using var teacher = await fixture.CreateTeacherAsync(confirmEmail: true);
         var slug = UniqueSlug();
         await PublishAsync(teacher, (await SaveAsync(teacher, Body(slug))).Version);
 
@@ -289,7 +289,7 @@ public sealed partial class PublicSiteTests(ClassHubApiFixture fixture)
     [Fact]
     public async Task The_public_photo_is_served_only_while_published_and_shown_in_the_hero()
     {
-        using var teacher = await fixture.CreateTeacherAsync();
+        using var teacher = await fixture.CreateTeacherAsync(confirmEmail: true);
         using (var upload = await teacher.Client.SendContentAsync(HttpMethod.Put, $"/api/w/{teacher.WorkspaceId}/profile/photo",
                    new MultipartFormDataContent { { new ByteArrayContent(ClassHub.UnitTests.Files.TestImages.Png(300, 300)), "file", "me.png" } }))
         {
@@ -322,7 +322,7 @@ public sealed partial class PublicSiteTests(ClassHubApiFixture fixture)
     [Fact]
     public async Task Publishing_needs_a_saved_site_the_current_version_and_the_own_workspace()
     {
-        using var teacher = await fixture.CreateTeacherAsync();
+        using var teacher = await fixture.CreateTeacherAsync(confirmEmail: true);
         using (var early = await teacher.Client.PostAsync($"{SitePath(teacher)}/publish", new { version = (int?)null }))
         {
             early.StatusCode.ShouldBe(HttpStatusCode.UnprocessableEntity);
@@ -345,7 +345,7 @@ public sealed partial class PublicSiteTests(ClassHubApiFixture fixture)
     [Fact]
     public async Task Publishing_completes_the_onboarding_step()
     {
-        using var teacher = await fixture.CreateTeacherAsync();
+        using var teacher = await fixture.CreateTeacherAsync(confirmEmail: true);
         var step = async () => (await teacher.Client.GetJsonAsync<OnboardingResponse>($"/api/w/{teacher.WorkspaceId}/onboarding"))
             .Steps.Single(s => s.Key == OnboardingSteps.Publish);
 
@@ -357,7 +357,7 @@ public sealed partial class PublicSiteTests(ClassHubApiFixture fixture)
     [Fact]
     public async Task Changing_the_address_of_a_published_site_moves_it_at_once()
     {
-        using var teacher = await fixture.CreateTeacherAsync();
+        using var teacher = await fixture.CreateTeacherAsync(confirmEmail: true);
         var oldSlug = UniqueSlug();
         var published = await PublishAsync(teacher, (await SaveAsync(teacher, Body(oldSlug))).Version);
         using var visitor = Visitor();
@@ -410,7 +410,7 @@ public sealed partial class PublicSiteTests(ClassHubApiFixture fixture)
     [Fact]
     public async Task A_public_read_only_request_cannot_write_tenant_data()
     {
-        using var teacher = await fixture.CreateTeacherAsync();
+        using var teacher = await fixture.CreateTeacherAsync(confirmEmail: true);
         await using var scope = fixture.Factory.Services.CreateAsyncScope();
         scope.ServiceProvider.GetRequiredService<TenantContext>().SetPublicReadOnly(teacher.WorkspaceId);
         var db = scope.ServiceProvider.GetRequiredService<ClassHub.Core.Infrastructure.Persistence.ClassHubDbContext>();

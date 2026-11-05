@@ -80,6 +80,14 @@ ASP.NET Core Identity with cookie sessions. See [ARCHITECTURE.md](ARCHITECTURE.m
 - Policies: `Authenticated`; workspace policies `ws:<permission>` (for example `ws:workspace.read`). Permissions are code constants (`WorkspacePermissions`), mapped from workspace roles (`WorkspaceRolePermissions`; today `Owner` has all workspace permissions). Unknown permission names fail when the policy is resolved.
 - Platform roles (`PlatformOwner`, `PlatformAdmin`) are Identity roles. **They grant no workspace access**: a platform admin without membership gets 404 on workspace routes (tested). The first Platform Owner is created only with the local CLI `dotnet run --project src/ClassHub.Api -- grant-platform-owner <email> [--force-add]` (audited, never exposed over HTTP). The owner check, the grant, the session revocation and the audit entry run in one transaction under an application lock (`sp_getapplock`), so concurrent bootstraps cannot both add an owner without `--force-add`.
 
+## Public leads (R1-P5)
+
+- The public endpoints are anonymous and use no cookies (the island sends `credentials: 'omit'`); the answer is always `202 {received: true}`, so nothing submitted is reflected, and spam gets the same answer (no oracle).
+- Spam protection (D-19): honeypot field, minimum fill time measured from a signed, site-bound form token (24 h), per-IP `public-form` limit, per-site hourly limit, length limits on every field. CAPTCHA is decided with hosting.
+- Validation is server-side: offers must be public, active and of this teacher; subjects must be the teacher's; consent and the age/guardian confirmation (D-18, provisional text, configurable threshold) are required and their version is stored with the time.
+- Intake checks run under the read-only public binding; the insert happens in its own scope with an explicit workspace (composite FKs keep offers and notes in the same workspace at the database level).
+- The teacher's notification email carries no visitor data (only a link to the inbox, which requires a session); unconfirmed accounts can neither publish nor receive leads (D-10b).
+
 ## Public sites (R1-P4)
 
 - Only **published** sites of **visible** owners (active owner membership, account not suspended) are public; everything else is a 404 with `noindex`. Hidden sections, unpublished drafts, non-public/inactive/archived offers and private profile fields never reach a template: the render model is an allow-list (snapshot-tested), and anonymous requests are bound to the workspace **read-only** (any tenant-owned write throws).

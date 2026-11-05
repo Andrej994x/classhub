@@ -20,6 +20,7 @@
     ViewData["Lang"] = lang;
     ViewData["Title"] = seo.Title;
     ViewData["BodyClass"] = $"palette-{site.Palette.Key}";
+    ViewData["Interactive"] = true;
 }
 @section Head {
     <meta name="description" content="@seo.Description" />

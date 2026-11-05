@@ -24,7 +24,8 @@
     "register": "Sign up",
     "profile": "Profile",
     "offers": "Offers",
-    "site": "Website"
+    "site": "Website",
+    "leads": "Requests"
   },
   "layout": {
     "teacherArea": "Teacher workspace",
@@ -73,7 +74,11 @@
       "NETWORK_ERROR": "Cannot reach the server. Check your internet connection.",
       "IMAGE_INVALID": "This image cannot be used. Choose a JPEG, PNG or WebP photo of at least 128 × 128 pixels and up to 5 MB.",
       "SLUG_TAKEN": "This address is already taken. Choose another one.",
-      "SITE_NOT_CREATED": "Save your website once before previewing it."
+      "SITE_NOT_CREATED": "Save your website once before previewing it.",
+      "EMAIL_NOT_CONFIRMED": "Confirm your email address first (see the link in the email we sent you).",
+      "INVALID_STATUS_TRANSITION": "This status change is not possible.",
+      "FORM_EXPIRED": "The form has expired. Reload the page.",
+      "LEADS_UNAVAILABLE": "Requests cannot be received at the moment."
     }
   },
   "auth": {
@@ -379,5 +384,55 @@
       "cancel": "Cancel",
       "slugMoves": "Your page is published: saving a new address moves it there at once, and the old address stops working."
     }
+  },
+  "leads": {
+    "title": "Requests",
+    "lead": "Messages and lesson requests from your public page.",
+    "newCount_one": "{{count}} new",
+    "newCount_other": "{{count}} new",
+    "filters": "Filter requests",
+    "search": "Search (name, email, message)",
+    "status": "Status",
+    "type": "Type",
+    "all": "All",
+    "showArchived": "Show archived requests",
+    "archived": "archived",
+    "empty": "No requests yet. When visitors use the contact form on your public page, their requests appear here.",
+    "noMatches": "No requests match these filters.",
+    "pagination": "Pages",
+    "previous": "Previous",
+    "next": "Next",
+    "pageOf": "Page {{page}} of {{pages}}",
+    "statuses": {
+      "New": "New",
+      "Contacted": "Contacted",
+      "Converted": "Converted",
+      "Closed": "Closed"
+    },
+    "types": {
+      "Message": "Message",
+      "LessonRequest": "Lesson request"
+    },
+    "moveTo": {
+      "New": "Mark as new",
+      "Contacted": "Mark as contacted",
+      "Converted": "Mark as converted",
+      "Closed": "Close"
+    },
+    "back": "All requests",
+    "request": "Request",
+    "email": "Email",
+    "phone": "Phone",
+    "offer": "Offer",
+    "subject": "Subject",
+    "consent": "Consent",
+    "consentGiven": "Given {{date}} (text version {{version}})",
+    "archive": "Archive",
+    "restore": "Restore from archive",
+    "changedElsewhere": "This request was changed elsewhere. Reload the page and try again.",
+    "notes": "Private notes",
+    "noNotes": "No notes yet. Only you see notes.",
+    "addNote": "Add a note",
+    "saveNote": "Save note"
   }
 }

@@ -206,7 +206,15 @@ public interface IPublicSites
 
     /// <summary>Counts one page view of a published site for today (UTC). Never throws.</summary>
     Task RecordViewAsync(string slug, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// The workspace and language of a published site of a visible owner, or null. Binds nothing: callers (lead intake)
+    /// decide how to read and write for that workspace.
+    /// </summary>
+    Task<PublishedSiteRef?> FindPublishedWorkspaceAsync(string slug, CancellationToken cancellationToken);
 }
+
+public sealed record PublishedSiteRef(Guid WorkspaceId, string Language);
 
 /// <summary>
 /// Clears cached public pages after a change that shows on them (site, profile, photo, offers). Call it after the

@@ -22,6 +22,7 @@ internal sealed class SiteService(
     SiteSlugQueries slugs,
     PublicSiteCache cache,
     IAuditLog audit,
+    IWorkspaceOwnerContact owners,
     TimeProvider clock)
 {
     /// <summary>Page views are summed over this many UTC days (today included).</summary>
@@ -109,6 +110,12 @@ internal sealed class SiteService(
     public async Task<SiteResponse> PublishAsync(PublishSiteRequest request, CancellationToken cancellationToken)
     {
         var site = await LoadForChangeAsync(request.Version, cancellationToken);
+        // D-10b: an unconfirmed account can prepare the site but not publish it.
+        if (await owners.GetOwnerAsync(site.WorkspaceId, cancellationToken) is not { EmailConfirmed: true })
+        {
+            throw new BusinessRuleException("Confirm your email address before publishing your page.", ErrorCodes.EmailNotConfirmed);
+        }
+
         var now = clock.GetUtcNow().UtcDateTime;
         var firstPublication = site.PublishedAtUtc is null;
         site.PublishedJson = SiteSnapshot.FromDraft(site).Serialize();

@@ -121,6 +121,54 @@ export const NEW_SITE = (): FakeSite => ({
   viewsLast30Days: 0,
 });
 
+export interface FakeLead {
+  id: string;
+  type: 'Message' | 'LessonRequest';
+  status: 'New' | 'Contacted' | 'Converted' | 'Closed';
+  name: string;
+  email: string;
+  phone: string | null;
+  message: string | null;
+  offerId: string | null;
+  offerTitle: string | null;
+  subjectId: string | null;
+  consentVersion: string;
+  consentedAtUtc: string;
+  createdAtUtc: string;
+  updatedAtUtc: string;
+  archived: boolean;
+  notes: { id: string; text: string; createdAtUtc: string }[];
+  version: number;
+}
+
+export const LEAD = (overrides: Partial<FakeLead> = {}): FakeLead => ({
+  id: 'lead-1',
+  type: 'Message',
+  status: 'New',
+  name: 'Марија Илиевска',
+  email: 'marija@example.test',
+  phone: '+389 70 123 456',
+  message: 'Здраво, ми треба помош по математика.',
+  offerId: null,
+  offerTitle: null,
+  subjectId: null,
+  consentVersion: '2026-11-05.1',
+  consentedAtUtc: '2026-11-05T09:00:00Z',
+  createdAtUtc: '2026-11-05T09:00:00Z',
+  updatedAtUtc: '2026-11-05T09:00:00Z',
+  archived: false,
+  notes: [],
+  version: 0,
+  ...overrides,
+});
+
+const NEXT: Record<string, string[]> = {
+  New: ['Contacted', 'Converted', 'Closed'],
+  Contacted: ['New', 'Converted', 'Closed'],
+  Converted: ['Contacted', 'Closed'],
+  Closed: ['New', 'Contacted'],
+};
+
 export interface FakeOffer {
   id: string;
   kind: string;
@@ -157,7 +205,7 @@ export const problem = (status: number, code: string, errors?: Record<string, st
  * antiforgery endpoint. `extra` handlers run first and may answer any request.
  */
 export function fakeApi({ me = null as FakeMe | null, extra = [] as Handler[] } = {}) {
-  const state = { me, profile: { ...EMPTY_PROFILE }, onboarding: ONBOARDING(0), catalog: CATALOG, offers: [] as FakeOffer[], site: NEW_SITE(), slugTaken: [] as string[] };
+  const state = { me, profile: { ...EMPTY_PROFILE }, onboarding: ONBOARDING(0), catalog: CATALOG, offers: [] as FakeOffer[], site: NEW_SITE(), slugTaken: [] as string[], leads: [] as FakeLead[] };
   const calls: FakeCall[] = [];
 
   const fetchMock = vi.fn<(input: RequestInfo | URL, init?: RequestInit) => Promise<Response>>(async (input, init) => {
@@ -250,6 +298,51 @@ export function fakeApi({ me = null as FakeMe | null, extra = [] as Handler[] } 
         if (body.version !== state.offers[index]!.version) return problem(409, 'CONCURRENCY_CONFLICT');
         state.offers[index] = { ...state.offers[index]!, ...body, version: body.version + 1 };
         return json(200, state.offers[index]);
+      }
+    }
+    const leadsPath = `/api/w/${WORKSPACE_ID}/leads`;
+    if (state.me && call.path === leadsPath && call.method === 'GET') {
+      const query = new URLSearchParams(call.search);
+      const archived = query.get('archived') === 'true';
+      const q = (query.get('q') ?? '').toLowerCase();
+      const items = state.leads.filter(
+        (l) =>
+          l.archived === archived &&
+          (!query.get('status') || l.status === query.get('status')) &&
+          (!query.get('type') || l.type === query.get('type')) &&
+          (!q || `${l.name} ${l.email} ${l.message ?? ''}`.toLowerCase().includes(q)),
+      );
+      const page = Number(query.get('page') ?? '1');
+      const pageSize = Number(query.get('pageSize') ?? '20');
+      return json(200, {
+        items: items.slice((page - 1) * pageSize, page * pageSize).map((l) => ({ ...l, preview: l.message })),
+        total: items.length,
+        newCount: state.leads.filter((l) => l.status === 'New' && !l.archived).length,
+        page,
+        pageSize,
+      });
+    }
+    const leadMatch = state.me ? call.path.match(new RegExp(`^${leadsPath}/([^/]+)(?:/(status|notes|archive|restore))?$`)) : null;
+    if (leadMatch) {
+      const lead = state.leads.find((l) => l.id === leadMatch[1]);
+      if (!lead) return problem(404, 'NOT_FOUND');
+      const action = leadMatch[2];
+      if (!action && call.method === 'GET') return json(200, lead);
+      if (action === 'notes' && call.method === 'POST') {
+        const note = { id: `note-${lead.notes.length + 1}`, text: (call.body as { text: string }).text, createdAtUtc: '2026-11-05T10:00:00Z' };
+        lead.notes.push(note);
+        return json(201, note);
+      }
+      const body = call.body as { version: number; status?: string };
+      if (body.version !== lead.version) return problem(409, 'CONCURRENCY_CONFLICT');
+      if (action === 'status' && call.method === 'PUT') {
+        if (!NEXT[lead.status]!.includes(body.status!)) return problem(422, 'INVALID_STATUS_TRANSITION');
+        Object.assign(lead, { status: body.status, version: lead.version + 1 });
+        return json(200, lead);
+      }
+      if ((action === 'archive' || action === 'restore') && call.method === 'POST') {
+        Object.assign(lead, { archived: action === 'archive', version: lead.version + 1 });
+        return json(200, lead);
       }
     }
     if (call.method === 'GET' && call.path.startsWith('/api/w/')) return problem(404, 'NOT_FOUND');

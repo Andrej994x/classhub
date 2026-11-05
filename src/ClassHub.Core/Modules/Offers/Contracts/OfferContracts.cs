@@ -59,8 +59,12 @@ public interface IOfferLookup
     Task<IReadOnlyList<PublicOffer>> ListPublicAsync(CancellationToken cancellationToken);
 }
 
-/// <summary>The public fields of an offer (public site, JSON-LD). Kind and mode are the API's enum names.</summary>
+/// <summary>
+/// The public fields of an offer (public site, JSON-LD, lead form). Kind and mode are the API's enum names. The id lets
+/// a visitor request this offer; it is not rendered on the page.
+/// </summary>
 public sealed record PublicOffer(
+    Guid Id,
     string Title,
     string? Description,
     string Kind,
@@ -71,3 +75,9 @@ public sealed record PublicOffer(
     string Mode,
     int? LessonCount,
     int? Seats);
+
+/// <summary>Offers other modules may reference with (composite, same-workspace) database foreign keys.</summary>
+public static class OfferForeignKeyTargets
+{
+    public static readonly Type Offer = typeof(Domain.Offer);
+}

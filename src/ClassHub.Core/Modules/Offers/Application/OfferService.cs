@@ -123,7 +123,7 @@ internal sealed class OfferService(
         await db.Set<Offer>().AsNoTracking()
             .Where(o => o.ShowOnPublicSite && o.IsActive)
             .OrderBy(o => o.DisplayOrder).ThenBy(o => o.CreatedAtUtc)
-            .Select(o => new PublicOffer(o.Title, o.Description, o.Kind.ToString(), o.SubjectId, o.DurationMinutes, o.PriceMinor, o.Currency,
+            .Select(o => new PublicOffer(o.Id, o.Title, o.Description, o.Kind.ToString(), o.SubjectId, o.DurationMinutes, o.PriceMinor, o.Currency,
                 o.Mode.ToString(), o.LessonCount, o.Seats))
             .ToListAsync(cancellationToken);
 

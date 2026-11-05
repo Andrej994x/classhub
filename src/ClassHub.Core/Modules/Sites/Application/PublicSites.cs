@@ -67,6 +67,18 @@ internal sealed partial class PublicSites(
         }
     }
 
+    public async Task<PublishedSiteRef?> FindPublishedWorkspaceAsync(string slug, CancellationToken cancellationToken)
+    {
+        if (SiteSlugs.Problem(slug) is not null || await queries.FindPublishedAsync(slug, cancellationToken) is not { } site
+            || !(await visibility.VisibleAsync([site.WorkspaceId], cancellationToken)).Contains(site.WorkspaceId)
+            || SiteSnapshot.Read(site.PublishedJson) is not { } snapshot)
+        {
+            return null;
+        }
+
+        return new PublishedSiteRef(site.WorkspaceId, snapshot.Language == SiteLanguages.English ? SiteLanguages.English : SiteLanguages.Macedonian);
+    }
+
     private async Task<(PublicSiteQueries.PublishedSite Site, SiteSnapshot Snapshot)?> ResolveAsync(string slug, CancellationToken cancellationToken)
     {
         if (SiteSlugs.Problem(slug) is not null || await queries.FindPublishedAsync(slug, cancellationToken) is not { } site)
