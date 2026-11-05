@@ -21,6 +21,9 @@ public sealed class LocalDiskFileStorageTests : IDisposable
     [InlineData("C:\\Windows\\win.ini")]
     [InlineData("")]
     [InlineData("   ")]
+    [InlineData(@"ws\file.webp")]
+    [InlineData("ws//file.webp")]
+    [InlineData(".hidden/file")]
     public void Keys_that_would_leave_the_root_are_refused(string key) =>
         Should.Throw<ArgumentException>(() => Storage().Resolve(key));
 
