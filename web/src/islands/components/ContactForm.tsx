@@ -4,6 +4,8 @@ import { CONTACT_FORM_TEXT, type ContactFormKey, type ContactFormLanguage } from
 export interface ContactFormProps {
   slug?: string;
   language?: string;
+  /** After a diagnostic test: the request is about this attempt (type Diagnostic), with an opt-in to share the score. */
+  attemptId?: string;
 }
 
 interface FormData {
@@ -66,7 +68,9 @@ const input = 'w-full rounded-lg border border-site-muted/40 bg-site-surface px-
  * page): availability (D-10b), a signed form token for the minimum fill time, offers, subjects and the versioned
  * consent text (D-18). Spam protection (D-19): a honeypot field people never see, the fill time, server rate limits.
  */
-export function ContactForm({ slug = '', language = 'mk' }: ContactFormProps) {
+export function ContactForm({ slug = '', language = 'mk', attemptId }: ContactFormProps) {
+  const diagnostic = attemptId !== undefined;
+  const [shareResult, setShareResult] = useState(false);
   const lang: ContactFormLanguage = language === 'en' ? 'en' : 'mk';
   const t = (key: ContactFormKey) => CONTACT_FORM_TEXT[lang][key];
   const id = useId();
@@ -105,7 +109,7 @@ export function ContactForm({ slug = '', language = 'mk' }: ContactFormProps) {
     if (!values.email.trim()) found.email = t('required');
     else if (!EMAIL.test(values.email.trim())) found.email = t('invalidEmail');
     if (values.phone.trim() && !PHONE.test(values.phone.trim())) found.phone = t('invalidPhone');
-    if (values.type === 'Message' && !values.message.trim()) found.message = t('required');
+    if (!diagnostic && values.type === 'Message' && !values.message.trim()) found.message = t('required');
     if (!values.consent) found.consent = t('consentRequired');
     if (!values.ageConfirmed) found.ageConfirmed = t('ageRequired');
     return found;
@@ -130,18 +134,19 @@ export function ContactForm({ slug = '', language = 'mk' }: ContactFormProps) {
         credentials: 'omit',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({
-          type: values.type,
+          type: diagnostic ? 'Diagnostic' : values.type,
           name: values.name.trim(),
           email: values.email.trim(),
           phone: values.phone.trim() || null,
           message: values.message.trim() || null,
-          offerId: values.type === 'LessonRequest' && values.offerId ? values.offerId : null,
+          offerId: !diagnostic && values.type === 'LessonRequest' && values.offerId ? values.offerId : null,
           subjectId: values.subjectId || null,
           consent: values.consent,
           ageConfirmed: values.ageConfirmed,
           consentVersion: form.consentVersion,
           formToken: form.formToken,
           website: values.website,
+          ...(diagnostic ? { attemptId, shareResult } : {}),
         }),
       });
       if (response.status === 202) {
@@ -219,16 +224,18 @@ export function ContactForm({ slug = '', language = 'mk' }: ContactFormProps) {
   const label = 'flex flex-col gap-1 text-sm font-medium';
 
   return (
-    <form noValidate onSubmit={(event) => void submit(event)} className="mt-4 flex flex-col gap-4" aria-label={t('title')}>
-      <fieldset className="flex flex-wrap gap-4">
-        <legend className="mb-2 text-sm font-medium">{t('typeLabel')}</legend>
-        {(['Message', 'LessonRequest'] as const).map((type) => (
-          <label key={type} className="flex items-center gap-2 text-sm">
-            <input type="radio" name={`${id}-type`} value={type} checked={values.type === type} onChange={() => set('type', type)} className="size-4 accent-site-primary" />
-            {type === 'Message' ? t('typeMessage') : t('typeLesson')}
-          </label>
-        ))}
-      </fieldset>
+    <form noValidate onSubmit={(event) => void submit(event)} className="mt-4 flex flex-col gap-4" aria-label={diagnostic ? t('diagnosticTitle') : t('title')}>
+      {!diagnostic && (
+        <fieldset className="flex flex-wrap gap-4">
+          <legend className="mb-2 text-sm font-medium">{t('typeLabel')}</legend>
+          {(['Message', 'LessonRequest'] as const).map((type) => (
+            <label key={type} className="flex items-center gap-2 text-sm">
+              <input type="radio" name={`${id}-type`} value={type} checked={values.type === type} onChange={() => set('type', type)} className="size-4 accent-site-primary" />
+              {type === 'Message' ? t('typeMessage') : t('typeLesson')}
+            </label>
+          ))}
+        </fieldset>
+      )}
 
       <div className="grid gap-4 sm:grid-cols-2">
         <div className={label}>
@@ -260,7 +267,7 @@ export function ContactForm({ slug = '', language = 'mk' }: ContactFormProps) {
             {error('subjectId')}
           </div>
         )}
-        {values.type === 'LessonRequest' && form.offers.length > 0 && (
+        {!diagnostic && values.type === 'LessonRequest' && form.offers.length > 0 && (
           <div className={label}>
             <label htmlFor={`${id}-offerId`}>{t('offer')}</label>
             <select {...field('offerId')} className={input} value={values.offerId} onChange={(e) => set('offerId', e.target.value)}>
@@ -277,7 +284,7 @@ export function ContactForm({ slug = '', language = 'mk' }: ContactFormProps) {
       </div>
 
       <div className={label}>
-        <label htmlFor={`${id}-message`}>{values.type === 'Message' ? t('message') : t('messageOptional')}</label>
+        <label htmlFor={`${id}-message`}>{!diagnostic && values.type === 'Message' ? t('message') : t('messageOptional')}</label>
         <textarea {...field('message')} className={input} rows={4} maxLength={2000} value={values.message} onChange={(e) => set('message', e.target.value)} />
         {error('message')}
       </div>
@@ -302,6 +309,12 @@ export function ContactForm({ slug = '', language = 'mk' }: ContactFormProps) {
           <span>{form.minorNotice}</span>
         </label>
         {error('ageConfirmed')}
+        {diagnostic && (
+          <label className="flex items-start gap-2 text-sm">
+            <input type="checkbox" className="mt-0.5 size-4 shrink-0 accent-site-primary" checked={shareResult} onChange={(e) => setShareResult(e.target.checked)} />
+            <span>{t('shareResult')}</span>
+          </label>
+        )}
       </fieldset>
 
       {notice && (

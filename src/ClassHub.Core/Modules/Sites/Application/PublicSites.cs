@@ -1,5 +1,6 @@
 using ClassHub.Core.Infrastructure.Email;
 using ClassHub.Core.Infrastructure.Tenancy;
+using ClassHub.Core.Modules.DiagnosticTests.Contracts;
 using ClassHub.Core.Modules.Sites.Contracts;
 using ClassHub.Core.Modules.Sites.Persistence;
 using ClassHub.Core.Modules.Teachers.Contracts;
@@ -21,6 +22,7 @@ internal sealed partial class PublicSites(
     TenantContext tenant,
     SiteRenderer renderer,
     ITeacherPhoto photos,
+    IPublicTests tests,
     IOptions<AppLinkOptions> links,
     TimeProvider clock,
     ILogger<PublicSites> logger) : IPublicSites
@@ -51,7 +53,12 @@ internal sealed partial class PublicSites(
     {
         var rows = await queries.ListPublishedAsync(cancellationToken);
         var visible = await visibility.VisibleAsync([.. rows.Select(r => r.WorkspaceId).Distinct()], cancellationToken);
-        return [.. rows.Where(r => visible.Contains(r.WorkspaceId)).Select(r => new SitemapEntry(r.Slug, r.PublishedAtUtc))];
+        var published = (await tests.ListPublishedForWorkspacesAsync([.. visible], cancellationToken)).ToLookup(t => t.WorkspaceId, t => t.Test);
+        return
+        [
+            .. rows.Where(r => visible.Contains(r.WorkspaceId)).Select(r => new SitemapEntry(r.Slug, r.PublishedAtUtc,
+                [.. published[r.WorkspaceId].Select(t => new SitemapEntry(t.Slug, t.PublishedAtUtc))])),
+        ];
     }
 
     public async Task RecordViewAsync(string slug, CancellationToken cancellationToken)
@@ -65,6 +72,26 @@ internal sealed partial class PublicSites(
             // A lost count must never break the page.
             LogViewNotRecorded(logger, ex);
         }
+    }
+
+    /// <summary>The published test page of a visible site, or null.</summary>
+    public async Task<PublicTestPage?> FindTestAsync(string slug, string testSlug, CancellationToken cancellationToken)
+    {
+        if (await FindAsync(slug, cancellationToken) is not { } page || await tests.FindAsync(testSlug, page.Site.Language, cancellationToken) is not { } test)
+        {
+            return null;
+        }
+
+        var baseUrl = links.Value.PublicBaseUrl.TrimEnd('/');
+        var description = test.Description ?? page.Seo.Description;
+        var title = page.Site.TeacherName is { } name ? $"{test.Title} — {name}" : test.Title;
+        return new PublicTestPage(page.Site, test, new SiteSeoHead(
+            SiteSeo.Truncate(title, SiteSeo.TitleMaxLength),
+            SiteSeo.Truncate(description, SiteSeo.DescriptionMaxLength),
+            $"{baseUrl}/{page.Site.Slug}/tests/{test.Slug}",
+            page.Seo.ImageUrl,
+            page.Seo.OgLocale,
+            "{}"), page.CacheTag);
     }
 
     public async Task<PublishedSiteRef?> FindPublishedWorkspaceAsync(string slug, CancellationToken cancellationToken)
@@ -106,11 +133,12 @@ internal sealed class PublicSiteCache(ITenantContext tenant, IOutputCacheStore s
     public async Task EvictCurrentWorkspaceAsync(CancellationToken cancellationToken) =>
         await store.EvictByTagAsync(PublicSiteCaching.WorkspaceTag(tenant.RequireWorkspaceId()), CancellationToken.None);
 
-    public async Task EvictSitemapAsync() => await store.EvictByTagAsync(PublicSiteCaching.SitemapTag, CancellationToken.None);
+    public async Task EvictSitemapAsync(CancellationToken cancellationToken = default) =>
+        await store.EvictByTagAsync(PublicSiteCaching.SitemapTag, CancellationToken.None);
 
     public async Task EvictAllAsync(CancellationToken cancellationToken)
     {
         await store.EvictByTagAsync(PublicSiteCaching.AllSitesTag, CancellationToken.None);
-        await EvictSitemapAsync();
+        await EvictSitemapAsync(cancellationToken);
     }
 }

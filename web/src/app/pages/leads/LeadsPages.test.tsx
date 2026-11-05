@@ -88,6 +88,21 @@ describe('lead detail', () => {
     expect(screen.queryByRole('button', { name: 'Означи како контактирано' })).not.toBeInTheDocument();
   });
 
+  it('shows the test result of a diagnostic request only when the visitor shared it', async () => {
+    const api = fakeApi({ me: teacher() });
+    api.state.leads = [
+      LEAD({ type: 'Diagnostic', message: null, diagnosticResult: { testId: 'test-1', testTitle: 'Дропки', points: 4, maxPoints: 5 } } as never),
+      LEAD({ id: 'lead-2', type: 'Diagnostic', message: null, diagnosticResult: { testId: 'test-1', testTitle: 'Дропки', points: null, maxPoints: null } } as never),
+    ];
+    await renderRoute(`${INBOX}/lead-1`);
+    expect(await screen.findByText(/4 од 5 бода \(споделено од посетителот\)/)).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Дропки' })).toHaveAttribute('href', `/app/w/${WORKSPACE_ID}/tests/test-1`);
+    expect(screen.getByText('Резултат од тест', { exact: false })).toBeInTheDocument();
+
+    await renderRoute(`${INBOX}/lead-2`);
+    expect(await screen.findByText(/посетителот не го сподели резултатот/)).toBeInTheDocument();
+  });
+
   it('adds private notes and archives and restores the request', async () => {
     const user = userEvent.setup();
     const api = fakeApi({ me: teacher() });

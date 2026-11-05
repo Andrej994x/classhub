@@ -1,4 +1,5 @@
 using ClassHub.Core.Infrastructure.Persistence;
+using ClassHub.Core.Modules.DiagnosticTests.Contracts;
 using ClassHub.Core.Modules.Leads.Contracts;
 using ClassHub.Core.Modules.Leads.Domain;
 using ClassHub.Core.Modules.Leads.Persistence;
@@ -10,7 +11,7 @@ using Microsoft.EntityFrameworkCore;
 namespace ClassHub.Core.Modules.Leads.Application;
 
 /// <summary>The lead inbox of the current (verified) workspace: list, detail, status, notes, archive. Tenant-filtered.</summary>
-internal sealed class LeadService(ClassHubDbContext db, LeadQueries queries, ITenantContext tenant, TimeProvider clock)
+internal sealed class LeadService(ClassHubDbContext db, LeadQueries queries, ITenantContext tenant, IDiagnosticAttemptLink attempts, TimeProvider clock)
 {
     public const int MaxPageSize = 50;
     public const int PreviewLength = 140;
@@ -130,9 +131,11 @@ internal sealed class LeadService(ClassHubDbContext db, LeadQueries queries, ITe
     {
         var notes = await db.Set<LeadNote>().AsNoTracking().Where(n => n.LeadId == lead.Id).OrderBy(n => n.CreatedAtUtc)
             .Select(n => new LeadNoteResponse(n.Id, n.Text, n.CreatedAtUtc)).ToListAsync(cancellationToken);
+        var result = lead.AttemptId is { } attemptId ? await attempts.GetResultAsync(attemptId, cancellationToken) : null;
         return new LeadResponse(
             lead.Id, lead.Type.ToString(), lead.Status.ToString(), lead.Name, lead.Email, lead.Phone, lead.Message, lead.OfferId, lead.OfferTitle,
-            lead.SubjectId, lead.ConsentVersion, lead.ConsentedAtUtc, lead.CreatedAtUtc, lead.UpdatedAtUtc, lead.ArchivedAtUtc is not null, notes, lead.Version);
+            lead.SubjectId, lead.ConsentVersion, lead.ConsentedAtUtc, lead.CreatedAtUtc, lead.UpdatedAtUtc, lead.ArchivedAtUtc is not null, notes, lead.Version,
+            result);
     }
 
     private static T Parse<T>(string value, string field)
@@ -147,7 +150,11 @@ internal sealed class SubmitLeadRequestValidator : AbstractValidator<SubmitLeadR
 {
     public SubmitLeadRequestValidator()
     {
-        RuleFor(x => x.Type).Must(t => t is nameof(LeadType.Message) or nameof(LeadType.LessonRequest)).WithMessage("Type must be Message or LessonRequest.");
+        RuleFor(x => x.Type).Must(t => t is nameof(LeadType.Message) or nameof(LeadType.LessonRequest) or nameof(LeadType.Diagnostic))
+            .WithMessage("Type must be Message, LessonRequest or Diagnostic.");
+        RuleFor(x => x.AttemptId).NotNull().When(x => x.Type == nameof(LeadType.Diagnostic)).WithMessage("A test result request needs its attempt.");
+        RuleFor(x => x.AttemptId).Null().When(x => x.Type != nameof(LeadType.Diagnostic)).WithMessage("Only test result requests belong to an attempt.");
+        RuleFor(x => x.ShareResult).Equal(false).When(x => x.Type != nameof(LeadType.Diagnostic)).WithMessage("Only test result requests can share a result.");
         RuleFor(x => x.Name).Cascade(CascadeMode.Stop).NotEmpty().Must(n => n!.Trim().Length > 0).MaximumLength(Lead.NameMaxLength);
         RuleFor(x => x.Email).Cascade(CascadeMode.Stop).NotEmpty().MaximumLength(Lead.EmailMaxLength).EmailAddress();
         RuleFor(x => x.Phone).MaximumLength(Lead.PhoneMaxLength).Matches(@"\A[0-9+()\-./ ]{5,40}\z").When(x => !string.IsNullOrWhiteSpace(x.Phone))

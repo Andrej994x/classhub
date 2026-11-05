@@ -98,7 +98,7 @@ internal sealed class SiteService(
         if (site.PublishedAtUtc is not null && previousSlug != site.Slug)
         {
             await cache.EvictCurrentWorkspaceAsync(cancellationToken);
-            await cache.EvictSitemapAsync();
+            await cache.EvictSitemapAsync(cancellationToken);
         }
 
         return await ToResponseAsync(site, cancellationToken);
@@ -128,7 +128,7 @@ internal sealed class SiteService(
         await cache.EvictCurrentWorkspaceAsync(cancellationToken);
         if (firstPublication)
         {
-            await cache.EvictSitemapAsync();
+            await cache.EvictSitemapAsync(cancellationToken);
         }
 
         return await ToResponseAsync(site, cancellationToken);
@@ -150,7 +150,7 @@ internal sealed class SiteService(
         audit.Record("site.unpublished", "Site", site.Id.ToString(), site.WorkspaceId, before: new { site.Slug });
         await db.SaveChangesAsync(cancellationToken);
         await cache.EvictCurrentWorkspaceAsync(cancellationToken);
-        await cache.EvictSitemapAsync();
+        await cache.EvictSitemapAsync(cancellationToken);
         return await ToResponseAsync(site, cancellationToken);
     }
 

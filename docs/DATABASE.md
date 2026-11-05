@@ -50,6 +50,8 @@ Rules:
 | `AddIdentityAndEmailOutbox` | R0-P4 | Identity tables (unique `EmailIndex`), `DataProtectionKeys`, `EmailOutbox`, `DevMailbox` |
 | `AddWorkspacesTenancyAndAudit` | R0-P5 | `Workspaces`, `WorkspaceMembers`, `AuditLog`, seeded platform roles, idempotent workspace backfill for existing accounts |
 | `AddSites` | R1-P3 | `Sites` (unique workspace, unique slug with `Latin1_General_100_BIN2` collation and a shape CHECK, ISJSON checks for draft/published content) |
+| `AddTestAttemptLeadForeignKey` | R1-P7 | Composite tenant FK `TestAttempts (WorkspaceId, LeadId)` → `Leads` (the attempt and its request stay in one workspace) |
+| `AddTestAttemptsAndDiagnosticLeads` | R1-P7 | `TestAttempts` (random ids, ISJSON answers, score CHECKs, shared-requires-lead CHECK, unique `LeadId`, composite tenant FK to the test); `Leads`: type 3 `Diagnostic`, `AttemptId` with a composite tenant FK to the attempt, a type/attempt CHECK and a unique filtered index (one request per attempt) |
 | `AddDiagnosticTests` | R1-P6 | `DiagnosticTests` (status/difficulty/slug/attempt CHECKs, published-date rule, unique slug per workspace with binary collation), `TestQuestions` (points 0–100, text CHECKs) and `TestOptions`, chained by composite tenant FKs |
 | `AddLeads` | R1-P5 | `Leads` (type/status/name/email CHECKs, composite tenant FK to `Offers` with a title snapshot, subject FK, consent version + time, indexes per workspace and date/status) and `LeadNotes` (composite tenant FK to `Leads`) |
 | `AddSitePageViews` | R1-P4 | `SitePageViews` (PK site + UTC day, `Views ≥ 0` CHECK, composite tenant FK to `Sites`): the D-32 counter, no visitor data |

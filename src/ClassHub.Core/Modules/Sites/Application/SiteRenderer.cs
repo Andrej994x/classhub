@@ -1,5 +1,6 @@
 using System.Text.Json;
 using ClassHub.Core.Modules.Catalog.Contracts;
+using ClassHub.Core.Modules.DiagnosticTests.Contracts;
 using ClassHub.Core.Modules.Offers.Contracts;
 using ClassHub.Core.Modules.Sites.Contracts;
 using ClassHub.Core.Modules.Sites.Domain;
@@ -28,7 +29,7 @@ internal sealed record SiteSnapshot(string Template, string Palette, string Lang
 /// site's workspace (tenant filters apply) and copies only public fields: visible sections, the profile's public
 /// fields, and public offers (only when their sections are visible).
 /// </summary>
-internal sealed class SiteRenderer(ITeacherPublicProfile profiles, ICatalogLookup catalog, IOfferLookup offers)
+internal sealed class SiteRenderer(ITeacherPublicProfile profiles, ICatalogLookup catalog, IOfferLookup offers, IPublicTests tests)
 {
     public async Task<SiteRenderModel> RenderAsync(string slug, SiteSnapshot snapshot, Func<string, string> photoUrl, CancellationToken cancellationToken)
     {
@@ -78,6 +79,8 @@ internal sealed class SiteRenderer(ITeacherPublicProfile profiles, ICatalogLooku
             _ => section.Text is not null,
         };
 
+        var testLinks = (await tests.ListPublishedAsync(cancellationToken)).Select(t => new SiteTestLink(t.Slug, t.Title)).ToList();
+
         return new SiteRenderModel(
             slug,
             SiteTemplates.All.Contains(snapshot.Template) ? snapshot.Template : SiteTemplates.Classic,
@@ -87,7 +90,8 @@ internal sealed class SiteRenderer(ITeacherPublicProfile profiles, ICatalogLooku
             name.Length == 0 ? null : name,
             photo,
             teaching,
-            offerViews);
+            offerViews,
+            testLinks);
     }
 }
 

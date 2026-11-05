@@ -95,7 +95,7 @@ public sealed class LeadRulesTests
     [InlineData("en", "New request on your ClassHub page")]
     public void The_teacher_email_is_localized_and_links_to_the_inbox(string locale, string subject)
     {
-        var mail = LeadEmails.NewLead("teacher@example.test", locale, "https://classhub.app/app/w/1/leads", lessonRequest: true);
+        var mail = LeadEmails.NewLead("teacher@example.test", locale, "https://classhub.app/app/w/1/leads", LeadType.LessonRequest);
 
         (mail.ToAddress, mail.Subject, mail.Template).ShouldBe(("teacher@example.test", subject, LeadEmails.NewLeadTemplate));
         mail.TextBody.ShouldContain("https://classhub.app/app/w/1/leads");

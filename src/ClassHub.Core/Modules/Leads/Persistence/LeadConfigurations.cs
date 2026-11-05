@@ -1,5 +1,6 @@
 using ClassHub.Core.Infrastructure.Tenancy;
 using ClassHub.Core.Modules.Catalog.Contracts;
+using ClassHub.Core.Modules.DiagnosticTests.Contracts;
 using ClassHub.Core.Modules.Leads.Domain;
 using ClassHub.Core.Modules.Offers.Contracts;
 using ClassHub.Core.Modules.Workspaces.Contracts;
@@ -14,7 +15,8 @@ internal sealed class LeadConfiguration : IEntityTypeConfiguration<Lead>
     {
         builder.ToTable("Leads", t =>
         {
-            t.HasCheckConstraint("CK_Leads_Type", "[Type] IN (1, 2)");
+            t.HasCheckConstraint("CK_Leads_Type", "[Type] IN (1, 2, 3)");
+            t.HasCheckConstraint("CK_Leads_Attempt", "([Type] = 3 AND [AttemptId] IS NOT NULL) OR ([Type] <> 3 AND [AttemptId] IS NULL)");
             t.HasCheckConstraint("CK_Leads_Status", "[Status] BETWEEN 1 AND 4");
             t.HasCheckConstraint("CK_Leads_Name", "LEN([Name]) > 0");
             t.HasCheckConstraint("CK_Leads_Email", "[Email] LIKE '%_@_%'");
@@ -37,6 +39,12 @@ internal sealed class LeadConfiguration : IEntityTypeConfiguration<Lead>
             .HasPrincipalKey("WorkspaceId", "Id")
             .OnDelete(DeleteBehavior.NoAction);
         builder.HasOne(CatalogForeignKeyTargets.Subject, navigationName: null).WithMany().HasForeignKey(nameof(Lead.SubjectId)).OnDelete(DeleteBehavior.NoAction);
+        // A diagnostic request belongs to an attempt of the same workspace, and an attempt gets at most one request.
+        builder.HasOne(DiagnosticTestForeignKeyTargets.Attempt, navigationName: null).WithMany()
+            .HasForeignKey(nameof(Lead.WorkspaceId), nameof(Lead.AttemptId))
+            .HasPrincipalKey("WorkspaceId", "Id")
+            .OnDelete(DeleteBehavior.NoAction);
+        builder.HasIndex(x => x.AttemptId).IsUnique().HasFilter("[AttemptId] IS NOT NULL");
     }
 }
 

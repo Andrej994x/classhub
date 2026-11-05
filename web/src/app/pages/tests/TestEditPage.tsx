@@ -3,7 +3,7 @@ import { ArrowDown, ArrowUp, Copy, Plus, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import { useFieldArray, useForm, useWatch, type Control, type UseFormRegister } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
-import { useNavigate, useParams } from 'react-router';
+import { Link, useNavigate, useParams } from 'react-router';
 import { z } from 'zod';
 import { ApiError, errorMessage } from '../../../api/errors.ts';
 import { Alert } from '../../../components/ui/alert.tsx';
@@ -22,6 +22,7 @@ import {
   useDuplicateTest,
   useSaveTest,
   useTest,
+  useTestAttempts,
   useTestStatus,
   type DiagnosticTest,
 } from '../../../teacher/tests.ts';
@@ -159,6 +160,7 @@ function TestEditor({ workspaceId, test }: { workspaceId: string; test: Diagnost
 
       {test && <StatusCard workspaceId={workspaceId} test={test} version={formVersion ?? 0} dirty={isDirty} onChanged={(changed) => form.reset(toForm(changed), { keepDirtyValues: true })} />}
       {locked && <Alert variant="info">{t('tests.locked', { count: num(test?.attemptCount) ?? 0 })}</Alert>}
+      {test && <ResultsCard workspaceId={workspaceId} testId={test.id} />}
 
       <form noValidate onSubmit={onSubmit} className="flex flex-col gap-6">
         <fieldset disabled={isSubmitting} aria-busy={isSubmitting} className="contents">
@@ -310,6 +312,47 @@ function StatusCard({ workspaceId, test, version, dirty, onChanged }: { workspac
           {dirty && test.status !== 'Published' && <p className="text-sm text-muted-foreground">{t('tests.saveFirst')}</p>}
         </div>
       </CardContent>
+    </Card>
+  );
+}
+
+/** How often the test was taken, and the results visitors shared with a contact request (D-18). */
+function ResultsCard({ workspaceId, testId }: { workspaceId: string; testId: string }) {
+  const { t, i18n } = useTranslation();
+  const attempts = useTestAttempts(workspaceId, testId);
+  const language = i18n.resolvedLanguage ?? 'mk';
+  const timeZone = new Intl.DateTimeFormat().resolvedOptions().timeZone;
+  if (!attempts.data) return null;
+  const total = num(attempts.data.total) ?? 0;
+
+  return (
+    <Card data-testid="test-results">
+      <CardHeader>
+        <CardTitle className="text-lg">{t('tests.results.title')}</CardTitle>
+        <CardDescription>
+          {t('tests.results.summary', { count: total })} {total > 0 && t('tests.results.shared', { count: num(attempts.data.sharedCount) ?? 0 })}
+        </CardDescription>
+      </CardHeader>
+      {attempts.data.shared.length > 0 && (
+        <CardContent>
+          <ul aria-label={t('tests.results.sharedList')} className="flex flex-col gap-2">
+            {attempts.data.shared.map((attempt) => (
+              <li key={attempt.attemptId} className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-border p-3 text-sm">
+                <span>
+                  <strong>{t('tests.results.score', { points: num(attempt.points) ?? 0, max: num(attempt.maxPoints) ?? 0 })}</strong>
+                  {' · '}
+                  {new Intl.DateTimeFormat(language === 'en' ? 'en-GB' : 'mk-MK', { dateStyle: 'medium', timeStyle: 'short', timeZone }).format(new Date(attempt.completedAtUtc))}
+                </span>
+                {attempt.leadId && (
+                  <Link className="text-primary underline-offset-4 hover:underline" to={`/app/w/${workspaceId}/leads/${attempt.leadId}`}>
+                    {t('tests.results.openRequest')}
+                  </Link>
+                )}
+              </li>
+            ))}
+          </ul>
+        </CardContent>
+      )}
     </Card>
   );
 }

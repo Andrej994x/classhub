@@ -32,6 +32,8 @@ export const CONTACT_FORM_TEXT = {
     consentChanged: 'Текстот за согласност е ажуриран. Прочитајте го и потврдете повторно.',
     offerUnavailable: 'Оваа понуда веќе не е достапна. Изберете друга.',
     subjectUnavailable: 'Овој предмет веќе не е достапен. Изберете друг.',
+    diagnosticTitle: 'Побарајте час според резултатот',
+    shareResult: 'Сподели го мојот резултат со наставникот (по желба).',
   },
   en: {
     title: 'Send a request',
@@ -65,6 +67,8 @@ export const CONTACT_FORM_TEXT = {
     consentChanged: 'The consent text was updated. Please read it and confirm again.',
     offerUnavailable: 'This offer is no longer available. Choose another one.',
     subjectUnavailable: 'This subject is no longer available. Choose another one.',
+    diagnosticTitle: 'Ask for a lesson about your result',
+    shareResult: 'Share my result with the teacher (optional).',
   },
 } as const;
 

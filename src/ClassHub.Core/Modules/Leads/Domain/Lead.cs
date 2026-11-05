@@ -7,6 +7,9 @@ public enum LeadType
 {
     Message = 1,
     LessonRequest = 2,
+
+    /// <summary>Sent after a diagnostic test attempt (R1-P7); linked to that attempt.</summary>
+    Diagnostic = 3,
 }
 
 public enum LeadStatus
@@ -54,6 +57,9 @@ public sealed class Lead : ITenantOwned, IArchivable
 
     /// <summary>The subject the visitor is interested in (catalog).</summary>
     public Guid? SubjectId { get; set; }
+
+    /// <summary>The diagnostic test attempt this request belongs to (type Diagnostic only; one request per attempt).</summary>
+    public Guid? AttemptId { get; set; }
 
     /// <summary>Version of the consent and privacy notice text the visitor accepted (D-18).</summary>
     public required string ConsentVersion { get; set; }

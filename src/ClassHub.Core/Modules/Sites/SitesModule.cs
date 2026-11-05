@@ -43,6 +43,11 @@ public sealed class SitesModule : IModule
                 .SetVaryByRouteValue("slug")
                 .SetVaryByQuery(PublicSiteCaching.NoQueryKey)
                 .Tag(PublicSiteCaching.AllSitesTag));
+            options.AddPolicy(PublicSiteCaching.TestPolicy, policy => policy
+                .Expire(PublicSiteCaching.SiteLifetime)
+                .SetVaryByRouteValue("slug", "testSlug")
+                .SetVaryByQuery(PublicSiteCaching.NoQueryKey)
+                .Tag(PublicSiteCaching.AllSitesTag));
             options.AddPolicy(PublicSiteCaching.StaticPolicy, policy => policy
                 .Expire(PublicSiteCaching.StaticLifetime)
                 .SetVaryByQuery(PublicSiteCaching.NoQueryKey));

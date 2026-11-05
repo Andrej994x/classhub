@@ -49,6 +49,94 @@
         }
       }
     },
+    "/api/public/sites/{slug}/tests/{testSlug}": {
+      "get": {
+        "tags": [
+          "Public tests"
+        ],
+        "summary": "A published test with its questions and options (never the correct answers).",
+        "operationId": "GetPublicTest",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "testSlug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicTestResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/public/sites/{slug}/tests/{testSlug}/attempts": {
+      "post": {
+        "tags": [
+          "Public tests"
+        ],
+        "summary": "Submit the chosen options; the server scores them and returns the totals and an attempt id for an optional contact request.",
+        "operationId": "SubmitTestAttempt",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "testSlug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SubmitAttemptRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicAttemptResult"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/w/{workspaceId}/tests": {
       "get": {
         "tags": [
@@ -420,6 +508,47 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/DiagnosticTestResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/w/{workspaceId}/tests/{testId}/attempts": {
+      "get": {
+        "tags": [
+          "Diagnostic tests"
+        ],
+        "summary": "How often the test was taken, and the results visitors shared with their contact request.",
+        "operationId": "ListTestAttempts",
+        "parameters": [
+          {
+            "name": "testId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "workspaceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TestAttemptsResponse"
                 }
               }
             }
@@ -2004,6 +2133,29 @@
           }
         }
       },
+      "AttemptAnswer": {
+        "required": [
+          "questionId",
+          "optionIds"
+        ],
+        "type": "object",
+        "properties": {
+          "questionId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "optionIds": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        }
+      },
       "CatalogItem": {
         "required": [
           "id",
@@ -2158,6 +2310,42 @@
               "null",
               "string"
             ]
+          }
+        }
+      },
+      "DiagnosticResultSummary": {
+        "required": [
+          "testId",
+          "testTitle",
+          "points",
+          "maxPoints"
+        ],
+        "type": "object",
+        "properties": {
+          "testId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "testTitle": {
+            "type": "string"
+          },
+          "points": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "maxPoints": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
           }
         }
       },
@@ -2619,7 +2807,8 @@
           "updatedAtUtc",
           "archived",
           "notes",
-          "version"
+          "version",
+          "diagnosticResult"
         ],
         "type": "object",
         "properties": {
@@ -2702,6 +2891,16 @@
               "string"
             ],
             "format": "int32"
+          },
+          "diagnosticResult": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/DiagnosticResultSummary"
+              }
+            ]
           }
         }
       },
@@ -2959,6 +3158,164 @@
           },
           "available": {
             "type": "boolean"
+          }
+        }
+      },
+      "PublicAttemptResult": {
+        "required": [
+          "attemptId",
+          "points",
+          "maxPoints",
+          "questionsRight",
+          "totalQuestions"
+        ],
+        "type": "object",
+        "properties": {
+          "attemptId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "points": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "maxPoints": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "questionsRight": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "totalQuestions": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
+      "PublicTestOption": {
+        "required": [
+          "id",
+          "text"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "text": {
+            "type": "string"
+          }
+        }
+      },
+      "PublicTestQuestion": {
+        "required": [
+          "id",
+          "text",
+          "points",
+          "selectSeveral",
+          "options"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "text": {
+            "type": "string"
+          },
+          "points": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "selectSeveral": {
+            "type": "boolean"
+          },
+          "options": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PublicTestOption"
+            }
+          }
+        }
+      },
+      "PublicTestResponse": {
+        "required": [
+          "version",
+          "title",
+          "slug",
+          "description",
+          "difficulty",
+          "subject",
+          "totalPoints",
+          "questions"
+        ],
+        "type": "object",
+        "properties": {
+          "version": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "title": {
+            "type": "string"
+          },
+          "slug": {
+            "type": "string"
+          },
+          "description": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "difficulty": {
+            "type": "string"
+          },
+          "subject": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "totalPoints": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "questions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PublicTestQuestion"
+            }
           }
         }
       },
@@ -3344,6 +3701,67 @@
           }
         }
       },
+      "SharedAttemptResult": {
+        "required": [
+          "attemptId",
+          "points",
+          "maxPoints",
+          "correctQuestions",
+          "totalQuestions",
+          "completedAtUtc",
+          "leadId"
+        ],
+        "type": "object",
+        "properties": {
+          "attemptId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "points": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "maxPoints": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "correctQuestions": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "totalQuestions": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "completedAtUtc": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "leadId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          }
+        }
+      },
       "SiteContent": {
         "required": [
           "sections"
@@ -3546,6 +3964,33 @@
           }
         }
       },
+      "SubmitAttemptRequest": {
+        "required": [
+          "version",
+          "answers"
+        ],
+        "type": "object",
+        "properties": {
+          "version": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "answers": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/AttemptAnswer"
+            }
+          }
+        }
+      },
       "SubmitLeadRequest": {
         "required": [
           "type",
@@ -3630,6 +4075,17 @@
               "null",
               "string"
             ]
+          },
+          "attemptId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "shareResult": {
+            "type": "boolean",
+            "default": false
           }
         }
       },
@@ -3724,6 +4180,38 @@
               "string"
             ],
             "format": "int32"
+          }
+        }
+      },
+      "TestAttemptsResponse": {
+        "required": [
+          "total",
+          "sharedCount",
+          "shared"
+        ],
+        "type": "object",
+        "properties": {
+          "total": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "sharedCount": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "shared": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SharedAttemptResult"
+            }
           }
         }
       },
@@ -3992,6 +4480,9 @@
     },
     {
       "name": "Workspaces"
+    },
+    {
+      "name": "Public tests"
     },
     {
       "name": "Diagnostic tests"

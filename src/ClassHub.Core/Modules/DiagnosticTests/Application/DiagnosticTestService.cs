@@ -3,6 +3,7 @@ using ClassHub.Core.Modules.Catalog.Contracts;
 using ClassHub.Core.Modules.DiagnosticTests.Contracts;
 using ClassHub.Core.Modules.DiagnosticTests.Domain;
 using ClassHub.Core.Modules.DiagnosticTests.Persistence;
+using ClassHub.Core.Modules.Sites.Contracts;
 using ClassHub.Core.SharedKernel.Errors;
 using ClassHub.Core.SharedKernel.Globalization;
 using ClassHub.Core.SharedKernel.Tenancy;
@@ -19,9 +20,11 @@ namespace ClassHub.Core.Modules.DiagnosticTests.Application;
 internal sealed class DiagnosticTestService(
     ClassHubDbContext db,
     DiagnosticTestQueries queries,
+    TestAttemptQueries attemptLock,
     ITenantContext tenant,
     ICatalogLookup catalog,
     IPublishedTestQuota quota,
+    IPublicSiteCache siteCache,
     TimeProvider clock)
 {
     public async Task<IReadOnlyList<DiagnosticTestListItem>> ListAsync(CancellationToken cancellationToken)
@@ -67,6 +70,10 @@ internal sealed class DiagnosticTestService(
 
     public async Task<DiagnosticTestResponse> UpdateAsync(Guid testId, SaveDiagnosticTestRequest request, CancellationToken cancellationToken)
     {
+        // The same per-test lock as attempt submission: either an attempt is counted first (and the D-38 check below
+        // sees it), or this edit saves first (and the attempt, scored on the old version, is refused).
+        await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
+        await attemptLock.LockAttemptsAsync(testId, cancellationToken);
         var test = await LoadForChangeAsync(testId, request.Version, cancellationToken);
         await ThrowIfUnknownSubjectAsync(request.SubjectId!.Value, cancellationToken);
         var questions = await db.Set<TestQuestion>().Where(q => q.TestId == test.Id).ToListAsync(cancellationToken);
@@ -158,7 +165,9 @@ internal sealed class DiagnosticTestService(
         }
 
         Touch(test);
-        await SaveAsync(cancellationToken);
+        await SaveAsync(cancellationToken, evict: false);
+        await transaction.CommitAsync(cancellationToken);
+        await EvictPublicAsync(cancellationToken);
         return await GetAsync(test.Id, cancellationToken);
     }
 
@@ -238,6 +247,19 @@ internal sealed class DiagnosticTestService(
         ];
         return new DiagnosticTestResponse(Guid.Empty, string.Empty, string.Empty, Guid.Empty, null, string.Empty, string.Empty, null, 0, false, items,
             items.Sum(q => q.Points), DateTime.MinValue, 0);
+    }
+
+    /// <summary>Attempts of a test: the count, and the results visitors chose to share (D-18), newest first.</summary>
+    public async Task<TestAttemptsResponse> AttemptsAsync(Guid testId, CancellationToken cancellationToken)
+    {
+        var test = await queries.WithArchived().AsNoTracking().SingleOrDefaultAsync(t => t.Id == testId, cancellationToken) ?? throw new NotFoundException();
+        var attempts = db.Set<TestAttempt>().AsNoTracking().Where(a => a.TestId == test.Id);
+        var total = await attempts.CountAsync(cancellationToken);
+        var shared = await attempts.Where(a => a.ResultSharedAtUtc != null).OrderByDescending(a => a.CompletedAtUtc).Take(100)
+            .Select(a => new SharedAttemptResult(a.Id, a.Points, a.MaxPoints, a.CorrectQuestions, a.TotalQuestions, a.CompletedAtUtc, a.LeadId))
+            .ToListAsync(cancellationToken);
+        var sharedCount = await attempts.CountAsync(a => a.ResultSharedAtUtc != null, cancellationToken);
+        return new TestAttemptsResponse(total, sharedCount, shared);
     }
 
     /// <summary>Why the test cannot be published yet, by field (empty when it is ready).</summary>
@@ -357,16 +379,31 @@ internal sealed class DiagnosticTestService(
         }
     }
 
-    private async Task SaveAsync(CancellationToken cancellationToken)
+    /// <summary>
+    /// Saves; then evicts the public caches unless <paramref name="evict"/> is false (inside a transaction the caller
+    /// evicts after the commit, so no reader can re-cache the state before it).
+    /// </summary>
+    private async Task SaveAsync(CancellationToken cancellationToken, bool evict = true)
     {
         try
         {
             await db.SaveChangesAsync(cancellationToken);
+            if (evict)
+            {
+                await EvictPublicAsync(cancellationToken);
+            }
         }
         catch (DbUpdateException ex) when (SqlServerErrors.IsUniqueViolation(ex))
         {
             throw new ConflictException("Another test of yours already uses this address. Choose another one.", ErrorCodes.TestSlugTaken);
         }
+    }
+
+    /// <summary>The public site lists published tests and the test pages are cached: every change may show there.</summary>
+    private async Task EvictPublicAsync(CancellationToken cancellationToken)
+    {
+        await siteCache.EvictCurrentWorkspaceAsync(cancellationToken);
+        await siteCache.EvictSitemapAsync(cancellationToken);
     }
 
     private void Touch(DiagnosticTest test)
