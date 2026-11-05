@@ -28,6 +28,8 @@ public sealed class SiteRulesTests
     [InlineData("admin", "reserved")]
     [InlineData("preview", "reserved")]
     [InlineData("api", "reserved")]
+    [InlineData("admin\n", "format")]     // "$" would match before the newline: the whole string must match
+    [InlineData("ana-math\n", "format")]
     public void Invalid_or_reserved_slugs_are_refused(string slug, string reason) => SiteSlugs.Problem(slug).ShouldBe(reason);
 
     [Theory]

@@ -102,7 +102,8 @@ public static partial class SiteSlugs
         "book", "booking", "offers", "s", "t", "p", "u", "w",
     };
 
-    [GeneratedRegex("^[a-z0-9](?:[a-z0-9]|-(?=[a-z0-9]))*$")]
+    // \z, not $: in .NET "$" also matches before a final newline ("admin\n").
+    [GeneratedRegex(@"\A[a-z0-9](?:[a-z0-9]|-(?=[a-z0-9]))*\z")]
     private static partial Regex Shape();
 
     /// <summary>Null when valid; otherwise a reason code: <c>length</c>, <c>format</c> or <c>reserved</c>.</summary>
@@ -134,6 +135,9 @@ public interface ISitePreview
 {
     /// <summary>The preview model, or null when the token is invalid, expired or no longer authorized.</summary>
     Task<SitePreviewModel?> ReadAsync(string token, CancellationToken cancellationToken);
+
+    /// <summary>The teacher photo for a valid preview token (same checks as <see cref="ReadAsync"/>), or null.</summary>
+    Task<(Stream Content, string ContentType)?> OpenPhotoAsync(string token, CancellationToken cancellationToken);
 }
 
 public sealed record SitePreviewModel(

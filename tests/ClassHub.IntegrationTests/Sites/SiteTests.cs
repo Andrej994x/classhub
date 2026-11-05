@@ -205,6 +205,48 @@ public sealed class SiteTests(ClassHubApiFixture fixture)
     }
 
     [Fact]
+    public async Task The_preview_shows_the_teacher_photo_without_a_session_through_the_token()
+    {
+        using var teacher = await fixture.CreateTeacherAsync();
+        using (var upload = await teacher.Client.SendContentAsync(HttpMethod.Put, $"/api/w/{teacher.WorkspaceId}/profile/photo",
+                   new MultipartFormDataContent { { new ByteArrayContent(ClassHub.UnitTests.Files.TestImages.Png(300, 300)), "file", "me.png" } }))
+        {
+            upload.StatusCode.ShouldBe(HttpStatusCode.OK);
+        }
+
+        await SaveAsync(teacher, Body(UniqueSlug()));
+        using var issued = await teacher.Client.PostAsync($"{SitePath(teacher)}/preview");
+        var url = (await issued.Content.ReadFromJsonAsync<SitePreviewResponse>(Ct))!.Url;
+        using var anonymous = await ApiClient.CreateAsync(fixture);
+        var html = await (await anonymous.GetAsync(url)).Content.ReadAsStringAsync(Ct);
+        var photoUrl = System.Text.RegularExpressions.Regex.Match(html, "<img src=\"([^\"]+)\"").Groups[1].Value.Replace("&amp;", "&", StringComparison.Ordinal);
+        photoUrl.ShouldStartWith($"{url}/photo?v=");
+
+        using var photo = await anonymous.GetAsync(photoUrl);
+        photo.StatusCode.ShouldBe(HttpStatusCode.OK);
+        photo.Content.Headers.ContentType!.MediaType.ShouldBe("image/webp");
+        photo.Headers.GetValues("Referrer-Policy").ShouldBe(["no-referrer"]);
+
+        // Without a valid token there is no photo; the private endpoint still needs a member session.
+        using (var forged = await anonymous.GetAsync("/preview/forged/photo"))
+        {
+            forged.StatusCode.ShouldBe(HttpStatusCode.NotFound);
+        }
+
+        using var privateWithoutSession = await anonymous.GetAsync($"/api/w/{teacher.WorkspaceId}/profile/photo");
+        privateWithoutSession.StatusCode.ShouldBe(HttpStatusCode.Unauthorized);
+    }
+
+    [Fact]
+    public async Task A_slug_with_a_trailing_newline_is_a_validation_error()
+    {
+        using var teacher = await fixture.CreateTeacherAsync();
+        using var response = await teacher.Client.PutAsync(SitePath(teacher), Body("admin\n"));
+        response.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
+        (await response.ReadJsonAsync()).GetProperty("errors").TryGetProperty("slug", out _).ShouldBeTrue();
+    }
+
+    [Fact]
     public async Task Invalid_tampered_and_expired_preview_tokens_get_404()
     {
         using var teacher = await fixture.CreateTeacherAsync();

@@ -55,3 +55,9 @@ public interface ITeacherSummary
 {
     Task<TeacherSummary> GetSummaryAsync(CancellationToken cancellationToken);
 }
+
+/// <summary>The current workspace's teacher photo, for other modules that authorize access themselves (preview).</summary>
+public interface ITeacherPhoto
+{
+    Task<(Stream Content, string ContentType)?> OpenAsync(CancellationToken cancellationToken);
+}

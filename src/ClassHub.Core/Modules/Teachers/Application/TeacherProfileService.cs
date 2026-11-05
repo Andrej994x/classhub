@@ -26,8 +26,11 @@ internal sealed partial class TeacherProfileService(
     ISiteStatus site,
     IFileStorage files,
     TimeProvider clock,
-    ILogger<TeacherProfileService> logger) : ITeacherSummary
+    ILogger<TeacherProfileService> logger) : ITeacherSummary, ITeacherPhoto
 {
+    async Task<(Stream Content, string ContentType)?> ITeacherPhoto.OpenAsync(CancellationToken cancellationToken) =>
+        await OpenPhotoAsync(cancellationToken) is { } photo ? (photo.Content, photo.ContentType) : null;
+
     public async Task<TeacherSummary> GetSummaryAsync(CancellationToken cancellationToken)
     {
         var profile = await GetAsync(cancellationToken);

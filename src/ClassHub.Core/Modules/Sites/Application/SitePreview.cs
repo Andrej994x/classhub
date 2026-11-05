@@ -60,9 +60,11 @@ internal sealed class SitePreview(
     TenantContext tenant,
     IWorkspaceMembershipLookup memberships,
     ClassHubDbContext db,
-    ITeacherSummary teacher) : ISitePreview
+    ITeacherSummary teacher,
+    ITeacherPhoto photos) : ISitePreview
 {
-    public async Task<SitePreviewModel?> ReadAsync(string token, CancellationToken cancellationToken)
+    /// <summary>Validates the token and the member, then binds the request to the workspace. Null when not allowed.</summary>
+    private async Task<SitePreviewTokens.Payload?> AuthorizeAsync(string token, CancellationToken cancellationToken)
     {
         if (tokens.Validate(token) is not { } payload)
         {
@@ -70,12 +72,25 @@ internal sealed class SitePreview(
         }
 
         var role = await memberships.GetActiveRoleAsync(payload.WorkspaceId, payload.UserId, cancellationToken);
-        if (role is not { } activeRole || !WorkspaceRolePermissions.Has(activeRole, WorkspacePermissions.ProfileRead))
+        if (role is not { } activeRole || !WorkspaceRolePermissions.Has(activeRole, WorkspacePermissions.SiteRead))
         {
             return null;
         }
 
         tenant.Set(payload.WorkspaceId, payload.UserId, activeRole);
+        return await db.Set<Site>().AnyAsync(s => s.Id == payload.SiteId, cancellationToken) ? payload : null;
+    }
+
+    public async Task<(Stream Content, string ContentType)?> OpenPhotoAsync(string token, CancellationToken cancellationToken) =>
+        await AuthorizeAsync(token, cancellationToken) is null ? null : await photos.OpenAsync(cancellationToken);
+
+    public async Task<SitePreviewModel?> ReadAsync(string token, CancellationToken cancellationToken)
+    {
+        if (await AuthorizeAsync(token, cancellationToken) is not { } payload)
+        {
+            return null;
+        }
+
         var site = await db.Set<Site>().AsNoTracking().SingleOrDefaultAsync(s => s.Id == payload.SiteId, cancellationToken);
         if (site is null)
         {
@@ -84,7 +99,9 @@ internal sealed class SitePreview(
 
         var summary = await teacher.GetSummaryAsync(cancellationToken);
         var name = $"{summary.FirstName} {summary.LastName}".Trim();
-        var photo = summary.PhotoVersion is { } version ? $"/api/w/{payload.WorkspaceId}/profile/photo?v={Uri.EscapeDataString(version)}" : null;
+        // Served through the same token (the preview may be opened without a session); the private profile photo
+        // endpoint keeps requiring a member's session.
+        var photo = summary.PhotoVersion is { } version ? $"/preview/{Uri.EscapeDataString(token)}/photo?v={Uri.EscapeDataString(version)}" : null;
         return new SitePreviewModel(
             site.Slug,
             site.Template,
