@@ -233,6 +233,57 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/w/{workspaceId}/site": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The site draft, or suggestions to start from when it does not exist yet (exists = false). */
+        get: operations["GetSite"];
+        /** Save the draft (slug, template, palette, language, sections). Visitors see nothing until publishing (R1-P4). */
+        put: operations["SaveSite"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/w/{workspaceId}/site/slug-availability": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["CheckSiteSlug"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/w/{workspaceId}/site/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** A signed preview URL for the current draft, valid for 15 minutes. */
+        post: operations["CreateSitePreview"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/w/{workspaceId}/profile": {
         parameters: {
             query?: never;
@@ -450,6 +501,55 @@ export interface components {
             showOnPublicSite: boolean;
             /** Format: int32 */
             version?: null | number | string;
+        };
+        SaveSiteRequest: {
+            slug: null | string;
+            template: null | string;
+            palette: null | string;
+            language: null | string;
+            draft: null | components["schemas"]["SiteContent"];
+            /** Format: int32 */
+            version?: null | number | string;
+        };
+        SiteContent: {
+            sections: null | components["schemas"]["SiteSection"][];
+        };
+        SitePreviewResponse: {
+            url: string;
+            /** Format: date-time */
+            expiresAtUtc: string;
+        };
+        SiteResponse: {
+            exists: boolean;
+            slug: string;
+            template: string;
+            palette: string;
+            language: string;
+            draft: components["schemas"]["SiteContent"];
+            isPublished: boolean;
+            /** Format: date-time */
+            updatedAtUtc: null | string;
+            /** Format: int32 */
+            version: null | number | string;
+        };
+        SiteSection: {
+            type: null | string;
+            visible: boolean;
+            title: null | string;
+            text: null | string;
+            /** @default false */
+            showPhoto: boolean;
+            items?: null | components["schemas"]["SiteSectionItem"][];
+        };
+        SiteSectionItem: {
+            title: null | string;
+            subtitle: null | string;
+            text: null | string;
+        };
+        SlugAvailabilityResponse: {
+            slug: string;
+            available: boolean;
+            reason: null | string;
         };
         TeacherProfileResponse: {
             firstName: null | string;
@@ -995,6 +1095,109 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["OfferResponse"][];
+                };
+            };
+        };
+    };
+    GetSite: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SiteResponse"];
+                };
+            };
+        };
+    };
+    SaveSite: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SaveSiteRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SiteResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["HttpValidationProblemDetails"];
+                };
+            };
+        };
+    };
+    CheckSiteSlug: {
+        parameters: {
+            query?: {
+                slug?: string;
+            };
+            header?: never;
+            path: {
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SlugAvailabilityResponse"];
+                };
+            };
+        };
+    };
+    CreateSitePreview: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SitePreviewResponse"];
                 };
             };
         };

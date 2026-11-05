@@ -24,8 +24,14 @@ internal sealed partial class TeacherProfileService(
     IOfferLookup offers,
     IFileStorage files,
     TimeProvider clock,
-    ILogger<TeacherProfileService> logger)
+    ILogger<TeacherProfileService> logger) : ITeacherSummary
 {
+    public async Task<TeacherSummary> GetSummaryAsync(CancellationToken cancellationToken)
+    {
+        var profile = await GetAsync(cancellationToken);
+        return new TeacherSummary(profile.FirstName, profile.LastName, profile.PhotoVersion);
+    }
+
     public const string PhotoPurpose = "profile-photo";
 
     public async Task<TeacherProfileResponse> GetAsync(CancellationToken cancellationToken)

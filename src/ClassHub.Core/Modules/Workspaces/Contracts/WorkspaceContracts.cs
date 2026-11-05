@@ -29,4 +29,7 @@ public interface IWorkspaceSettings
 
     /// <summary>The current workspace's default currency (ISO 4217).</summary>
     Task<string> GetCurrencyAsync(CancellationToken cancellationToken);
+
+    /// <summary>The current workspace's content language (mk/en).</summary>
+    Task<string> GetLocaleAsync(CancellationToken cancellationToken);
 }

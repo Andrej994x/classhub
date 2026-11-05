@@ -47,3 +47,11 @@ public static class OnboardingSteps
     public const string PublicPage = "public-page";
     public const string Publish = "publish";
 }
+
+/// <summary>Name and photo of the current workspace's teacher, for other modules (public site, preview).</summary>
+public sealed record TeacherSummary(string? FirstName, string? LastName, string? PhotoVersion);
+
+public interface ITeacherSummary
+{
+    Task<TeacherSummary> GetSummaryAsync(CancellationToken cancellationToken);
+}

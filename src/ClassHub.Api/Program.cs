@@ -33,6 +33,8 @@ builder.Services.AddClassHubPersistence(builder.Configuration);
 builder.Services.AddClassHubEmail(builder.Configuration, builder.Environment);
 builder.Services.AddClassHubModules(builder.Configuration);
 builder.Services.AddOpenApi("v1", options => options.AddOperationTransformer<RouteParameterOperationTransformer>());
+// Server-rendered pages: the site preview now (R1-P3), the public teacher sites with R1-P4.
+builder.Services.AddRazorPages();
 
 var app = builder.Build();
 
@@ -84,6 +86,7 @@ app.MapHealthChecks("/health/ready", new HealthCheckOptions
     .AllowAnonymous();
 
 app.MapClassHubModules();
+app.MapRazorPages();
 
 // The OpenAPI document is the contract for the generated TypeScript types (web/src/api/schema.d.ts).
 if (app.Environment.IsDevelopment() || app.Environment.IsEnvironment("Testing"))

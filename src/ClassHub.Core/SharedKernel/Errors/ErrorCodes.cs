@@ -30,6 +30,10 @@ public static class ErrorCodes
     // Files
     public const string ImageInvalid = "IMAGE_INVALID";
 
+    // Public site (R1-P3)
+    public const string SlugTaken = "SLUG_TAKEN";
+    public const string SiteNotCreated = "SITE_NOT_CREATED";
+
     /// <summary>Default code for an HTTP status when no specific code was set.</summary>
     public static string ForStatus(int statusCode) => statusCode switch
     {

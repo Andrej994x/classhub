@@ -626,6 +626,158 @@
         }
       }
     },
+    "/api/w/{workspaceId}/site": {
+      "get": {
+        "tags": [
+          "Site"
+        ],
+        "summary": "The site draft, or suggestions to start from when it does not exist yet (exists = false).",
+        "operationId": "GetSite",
+        "parameters": [
+          {
+            "name": "workspaceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SiteResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Site"
+        ],
+        "summary": "Save the draft (slug, template, palette, language, sections). Visitors see nothing until publishing (R1-P4).",
+        "operationId": "SaveSite",
+        "parameters": [
+          {
+            "name": "workspaceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SaveSiteRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SiteResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpValidationProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/w/{workspaceId}/site/slug-availability": {
+      "get": {
+        "tags": [
+          "Site"
+        ],
+        "operationId": "CheckSiteSlug",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "workspaceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SlugAvailabilityResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/w/{workspaceId}/site/preview": {
+      "post": {
+        "tags": [
+          "Site"
+        ],
+        "summary": "A signed preview URL for the current draft, valid for 15 minutes.",
+        "operationId": "CreateSitePreview",
+        "parameters": [
+          {
+            "name": "workspaceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SitePreviewResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/w/{workspaceId}/profile": {
       "get": {
         "tags": [
@@ -1548,6 +1700,242 @@
           }
         }
       },
+      "SaveSiteRequest": {
+        "required": [
+          "slug",
+          "template",
+          "palette",
+          "language",
+          "draft"
+        ],
+        "type": "object",
+        "properties": {
+          "slug": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "template": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "palette": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "language": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "draft": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/SiteContent"
+              }
+            ]
+          },
+          "version": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
+      "SiteContent": {
+        "required": [
+          "sections"
+        ],
+        "type": "object",
+        "properties": {
+          "sections": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/SiteSection"
+            }
+          }
+        }
+      },
+      "SitePreviewResponse": {
+        "required": [
+          "url",
+          "expiresAtUtc"
+        ],
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string"
+          },
+          "expiresAtUtc": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "SiteResponse": {
+        "required": [
+          "exists",
+          "slug",
+          "template",
+          "palette",
+          "language",
+          "draft",
+          "isPublished",
+          "updatedAtUtc",
+          "version"
+        ],
+        "type": "object",
+        "properties": {
+          "exists": {
+            "type": "boolean"
+          },
+          "slug": {
+            "type": "string"
+          },
+          "template": {
+            "type": "string"
+          },
+          "palette": {
+            "type": "string"
+          },
+          "language": {
+            "type": "string"
+          },
+          "draft": {
+            "$ref": "#/components/schemas/SiteContent"
+          },
+          "isPublished": {
+            "type": "boolean"
+          },
+          "updatedAtUtc": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "version": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
+      "SiteSection": {
+        "required": [
+          "type",
+          "visible",
+          "title",
+          "text"
+        ],
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "visible": {
+            "type": "boolean"
+          },
+          "title": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "text": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "showPhoto": {
+            "type": "boolean",
+            "default": false
+          },
+          "items": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/SiteSectionItem"
+            }
+          }
+        }
+      },
+      "SiteSectionItem": {
+        "required": [
+          "title",
+          "subtitle",
+          "text"
+        ],
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "subtitle": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "text": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "SlugAvailabilityResponse": {
+        "required": [
+          "slug",
+          "available",
+          "reason"
+        ],
+        "type": "object",
+        "properties": {
+          "slug": {
+            "type": "string"
+          },
+          "available": {
+            "type": "boolean"
+          },
+          "reason": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
       "TeacherProfileResponse": {
         "required": [
           "firstName",
@@ -1844,6 +2232,9 @@
     },
     {
       "name": "Offers"
+    },
+    {
+      "name": "Site"
     },
     {
       "name": "Teacher profile"
