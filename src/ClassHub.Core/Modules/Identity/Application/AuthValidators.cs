@@ -52,6 +52,22 @@ internal sealed class LoginRequestValidator : AbstractValidator<LoginRequest>
     }
 }
 
+internal sealed class TwoFactorLoginRequestValidator : AbstractValidator<TwoFactorLoginRequest>
+{
+    public TwoFactorLoginRequestValidator()
+    {
+        RuleFor(x => x).Must(x => (x.Code is null) != (x.RecoveryCode is null))
+            .OverridePropertyName("code").WithMessage("Send either an authenticator code or a recovery code.");
+        RuleFor(x => x.Code).NotEmpty().MaximumLength(20).When(x => x.Code is not null);
+        RuleFor(x => x.RecoveryCode).NotEmpty().MaximumLength(40).When(x => x.RecoveryCode is not null);
+    }
+}
+
+internal sealed class MfaCodeRequestValidator : AbstractValidator<MfaCodeRequest>
+{
+    public MfaCodeRequestValidator() => RuleFor(x => x.Code).NotEmpty().MaximumLength(20);
+}
+
 internal sealed class ConfirmEmailRequestValidator : AbstractValidator<ConfirmEmailRequest>
 {
     public ConfirmEmailRequestValidator()

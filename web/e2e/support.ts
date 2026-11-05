@@ -1,6 +1,8 @@
 /// <reference lib="dom" />
 import { expect, type APIRequestContext, type Page } from '@playwright/test';
-import { randomBytes } from 'node:crypto';
+import { execFile } from 'node:child_process';
+import { createHmac, randomBytes } from 'node:crypto';
+import { promisify } from 'node:util';
 import { crc32, deflateSync } from 'node:zlib';
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
@@ -84,6 +86,35 @@ export async function teacherViaApi(request: APIRequestContext, email: string) {
   expect((await request.post('/api/auth/login', { data: { email, password: PASSWORD, rememberMe: false }, headers: { 'X-XSRF-TOKEN': await xsrf(request) } })).ok()).toBe(true);
   const workspaces = (await (await request.get('/api/me/workspaces')).json()) as { id: string }[];
   return { workspaceId: workspaces[0]!.id };
+}
+
+/** The current RFC 6238 code for an authenticator key (base32, spaces and case ignored), like an authenticator app. */
+export function totp(key: string, at = Date.now()): string {
+  const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
+  let bits = '';
+  for (const c of key.replace(/[\s=]/g, '').toUpperCase()) bits += alphabet.indexOf(c).toString(2).padStart(5, '0');
+  const secret = Buffer.from(bits.match(/.{8}/g)!.map((byte) => parseInt(byte, 2)));
+  const counter = Buffer.alloc(8);
+  counter.writeBigUInt64BE(BigInt(Math.floor(at / 1000 / 30)));
+  const hash = createHmac('sha1', secret).update(counter).digest();
+  const offset = hash[hash.length - 1]! & 0x0f;
+  const binary = ((hash[offset]! & 0x7f) << 24) | (hash[offset + 1]! << 16) | (hash[offset + 2]! << 8) | hash[offset + 3]!;
+  return String(binary % 1_000_000).padStart(6, '0');
+}
+
+/**
+ * Makes an existing account a Platform Owner with the API's command-line tool (the only way; never over HTTP), on the
+ * disposable E2E database. `--force-add`: the desktop and mobile runs each create their own owner.
+ */
+export async function grantPlatformOwner(email: string) {
+  const connection = process.env.CLASSHUB_E2E_CONNECTION;
+  if (!connection) throw new Error('CLASSHUB_E2E_CONNECTION is not set (see e2e/global-setup.ts).');
+  const apiProject = join(dirname(fileURLToPath(import.meta.url)), '..', '..', 'src', 'ClassHub.Api');
+  const { stdout } = await promisify(execFile)('dotnet', [join(apiProject, 'bin', 'Release', 'net10.0', 'ClassHub.Api.dll'), 'grant-platform-owner', email, '--force-add'], {
+    cwd: apiProject,
+    env: { ...process.env, ASPNETCORE_ENVIRONMENT: 'E2E', ConnectionStrings__ClassHub: connection },
+  });
+  expect(stdout).toContain('Platform Owner role granted.');
 }
 
 function pngChunk(type: string, data: Buffer) {

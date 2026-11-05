@@ -41,6 +41,13 @@ npm run e2e                                # builds the SPA and the API, then ru
 
 Flows (each in **mk and en**, on **desktop and mobile**): register → dev mailbox → confirm → sign in → the dashboard shows the workspace → sign out; forgot password → reset link → the old password fails, the new one works; a second teacher opening the first teacher's workspace URL sees "not found". Texts come from the app's locale files, so wording changes do not break tests. CI job `e2e` uploads the HTML report and traces on failure.
 
+## Platform admin & MFA tests (R1-P9)
+
+- Integration: `MfaTests` (enrollment with a wrong and a right code, 202 + no session after the password, the second step, recovery codes once and audited, regeneration with step-up, lockout after 5 wrong codes, second step needs the first, exactly one kind of code, keys and codes encrypted at rest, suspended account cannot finish); `PlatformAdminTests` (401/403 for anonymous/teachers, `MFA_REQUIRED` for password-only staff, staff cookie never persistent and `amr` kept across stamp validations, overview numbers, search/detail return metadata only, suspension ends sessions/blocks sign-in/hides the site/is audited with reason and actor, owner vs admin target rules, owner-only role grant/revoke with step-up, staff get 404 on workspace routes, audit filters and hidden workspace details). `PlatformStaffKit` grants roles like the CLI and computes TOTP codes (RFC 6238).
+- Unit: `MfaUnitTests` (code normalization, key formatting, staff session limits).
+- Vitest: `TwoFactorLogin.test.tsx` (code step, recovery code, expired sign-in), `AdminPages.test.tsx` (no access, enrollment → recovery codes → overview, sign in again, suspension with reason, owner role grant with code, admin without role management, audit filters).
+- E2E: `admin.spec.ts` — a Platform Owner bootstrapped with the CLI (`grant-platform-owner` on the disposable database) enrolls the authenticator, signs in again with a TOTP code computed from the shown key, suspends a teacher (session ends, sign-in refused) and finds the audit entry.
+
 ## Dashboard tests (R1-P8)
 
 - Integration: `TeacherDashboardTests` (zeros and a full period of days for a new teacher; a fixture with offers, leads in every status incl. archived and old ones, a diagnostic request, test attempts, page views today and 40 days ago → exact numbers for 30 and 90 days, funnel included; only 7/30/90 days; isolation).

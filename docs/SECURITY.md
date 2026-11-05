@@ -27,7 +27,7 @@ Use GitHub's private vulnerability reporting on this repository. Do not open a p
 | Anonymous visitor / attacker on the internet | None | Call anonymous endpoints (register, login, confirm, resend, forgot, reset, antiforgery, health), the SPA, later public sites |
 | Teacher (authenticated) | Own workspace only | Workspace APIs of workspaces they are an active member of |
 | Another teacher (authenticated attacker) | Own workspace only | Everything a teacher can, aimed at someone else's workspace ids |
-| Platform Owner/Admin | Platform operations only | No workspace access (by design); admin features arrive in R1-P9 with MFA |
+| Platform Owner/Admin | Platform operations only, with MFA | Admin API (`/api/admin/*`: aggregates and account metadata, suspension, audit viewer); the owner also grants/revokes Platform Admin. No workspace access (by design) |
 | Operator with local shell access | Full (machine) | CLI `grant-platform-owner`, database, configuration; out of scope for the web threat model |
 | Contributors and automation (Claude Code, Codex, Dependabot) | Through PRs only | Branches and PRs; `main` only through the ruleset (required checks, PR gate, no bypass) |
 
@@ -63,7 +63,9 @@ Use GitHub's private vulnerability reporting on this repository. Do not open a p
 
 ### Residual risks (accepted for Release 0)
 
-- MFA for platform roles is not implemented yet (R1-P9); no admin features exist until then.
+- The authenticator key and recovery codes are encrypted with Data Protection, whose keys live in the same database (DPAPI-protected locally only); a database dump plus the key ring would expose them. Production key protection comes with hosting (D-28).
+- TOTP codes are not tracked as used: a code observed by an attacker stays valid for its time window (about 90 s), on top of the password; recovery codes are single-use.
+- Platform staff who were granted a role but have not enrolled the authenticator yet can enroll with the password alone (the bootstrap problem of every TOTP enrollment); grant roles only to accounts that enroll right away.
 - Email delivery is local only (dev mailbox); a real provider and its SPF/DKIM setup come with hosting.
 - The local runtime identity is the developer's Windows account (sysadmin); production identity is decided with hosting (D-28).
 - Codex reviews run on the developer machine; CI verifies the signed evidence but cannot re-run Codex. Whoever controls the machine holding the private evidence key can sign evidence; the key never leaves that machine (R0-P8 decision: signed local attestation instead of a paid CI integration or mandatory human approvals).
@@ -79,6 +81,18 @@ ASP.NET Core Identity with cookie sessions. See [ARCHITECTURE.md](ARCHITECTURE.m
 - Every endpoint declares `AllowAnonymous` or a **named** policy (`EndpointAuthorizationMetadataTests`).
 - Policies: `Authenticated`; workspace policies `ws:<permission>` (for example `ws:workspace.read`). Permissions are code constants (`WorkspacePermissions`), mapped from workspace roles (`WorkspaceRolePermissions`; today `Owner` has all workspace permissions). Unknown permission names fail when the policy is resolved.
 - Platform roles (`PlatformOwner`, `PlatformAdmin`) are Identity roles. **They grant no workspace access**: a platform admin without membership gets 404 on workspace routes (tested). The first Platform Owner is created only with the local CLI `dotnet run --project src/ClassHub.Api -- grant-platform-owner <email> [--force-add]` (audited, never exposed over HTTP). The owner check, the grant, the session revocation and the audit entry run in one transaction under an application lock (`sp_getapplock`), so concurrent bootstraps cannot both add an owner without `--force-add`.
+
+## Platform administration and MFA (R1-P9)
+
+- **MFA:** Identity's authenticator (TOTP, RFC 6238) with 10 single-use recovery codes. A password-correct account with the authenticator gets `202` from `/api/auth/login` and only a 5-minute `SameSite=Strict` two-factor cookie; `/api/auth/login/two-factor` takes the code (or a recovery code) and signs in with `amr=mfa`. Wrong codes count towards the Identity lockout (5 attempts, 15 minutes) and all auth endpoints are rate-limited (`auth`). A suspended account cannot finish the second step.
+- **Keys at rest:** `ProtectedUserStore` encrypts the authenticator key and the recovery codes with Data Protection before they reach `AspNetUserTokens` (tested on the raw column).
+- **Policies:** `platform:staff` (PlatformOwner or PlatformAdmin) and `platform:owner` require the role **and** `amr=mfa`; staff with a password-only session get 403 `MFA_REQUIRED`. The security-stamp validator keeps the `amr` claim when it refreshes the principal (otherwise the session would lose admin access after one interval).
+- **Step-up:** granting/revoking Platform Admin and replacing recovery codes need a fresh authenticator code in the request; a wrong one counts as a failed attempt.
+- **Owner vs admin:** only the owner grants or revokes Platform Admin; the Platform Owner role is managed only with the CLI. Nobody suspends their own account; admins cannot suspend other admins or owners.
+- **Suspension:** reason required; status, security-stamp rotation (all sessions end) and the audit entry commit together; public pages are evicted after the commit, so the site is hidden at once.
+- **Staff sessions:** never a persistent cookie and 8 hours without activity (`Identity:PlatformStaffSessionMinutes`); role changes rotate the stamp, so a session never gains a role without a new sign-in.
+- **No private content:** the admin API returns aggregates and account metadata (email, status, roles, dates, workspace name, site address/state). Audit details (before/after values) are shown only for platform-level entries; workspace entries show the action and the record, not the data. Platform staff still get 404 on every workspace route (tested with an MFA session). No impersonation.
+- Audited: `account.mfa.enabled`, `account.mfa.recovery-codes.regenerated`, `account.mfa.recovery-code-used`, `user.suspended`, `user.reactivated`, `platform.role.granted`, `platform.role.revoked`.
 
 ## Public test taking (R1-P7)
 

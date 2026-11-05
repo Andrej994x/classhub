@@ -95,7 +95,10 @@ public sealed class WorkspacePolicyProvider(IOptions<AuthorizationOptions> optio
     }
 }
 
-/// <summary>Turns "not a member of this workspace" into 404 (existence is never revealed).</summary>
+/// <summary>
+/// Turns "not a member of this workspace" into 404 (existence is never revealed), and a platform staff session without
+/// the authenticator into 403 <c>MFA_REQUIRED</c>.
+/// </summary>
 public sealed class WorkspaceAuthorizationResultHandler : IAuthorizationMiddlewareResultHandler
 {
     private readonly AuthorizationMiddlewareResultHandler _default = new();
@@ -118,6 +121,24 @@ public sealed class WorkspaceAuthorizationResultHandler : IAuthorizationMiddlewa
                     Status = StatusCodes.Status404NotFound,
                     Title = "The resource was not found.",
                     Extensions = { ["code"] = ErrorCodes.NotFound },
+                },
+            });
+            return;
+        }
+
+        if (authorizeResult.Forbidden &&
+            authorizeResult.AuthorizationFailure?.FailureReasons.Any(r => r.Message == ClassHub.Core.Infrastructure.Web.PlatformStaffHandler.MfaRequiredReason) == true)
+        {
+            context.Response.StatusCode = StatusCodes.Status403Forbidden;
+            var problems = context.RequestServices.GetRequiredService<IProblemDetailsService>();
+            await problems.TryWriteAsync(new ProblemDetailsContext
+            {
+                HttpContext = context,
+                ProblemDetails = new ProblemDetails
+                {
+                    Status = StatusCodes.Status403Forbidden,
+                    Title = "Sign in with your authenticator app first.",
+                    Extensions = { ["code"] = ErrorCodes.MfaRequired },
                 },
             });
             return;

@@ -566,7 +566,7 @@ public sealed class AuthFlowTests(ClassHubApiFixture fixture)
 
         await using (var scope = fixture.Factory.Services.CreateAsyncScope())
         {
-            await scope.ServiceProvider.GetRequiredService<IUserAccountStatus>().SuspendAsync(me.Id, Ct);
+            await scope.ServiceProvider.GetRequiredService<IUserAccountStatus>().SuspendAsync(me.Id, "Test suspension", Ct);
         }
 
         using (var session = await client.GetAsync("/api/auth/me"))

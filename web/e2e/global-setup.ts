@@ -77,6 +77,9 @@ export default async function globalSetup() {
     );
 
     const database = `ClassHubE2E_${randomBytes(6).toString('hex')}`;
+    const connectionString = `Server=127.0.0.1,${port};Database=${database};User Id=sa;Password=${password};Encrypt=True;TrustServerCertificate=True`;
+    // For tests that run the API's command-line tool against the same disposable database (grant-platform-owner).
+    process.env.CLASSHUB_E2E_CONNECTION = connectionString;
     const log = createWriteStream(join(resultsDir, 'api.log'));
     api = spawn('dotnet', [join(apiProject, 'bin', 'Release', 'net10.0', 'ClassHub.Api.dll')], {
       cwd: apiProject, // content root: appsettings*.json and wwwroot/dist
@@ -84,7 +87,7 @@ export default async function globalSetup() {
         ...process.env,
         ASPNETCORE_ENVIRONMENT: 'E2E',
         ASPNETCORE_URLS: E2E_BASE_URL,
-        ConnectionStrings__ClassHub: `Server=127.0.0.1,${port};Database=${database};User Id=sa;Password=${password};Encrypt=True;TrustServerCertificate=True`,
+        ConnectionStrings__ClassHub: connectionString,
         App__PublicBaseUrl: E2E_BASE_URL,
       },
       stdio: ['ignore', 'pipe', 'pipe'],

@@ -74,7 +74,6 @@ export function WorkspaceDashboardPage() {
   );
 }
 export const StudentHomePage = () => <AreaHome titleKey="student.title" emptyKey="student.empty" />;
-export const AdminHomePage = () => <AreaHome titleKey="admin.title" emptyKey="admin.empty" />;
 
 /** "Not found" inside an area layout (unknown route, or a workspace the user is not a member of). */
 export function NotFoundContent() {
