@@ -195,7 +195,10 @@ function ProfileFormCard({ workspaceId, profile, workspace, catalog }: { workspa
   const currencies = CURRENCIES.includes(workspace.currency) ? CURRENCIES : [workspace.currency, ...CURRENCIES];
 
   const onSubmit = form.handleSubmit(async (values) => {
-    const settingsChanged = values.timeZone !== workspace.timeZone || values.currency !== workspace.currency;
+    // Each workspace setting is sent only when it was changed here, so a stale value can never undo a change
+    // made elsewhere (the profile version does not cover workspace settings).
+    const timeZoneChanged = values.timeZone !== workspace.timeZone;
+    const currencyChanged = values.currency !== workspace.currency;
     await save
       .mutateAsync({
         firstName: empty(values.firstName),
@@ -206,8 +209,8 @@ function ProfileFormCard({ workspaceId, profile, workspace, catalog }: { workspa
         subjectIds: values.subjectIds,
         levelIds: values.levelIds,
         languages: values.languages,
-        timeZone: settingsChanged ? values.timeZone : null,
-        currency: settingsChanged ? values.currency : null,
+        timeZone: timeZoneChanged ? values.timeZone : null,
+        currency: currencyChanged ? values.currency : null,
         version: values.version,
       })
       .then((saved) => form.reset(toForm(saved, { ...workspace, timeZone: values.timeZone, currency: values.currency })))

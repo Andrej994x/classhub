@@ -56,7 +56,7 @@ describe('profile page', () => {
         subjectIds: [SUBJECT_MATH],
         levelIds: [LEVEL_SECONDARY],
         languages: ['mk'],
-        timeZone: 'Europe/Skopje',
+        timeZone: null, // unchanged settings are not sent (a stale value must not undo a change made elsewhere)
         currency: 'EUR',
         version: null, // the version the form was loaded from (no profile yet)
       },
