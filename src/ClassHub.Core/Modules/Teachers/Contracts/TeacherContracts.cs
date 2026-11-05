@@ -80,3 +80,9 @@ public interface ITeacherPhoto
 {
     Task<(Stream Content, string ContentType)?> OpenAsync(CancellationToken cancellationToken);
 }
+
+/// <summary>The current workspace's onboarding checklist, for other modules (dashboard).</summary>
+public interface IOnboardingProgress
+{
+    Task<OnboardingResponse> GetOnboardingAsync(CancellationToken cancellationToken);
+}

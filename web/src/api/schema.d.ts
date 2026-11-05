@@ -37,6 +37,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/w/{workspaceId}/dashboard": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Leads, tests, page visits, offers, onboarding and the conversion funnel for the last 7, 30 or 90 days. */
+        get: operations["GetDashboard"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/public/sites/{slug}/tests/{testSlug}": {
         parameters: {
             query?: never;
@@ -709,6 +726,76 @@ export interface components {
             userId: string;
             token: null | string;
         };
+        CountByKey: {
+            key: string;
+            /** Format: int32 */
+            count: number | string;
+        };
+        DailyCount: {
+            /** Format: date */
+            day: string;
+            /** Format: int32 */
+            count: number | string;
+        };
+        DashboardFunnel: {
+            /** Format: int32 */
+            visits: number | string;
+            /** Format: int32 */
+            leads: number | string;
+            /** Format: int32 */
+            contacted: number | string;
+            /** Format: int32 */
+            converted: number | string;
+        };
+        DashboardLeads: {
+            /** Format: int32 */
+            new: number | string;
+            /** Format: int32 */
+            inPeriod: number | string;
+            byStatus: components["schemas"]["CountByKey"][];
+            byTypeInPeriod: components["schemas"]["CountByKey"][];
+        };
+        DashboardOffers: {
+            /** Format: int32 */
+            active: number | string;
+            /** Format: int32 */
+            public: number | string;
+        };
+        DashboardOnboarding: {
+            /** Format: int32 */
+            completed: number | string;
+            /** Format: int32 */
+            total: number | string;
+        };
+        DashboardResponse: {
+            /** Format: int32 */
+            days: number | string;
+            /** Format: date */
+            from: string;
+            /** Format: date */
+            to: string;
+            leads: components["schemas"]["DashboardLeads"];
+            tests: components["schemas"]["DashboardTests"];
+            site: components["schemas"]["DashboardSite"];
+            offers: components["schemas"]["DashboardOffers"];
+            onboarding: components["schemas"]["DashboardOnboarding"];
+            funnel: components["schemas"]["DashboardFunnel"];
+        };
+        DashboardSite: {
+            exists: boolean;
+            published: boolean;
+            /** Format: int32 */
+            visitsInPeriod: number | string;
+            daily: components["schemas"]["DailyCount"][];
+        };
+        DashboardTests: {
+            /** Format: int32 */
+            published: number | string;
+            /** Format: int32 */
+            attemptsInPeriod: number | string;
+            /** Format: int32 */
+            sharedResultsInPeriod: number | string;
+        };
         DiagnosticResultSummary: {
             /** Format: uuid */
             testId: string;
@@ -1236,6 +1323,30 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["MyWorkspaceResponse"][];
+                };
+            };
+        };
+    };
+    GetDashboard: {
+        parameters: {
+            query?: {
+                days?: number | string;
+            };
+            header?: never;
+            path: {
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DashboardResponse"];
                 };
             };
         };

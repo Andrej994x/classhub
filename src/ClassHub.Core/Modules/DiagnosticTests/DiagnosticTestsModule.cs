@@ -28,6 +28,7 @@ public sealed class DiagnosticTestsModule : IModule
         services.AddScoped<PublicTestService>();
         services.AddScoped<IPublicTests, PublishedTests>();
         services.AddScoped<IDiagnosticAttemptLink, DiagnosticAttemptLink>();
+        services.AddScoped<ITestStats, TestStatsService>();
         // "{testSlug:testslug}": the address shape of a test (also used by the Razor test page).
         services.Configure<RouteOptions>(options => options.SetParameterPolicy<TestSlugRouteConstraint>(TestSlugRouteConstraint.Name));
         // R1-P10 replaces this with the plan-aware quota.

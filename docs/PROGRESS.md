@@ -7,10 +7,10 @@ This is the live status of the autonomous implementation loop ([ROADMAP.md](ROAD
 | Field | Value |
 |---|---|
 | Release | R1 — Teacher presence (R0 complete) |
-| Current phase | R1-P7 — Public test taking & results |
-| Branch | `feature/r1-p7-diagnostic-public` (from `main` @ `97b4167`) |
+| Current phase | R1-P8 — Basic teacher dashboard |
+| Branch | `feature/r1-p8-teacher-dashboard` (from `main` @ `7c79580`) |
 | Workflow step | 5 — signed Codex review, then PR |
-| Next action | R1-P7 PR; then R1-P8 (basic teacher dashboard) |
+| Next action | R1-P8 PR; then R1-P9 (platform admin foundation) |
 | Open blockers | None. User actions (optional): direct-push probe (R0-P8); remove the now redundant required `pr-gate` check (see Decisions) |
 
 ## Phase status
@@ -36,8 +36,8 @@ Status values: `not started`, `in progress`, `in review` (PR open), `merged`, `b
 | R1-P4 | Public site rendering, SEO & islands | merged | `feature/r1-p4-public-site` | [#16](https://github.com/Andrej994x/classhub/pull/16) | `f78ecc8` | 5 rounds: 2 × P2 fixed (unsaved edits on unpublish, query-string cache poisoning of `/`); final clean | green after 2 fix cycles (currency digits vs CLDR, sign-out race) | Migration applied to local `ClassHubDb` |
 | R1-P5 | Leads management | merged | `feature/r1-p5-leads` | [#17](https://github.com/Andrej994x/classhub/pull/17) | `9a948f1` | 5 rounds: 5 × P2 fixed (atomic per-site quota, consent version change, localized server errors, retry after token renewal, debounced search vs filters); final clean | green | Migration applied to local `ClassHubDb` |
 | R1-P6 | Diagnostic test builder | merged | `feature/r1-p6-diagnostic-builder` | [#18](https://github.com/Andrej994x/classhub/pull/18) | `97b4167` | 3 rounds: 3 × P2 fixed (published tests stay publishable, repeated ids vs D-38, form version for status changes); final clean | green | Migration applied to local `ClassHubDb` |
-| R1-P7 | Public test taking & results | in progress | `feature/r1-p7-diagnostic-public` | | | | | Plan: public test API without answers, server scoring, anonymous attempts, diagnostic leads with opt-in sharing, Razor test page, sitemap, teacher results |
-| R1-P8 | Basic teacher dashboard | not started | | | | | | |
+| R1-P7 | Public test taking & results | merged | `feature/r1-p7-diagnostic-public` | [#19](https://github.com/Andrej994x/classhub/pull/19) | `7c79580` | 6 rounds: 6 × P2 fixed (attempts vs. edits, Vite proxy, shown version, eviction after commit, rollback with data, attempt → lead FK); final clean | green after 1 CI fix (TEST_CHANGED translation) | Migrations applied to local `ClassHubDb` |
+| R1-P8 | Basic teacher dashboard | in progress | `feature/r1-p8-teacher-dashboard` | | | | | Plan: dashboard endpoint from module contracts (leads, tests, visits, offers, onboarding, funnel), SPA tiles/funnel/visits chart |
 | R1-P9 | Platform admin foundation | not started | | | | | | |
 | R1-P10 | SaaS plans & entitlements | not started | | | | | | |
 | R1-P11 | Moderation & reference data admin | not started | | | | | | |
@@ -75,6 +75,10 @@ Definition of Done (ROADMAP E) demonstrated:
 - **Gate passed:** `dotnet ef database update` created `ClassHubDb` on `.\SQLEXPRESS` via Windows authentication. The running API connects as `EFCore/10.0.14` over **Shared memory**, `NTLM`. Collation `Macedonian_FYROM_100_CI_AS_SC`, RCSI on, migrations `InitialTechnical` + `EnableReadCommittedSnapshot` applied. No SQL Server configuration was changed.
 - Local tests: 49/49 green (unit 5, architecture 1, integration 43 on Testcontainers SQL Server 2022).
 - CI `migrations` job sequence verified locally against a throwaway container.
+
+### R1-P7 — Public test taking & results (merged, PR #19, `7c79580`)
+
+- Public tests without answers, server-side scoring of the shown version, anonymous attempts with random ids, per-IP and atomic per-test limits, attempts serialized with structural edits (D-38), diagnostic requests with opt-in result sharing (D-18), Razor test page, sitemap, teacher results; 516 backend / 134 Vitest / 22 Playwright tests.
 
 ### R1-P6 — Diagnostic test builder (merged, PR #18, `97b4167`)
 

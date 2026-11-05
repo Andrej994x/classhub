@@ -75,3 +75,11 @@ public interface IDiagnosticAttemptLink
     /// <summary>The result for the teacher's lead detail (current workspace), or null.</summary>
     Task<DiagnosticResultSummary?> GetResultAsync(Guid attemptId, CancellationToken cancellationToken);
 }
+
+/// <summary>Test numbers of the current workspace for the dashboard.</summary>
+public sealed record TestStats(int Published, int AttemptsInPeriod, int SharedResultsInPeriod);
+
+public interface ITestStats
+{
+    Task<TestStats> GetAsync(DateTime fromUtc, CancellationToken cancellationToken);
+}

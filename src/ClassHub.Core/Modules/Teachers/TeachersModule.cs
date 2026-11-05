@@ -28,6 +28,7 @@ public sealed class TeachersModule : IModule
         services.AddScoped<ITeacherSummary>(sp => sp.GetRequiredService<TeacherProfileService>());
         services.AddScoped<ITeacherPhoto>(sp => sp.GetRequiredService<TeacherProfileService>());
         services.AddScoped<ITeacherPublicProfile>(sp => sp.GetRequiredService<TeacherProfileService>());
+        services.AddScoped<IOnboardingProgress>(sp => sp.GetRequiredService<TeacherProfileService>());
         services.AddClassHubFiles(configuration);
     }
 

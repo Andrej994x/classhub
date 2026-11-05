@@ -49,6 +49,50 @@
         }
       }
     },
+    "/api/w/{workspaceId}/dashboard": {
+      "get": {
+        "tags": [
+          "Dashboard"
+        ],
+        "summary": "Leads, tests, page visits, offers, onboarding and the conversion funnel for the last 7, 30 or 90 days.",
+        "operationId": "GetDashboard",
+        "parameters": [
+          {
+            "name": "days",
+            "in": "query",
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          },
+          {
+            "name": "workspaceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DashboardResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/public/sites/{slug}/tests/{testSlug}": {
       "get": {
         "tags": [
@@ -2313,6 +2357,294 @@
           }
         }
       },
+      "CountByKey": {
+        "required": [
+          "key",
+          "count"
+        ],
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string"
+          },
+          "count": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
+      "DailyCount": {
+        "required": [
+          "day",
+          "count"
+        ],
+        "type": "object",
+        "properties": {
+          "day": {
+            "type": "string",
+            "format": "date"
+          },
+          "count": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
+      "DashboardFunnel": {
+        "required": [
+          "visits",
+          "leads",
+          "contacted",
+          "converted"
+        ],
+        "type": "object",
+        "properties": {
+          "visits": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "leads": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "contacted": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "converted": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
+      "DashboardLeads": {
+        "required": [
+          "new",
+          "inPeriod",
+          "byStatus",
+          "byTypeInPeriod"
+        ],
+        "type": "object",
+        "properties": {
+          "new": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "inPeriod": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "byStatus": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CountByKey"
+            }
+          },
+          "byTypeInPeriod": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CountByKey"
+            }
+          }
+        }
+      },
+      "DashboardOffers": {
+        "required": [
+          "active",
+          "public"
+        ],
+        "type": "object",
+        "properties": {
+          "active": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "public": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
+      "DashboardOnboarding": {
+        "required": [
+          "completed",
+          "total"
+        ],
+        "type": "object",
+        "properties": {
+          "completed": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "total": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
+      "DashboardResponse": {
+        "required": [
+          "days",
+          "from",
+          "to",
+          "leads",
+          "tests",
+          "site",
+          "offers",
+          "onboarding",
+          "funnel"
+        ],
+        "type": "object",
+        "properties": {
+          "days": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "from": {
+            "type": "string",
+            "format": "date"
+          },
+          "to": {
+            "type": "string",
+            "format": "date"
+          },
+          "leads": {
+            "$ref": "#/components/schemas/DashboardLeads"
+          },
+          "tests": {
+            "$ref": "#/components/schemas/DashboardTests"
+          },
+          "site": {
+            "$ref": "#/components/schemas/DashboardSite"
+          },
+          "offers": {
+            "$ref": "#/components/schemas/DashboardOffers"
+          },
+          "onboarding": {
+            "$ref": "#/components/schemas/DashboardOnboarding"
+          },
+          "funnel": {
+            "$ref": "#/components/schemas/DashboardFunnel"
+          }
+        }
+      },
+      "DashboardSite": {
+        "required": [
+          "exists",
+          "published",
+          "visitsInPeriod",
+          "daily"
+        ],
+        "type": "object",
+        "properties": {
+          "exists": {
+            "type": "boolean"
+          },
+          "published": {
+            "type": "boolean"
+          },
+          "visitsInPeriod": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "daily": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DailyCount"
+            }
+          }
+        }
+      },
+      "DashboardTests": {
+        "required": [
+          "published",
+          "attemptsInPeriod",
+          "sharedResultsInPeriod"
+        ],
+        "type": "object",
+        "properties": {
+          "published": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "attemptsInPeriod": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "sharedResultsInPeriod": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
       "DiagnosticResultSummary": {
         "required": [
           "testId",
@@ -4480,6 +4812,9 @@
     },
     {
       "name": "Workspaces"
+    },
+    {
+      "name": "Dashboard"
     },
     {
       "name": "Public tests"

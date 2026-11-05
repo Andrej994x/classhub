@@ -41,6 +41,11 @@ npm run e2e                                # builds the SPA and the API, then ru
 
 Flows (each in **mk and en**, on **desktop and mobile**): register → dev mailbox → confirm → sign in → the dashboard shows the workspace → sign out; forgot password → reset link → the old password fails, the new one works; a second teacher opening the first teacher's workspace URL sees "not found". Texts come from the app's locale files, so wording changes do not break tests. CI job `e2e` uploads the HTML report and traces on failure.
 
+## Dashboard tests (R1-P8)
+
+- Integration: `TeacherDashboardTests` (zeros and a full period of days for a new teacher; a fixture with offers, leads in every status incl. archived and old ones, a diagnostic request, test attempts, page views today and 40 days ago → exact numbers for 30 and 90 days, funnel included; only 7/30/90 days; isolation).
+- Vitest: `DashboardOverview.test.tsx` (tiles and links, funnel shares, requests by status, period switch requests the new period, daily visits as a table).
+
 ## Public test tests (R1-P7)
 
 - Integration: `PublicTestTests` (no correct answers in the raw public JSON, `SelectSeveral`; drafts, inactive and unpublished sites hidden, cached page evicted; server-side scoring incl. partial and empty answers, random attempt ids, anonymous columns, attempt count; tampered submissions refused and not stored; **8 parallel attempts against a cap of 3**; contact with shared and unshared results, teacher views; one request per attempt and only from its own site; type/attempt rules; attempts lock destructive edits; indexable test page, link from the site page, sitemap; isolation of the results view).

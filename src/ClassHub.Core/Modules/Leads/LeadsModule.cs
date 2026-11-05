@@ -20,6 +20,7 @@ public sealed class LeadsModule : IModule
         services.AddOptions<LeadOptions>().Bind(configuration.GetSection(LeadOptions.SectionName)).ValidateDataAnnotations().ValidateOnStart();
         services.AddScoped<LeadQueries>();
         services.AddScoped<LeadService>();
+        services.AddScoped<ILeadStats, LeadStatsService>();
         services.AddScoped<LeadIntake>();
         services.AddScoped<LeadFormTokens>();
     }

@@ -92,3 +92,20 @@ public static class LeadForeignKeyTargets
 {
     public static readonly Type Lead = typeof(Domain.Lead);
 }
+
+/// <summary>
+/// Lead numbers of the current workspace for the dashboard. <c>ByStatus</c>: current, not archived. Period numbers count
+/// every lead that arrived since <c>fromUtc</c> (archived ones too), with its current status.
+/// </summary>
+public sealed record LeadStats(
+    int New,
+    IReadOnlyDictionary<string, int> ByStatus,
+    int InPeriod,
+    IReadOnlyDictionary<string, int> ByTypeInPeriod,
+    int ContactedInPeriod,
+    int ConvertedInPeriod);
+
+public interface ILeadStats
+{
+    Task<LeadStats> GetAsync(DateTime fromUtc, CancellationToken cancellationToken);
+}
