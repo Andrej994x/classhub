@@ -16,6 +16,8 @@ public static class WorkspacePermissions
     public const string OffersManage = "offers.manage";
     public const string SiteRead = "site.read";
     public const string SiteManage = "site.manage";
+    public const string LeadsRead = "leads.read";
+    public const string LeadsManage = "leads.manage";
 
     public static IReadOnlySet<string> All { get; } = new HashSet<string>(StringComparer.Ordinal)
     {
@@ -27,6 +29,8 @@ public static class WorkspacePermissions
         OffersManage,
         SiteRead,
         SiteManage,
+        LeadsRead,
+        LeadsManage,
     };
 }
 

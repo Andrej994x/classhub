@@ -184,6 +184,138 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/public/sites/{slug}/lead-form": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Contact form data of a published site: availability, a signed form token, offers, subjects and the consent text. */
+        get: operations["GetLeadForm"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/public/sites/{slug}/leads": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Send a message or lesson request to the teacher. Always 202 without echoing data; spam is dropped silently. */
+        post: operations["SubmitLead"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/w/{workspaceId}/leads": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The inbox, newest first: filter by status, type, text (name, email, message) and archived. */
+        get: operations["ListLeads"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/w/{workspaceId}/leads/{leadId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetLead"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/w/{workspaceId}/leads/{leadId}/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** New → Contacted → Converted, close at any point, reopen a closed lead. 422 INVALID_STATUS_TRANSITION; 409 stale version. */
+        put: operations["ChangeLeadStatus"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/w/{workspaceId}/leads/{leadId}/notes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["AddLeadNote"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/w/{workspaceId}/leads/{leadId}/archive": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["ArchiveLead"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/w/{workspaceId}/leads/{leadId}/restore": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["RestoreLead"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/w/{workspaceId}/offers": {
         parameters: {
             query?: never;
@@ -391,6 +523,9 @@ export interface components {
         AcceptedResponse: {
             message: string;
         };
+        AddLeadNoteRequest: {
+            text: null | string;
+        };
         AntiforgeryTokenResponse: {
             requestToken: string;
         };
@@ -422,6 +557,11 @@ export interface components {
             nameMk: string;
             nameEn: string;
         };
+        ChangeLeadStatusRequest: {
+            status: null | string;
+            /** Format: int32 */
+            version: null | number | string;
+        };
         ConfirmEmailRequest: {
             /** Format: uuid */
             userId: string;
@@ -443,6 +583,88 @@ export interface components {
         };
         /** Format: binary */
         IFormFile: string;
+        LeadFormOption: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+        };
+        LeadFormResponse: {
+            available: boolean;
+            formToken: null | string;
+            offers: components["schemas"]["LeadFormOption"][];
+            subjects: components["schemas"]["LeadFormOption"][];
+            consentVersion: string;
+            consentText: string;
+            minorNotice: string;
+            /** Format: int32 */
+            minorAgeThreshold: number | string;
+        };
+        LeadListItem: {
+            /** Format: uuid */
+            id: string;
+            type: string;
+            status: string;
+            name: string;
+            email: string;
+            offerTitle: null | string;
+            /** Format: uuid */
+            subjectId: null | string;
+            preview: null | string;
+            /** Format: date-time */
+            createdAtUtc: string;
+            archived: boolean;
+        };
+        LeadListResponse: {
+            items: components["schemas"]["LeadListItem"][];
+            /** Format: int32 */
+            total: number | string;
+            /** Format: int32 */
+            newCount: number | string;
+            /** Format: int32 */
+            page: number | string;
+            /** Format: int32 */
+            pageSize: number | string;
+        };
+        LeadNoteResponse: {
+            /** Format: uuid */
+            id: string;
+            text: string;
+            /** Format: date-time */
+            createdAtUtc: string;
+        };
+        LeadReceivedResponse: {
+            received: boolean;
+        };
+        LeadResponse: {
+            /** Format: uuid */
+            id: string;
+            type: string;
+            status: string;
+            name: string;
+            email: string;
+            phone: null | string;
+            message: null | string;
+            /** Format: uuid */
+            offerId: null | string;
+            offerTitle: null | string;
+            /** Format: uuid */
+            subjectId: null | string;
+            consentVersion: string;
+            /** Format: date-time */
+            consentedAtUtc: string;
+            /** Format: date-time */
+            createdAtUtc: string;
+            /** Format: date-time */
+            updatedAtUtc: string;
+            archived: boolean;
+            notes: components["schemas"]["LeadNoteResponse"][];
+            /** Format: int32 */
+            version: number | string;
+        };
+        LeadVersionRequest: {
+            /** Format: int32 */
+            version: null | number | string;
+        };
         LoginRequest: {
             email: null | string;
             password: null | string;
@@ -593,6 +815,22 @@ export interface components {
             slug: string;
             available: boolean;
             reason: null | string;
+        };
+        SubmitLeadRequest: {
+            type: null | string;
+            name: null | string;
+            email: null | string;
+            phone: null | string;
+            message: null | string;
+            /** Format: uuid */
+            offerId: null | string;
+            /** Format: uuid */
+            subjectId: null | string;
+            consent: boolean;
+            ageConfirmed: boolean;
+            consentVersion: null | string;
+            formToken: null | string;
+            website: null | string;
         };
         TeacherProfileResponse: {
             firstName: null | string;
@@ -967,6 +1205,259 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["HttpValidationProblemDetails"];
+                };
+            };
+        };
+    };
+    GetLeadForm: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LeadFormResponse"];
+                };
+            };
+        };
+    };
+    SubmitLead: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SubmitLeadRequest"];
+            };
+        };
+        responses: {
+            /** @description Accepted */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LeadReceivedResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["HttpValidationProblemDetails"];
+                };
+            };
+        };
+    };
+    ListLeads: {
+        parameters: {
+            query?: {
+                status?: string;
+                type?: string;
+                q?: string;
+                archived?: boolean;
+                page?: number | string;
+                pageSize?: number | string;
+            };
+            header?: never;
+            path: {
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LeadListResponse"];
+                };
+            };
+        };
+    };
+    GetLead: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                leadId: string;
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LeadResponse"];
+                };
+            };
+        };
+    };
+    ChangeLeadStatus: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                leadId: string;
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ChangeLeadStatusRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LeadResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["HttpValidationProblemDetails"];
+                };
+            };
+        };
+    };
+    AddLeadNote: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                leadId: string;
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AddLeadNoteRequest"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LeadNoteResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["HttpValidationProblemDetails"];
+                };
+            };
+        };
+    };
+    ArchiveLead: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                leadId: string;
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LeadVersionRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LeadResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["HttpValidationProblemDetails"];
+                };
+            };
+        };
+    };
+    RestoreLead: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                leadId: string;
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LeadVersionRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LeadResponse"];
+                };
             };
             /** @description Bad Request */
             400: {

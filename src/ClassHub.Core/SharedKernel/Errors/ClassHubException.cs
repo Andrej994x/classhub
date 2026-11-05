@@ -47,6 +47,10 @@ public sealed class RequestValidationException(IReadOnlyDictionary<string, strin
 }
 
 /// <summary>The request is invalid in a way the client must fix (for example an expired token).</summary>
+/// <summary>A business limit per resource (not per client), e.g. leads per site and hour.</summary>
+public sealed class TooManyRequestsException(string message, string code = ErrorCodes.RateLimited)
+    : ClassHubException(code, message, 429);
+
 public sealed class BadRequestException(string message, string code = ErrorCodes.BadRequest)
     : ClassHubException(code, message, 400);
 

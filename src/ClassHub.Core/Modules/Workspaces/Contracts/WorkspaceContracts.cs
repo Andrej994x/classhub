@@ -42,3 +42,12 @@ public interface IWorkspacePublicVisibility
 {
     Task<IReadOnlySet<Guid>> VisibleAsync(IReadOnlyCollection<Guid> workspaceIds, CancellationToken cancellationToken);
 }
+
+/// <summary>The workspace owner's address for notifications, and whether it is confirmed (D-10b).</summary>
+public sealed record WorkspaceOwnerContact(Guid UserId, string Email, string Locale, bool EmailConfirmed);
+
+public interface IWorkspaceOwnerContact
+{
+    /// <summary>The active owner of the workspace, or null when there is none.</summary>
+    Task<WorkspaceOwnerContact?> GetOwnerAsync(Guid workspaceId, CancellationToken cancellationToken);
+}

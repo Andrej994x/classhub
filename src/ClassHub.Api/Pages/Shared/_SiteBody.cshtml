@@ -177,7 +177,16 @@
                     {
                         <p class="site-text mb-2">@block.Text</p>
                     }
-                    <p class="text-sm text-site-muted">@PublicText.Get(lang, "site.contactSoon")</p>
+                    @if (ViewData["Interactive"] is true)
+                    {
+                        @* The form loads its own data (token, offers, consent) from the API: nothing user-specific is cached. *@
+                        <vite-island name="contact-form" props="@(new { slug = site.Slug, language = lang })" />
+                        <noscript><p class="text-sm text-site-muted">@PublicText.Get(lang, "site.contactNoScript")</p></noscript>
+                    }
+                    else
+                    {
+                        <p class="text-sm text-site-muted">@PublicText.Get(lang, "site.contactPreview")</p>
+                    }
                 </section>
                 break;
 

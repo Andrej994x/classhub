@@ -56,11 +56,32 @@ export async function signIn(page: Page, language: Language, email: string, pass
   await page.getByRole('button', { name: text(language, 'auth.login.submit') }).click();
 }
 
-/** Registers and signs in through the API (setup for flows that are not about registration). */
+/** The antiforgery request token for unsafe API calls of a request context. */
+export async function xsrf(request: APIRequestContext): Promise<string> {
+  return ((await (await request.get('/api/auth/antiforgery')).json()) as { requestToken: string }).requestToken;
+}
+
+/**
+ * Registers, confirms the email through the dev mailbox (publishing and public leads need it, D-10b) and signs in
+ * through the API (setup for flows that are not about registration).
+ */
 export async function teacherViaApi(request: APIRequestContext, email: string) {
-  const token = async () => ((await (await request.get('/api/auth/antiforgery')).json()) as { requestToken: string }).requestToken;
-  expect((await request.post('/api/auth/register', { data: { email, password: PASSWORD, locale: 'mk' }, headers: { 'X-XSRF-TOKEN': await token() } })).status()).toBe(202);
-  expect((await request.post('/api/auth/login', { data: { email, password: PASSWORD, rememberMe: false }, headers: { 'X-XSRF-TOKEN': await token() } })).ok()).toBe(true);
+  expect((await request.post('/api/auth/register', { data: { email, password: PASSWORD, locale: 'mk' }, headers: { 'X-XSRF-TOKEN': await xsrf(request) } })).status()).toBe(202);
+  let link: string | undefined;
+  await expect
+    .poll(async () => {
+      const mails = (await (await request.get(`/api/dev/mailbox?to=${encodeURIComponent(email)}`)).json()) as { template: string; text: string }[];
+      link = mails.find((m) => m.template === 'account.confirm-email')?.text;
+      return link !== undefined;
+    })
+    .toBe(true);
+  const fragment = (name: string) => decodeURIComponent(new RegExp(`[#&]${name}=([^&\\s]+)`).exec(link!)![1]!);
+  const confirm = await request.post('/api/auth/confirm-email', {
+    data: { userId: fragment('userId'), token: fragment('token') },
+    headers: { 'X-XSRF-TOKEN': await xsrf(request) },
+  });
+  expect(confirm.status()).toBe(204);
+  expect((await request.post('/api/auth/login', { data: { email, password: PASSWORD, rememberMe: false }, headers: { 'X-XSRF-TOKEN': await xsrf(request) } })).ok()).toBe(true);
   const workspaces = (await (await request.get('/api/me/workspaces')).json()) as { id: string }[];
   return { workspaceId: workspaces[0]!.id };
 }

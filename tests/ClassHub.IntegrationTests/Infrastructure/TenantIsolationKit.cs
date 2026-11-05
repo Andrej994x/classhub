@@ -1,3 +1,4 @@
+using Microsoft.EntityFrameworkCore;
 using System.Net;
 using System.Net.Http.Json;
 using ClassHub.Core.Modules.Identity.Contracts;
@@ -21,7 +22,7 @@ public static class TenantIsolationKit
     public const string Password = "Correct-Horse-Battery-7";
 
     /// <summary>Registers a new teacher, signs in and returns the session with the provisioned workspace.</summary>
-    public static async Task<TeacherSession> CreateTeacherAsync(this ClassHubApiFixture fixture, string locale = "mk")
+    public static async Task<TeacherSession> CreateTeacherAsync(this ClassHubApiFixture fixture, string locale = "mk", bool confirmEmail = false)
     {
         ArgumentNullException.ThrowIfNull(fixture);
         var client = await ApiClient.CreateAsync(fixture);
@@ -37,7 +38,22 @@ public static class TenantIsolationKit
         var me = (await login.Content.ReadFromJsonAsync<MeResponse>(TestContext.Current.CancellationToken))!;
 
         var workspaces = await client.GetJsonAsync<List<MyWorkspaceResponse>>("/api/me/workspaces");
-        return new TeacherSession(client, me, workspaces.ShouldHaveSingleItem().Id, email, Password);
+        var session = new TeacherSession(client, me, workspaces.ShouldHaveSingleItem().Id, email, Password);
+        if (confirmEmail)
+        {
+            await fixture.SetEmailConfirmedAsync(session, true);
+        }
+
+        return session;
+    }
+
+    /// <summary>Arranges the account's email confirmation (D-10b: publishing and public leads need a confirmed email).</summary>
+    public static async Task SetEmailConfirmedAsync(this ClassHubApiFixture fixture, TeacherSession teacher, bool confirmed)
+    {
+        ArgumentNullException.ThrowIfNull(fixture);
+        ArgumentNullException.ThrowIfNull(teacher);
+        await using var db = fixture.CreateDbContext();
+        await db.Database.ExecuteSqlAsync($"UPDATE AspNetUsers SET EmailConfirmed = {confirmed} WHERE Id = {teacher.Me.Id}", TestContext.Current.CancellationToken);
     }
 
     /// <summary>

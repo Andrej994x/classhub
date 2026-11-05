@@ -41,6 +41,13 @@ npm run e2e                                # builds the SPA and the API, then ru
 
 Flows (each in **mk and en**, on **desktop and mobile**): register → dev mailbox → confirm → sign in → the dashboard shows the workspace → sign out; forgot password → reset link → the old password fails, the new one works; a second teacher opening the first teacher's workspace URL sees "not found". Texts come from the app's locale files, so wording changes do not break tests. CI job `e2e` uploads the HTML report and traces on failure.
 
+## Lead tests (R1-P5)
+
+- Unit: `LeadRulesTests` (every status transition, form tokens: site-bound, tampered, expired, future, request validation, minimal localized email, consent texts).
+- Integration: `LeadTests` (form contents: only public offers and own subjects, `no-store`; full intake → inbox + email **without visitor data**, nothing echoed; honeypot and too-fast submissions dropped; invalid/foreign/expired tokens; field validation incl. hidden/inactive/foreign offers and foreign subjects; per-site hourly limit → 429; D-10b for publishing and leads; unknown/unpublished sites; statuses with versions and invalid transitions; notes; archive/restore; filters, search with literal `%`, paging, new count; isolation kit on every endpoint; composite FK in the database).
+- Vitest: `ContactForm.test.tsx` (payload incl. token, consent version and empty honeypot without cookies; browser validation; hidden when unavailable; expired form renewed; rate limit message; mk/en text parity), `LeadsPages.test.tsx` (list, filters in the URL, archived, search, empty state; detail, allowed transitions with the loaded version, notes, archive, conflict, not found).
+- Playwright `leads.spec.ts`: published site → anonymous phone visitor sends a lesson request → teacher email → inbox → detail → status and note. E2E teachers are confirmed through the dev mailbox (`teacherViaApi`).
+
 ## Public site tests (R1-P4)
 
 - Unit: `PublicSiteRulesTests` (SEO title/description/fallbacks, JSON-LD content and escaping, currency minor units and price formatting, mk/en text parity, palette CSS = `SitePalettes`, slug route constraint, page-view visitor filter, robots/sitemap output, **render-model allow-list snapshot**, Vite manifest resolution and missing build); `SiteRulesTests` also checks contrast on the page background.
