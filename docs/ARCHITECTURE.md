@@ -2,7 +2,12 @@
 
 This document describes the architecture **as implemented**. The target design is in [ROADMAP.md](ROADMAP.md) sections B–C; this file is updated as phases land.
 
-## Current state (end of Release 0)
+## Current state (end of Release 1)
+
+Release 1 added the teacher presence (profile, offers, public site with SEO and islands, leads, diagnostic tests,
+dashboard) and platform operations (MFA admin console, plans and entitlements, moderation and catalog admin). Modules:
+Identity, Workspaces, Catalog, Teachers, Offers, Sites, Leads, DiagnosticTests, Dashboard, Admin, Subscriptions,
+Moderation; each phase section below describes its part. The layout below is the Release 0 foundation they build on.
 
 ```
 ClassHub.slnx
