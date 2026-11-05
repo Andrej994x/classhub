@@ -24,9 +24,9 @@ public static class Currencies
     public static bool IsActiveIsoCode(string? code) =>
         code is { Length: 3 } && Active.Contains(code.ToUpperInvariant());
 
-    // Minor-unit digits as browsers use them (CLDR "digits", what Intl.NumberFormat reports as maximumFractionDigits).
-    // The SPA converts prices to minor units with Intl, so the server must use the same table; a Vitest test compares
-    // this list with Intl for every active code (web/src/lib/currencyDigits.test.ts).
+    // Minor-unit digits of stored prices. A fixed table (CLDR "digits" as of 2026), never the runtime's ICU/CLDR data,
+    // which changes between versions: a stored amount must keep its meaning. The SPA has the same table
+    // (web/src/lib/format.ts); web/src/lib/currencyDigits.test.ts compares them.
     private const string ZeroDigitCodes = "AFN ALL BIF CLP DJF GNF IQD IRR ISK JPY KMF KPW KRW LAK LBP MGA MMK PYG RSD RWF SOS SYP UGX VND VUV XAF XOF XPF YER";
     private const string ThreeDigitCodes = "BHD JOD KWD LYD OMR TND";
 
