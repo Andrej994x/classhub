@@ -21,6 +21,7 @@ public sealed class DiagnosticTestsModule : IModule
 {
     public void AddServices(IServiceCollection services, IConfiguration configuration)
     {
+        services.AddScoped<ITestModeration, Persistence.TestModerationQueries>();
         services.AddOptions<DiagnosticTestOptions>().Bind(configuration.GetSection(DiagnosticTestOptions.SectionName)).ValidateDataAnnotations().ValidateOnStart();
         services.AddScoped<DiagnosticTestQueries>();
         services.AddScoped<TestAttemptQueries>();

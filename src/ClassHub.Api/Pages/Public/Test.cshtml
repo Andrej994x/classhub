@@ -58,3 +58,7 @@
         <noscript><p class="text-sm text-site-muted">@PublicText.Get(lang, "test.noScript")</p></noscript>
     </section>
 </main>
+<footer class="mx-auto max-w-3xl px-4 pb-10 text-sm text-site-muted">
+    @* Reports go to the ClassHub team only (R1-P11). *@
+    <vite-island name="report-abuse" props="@(new { slug = site.Slug, language = lang, testSlug = test.Slug })" />
+</footer>

@@ -127,6 +127,9 @@ export const AdminLayout = () => (
         { to: '/admin/users', labelKey: 'nav.adminUsers' },
         { to: '/admin/audit', labelKey: 'nav.adminAudit' },
         { to: '/admin/plans', labelKey: 'nav.adminPlans' },
+        { to: '/admin/reports', labelKey: 'nav.adminReports' },
+        { to: '/admin/moderation', labelKey: 'nav.adminHidden' },
+        { to: '/admin/catalog', labelKey: 'nav.adminCatalog' },
         { to: '/admin/security', labelKey: 'nav.adminSecurity' },
       ]}
     >

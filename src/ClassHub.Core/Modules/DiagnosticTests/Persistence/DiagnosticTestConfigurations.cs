@@ -18,8 +18,10 @@ internal sealed class DiagnosticTestConfiguration : IEntityTypeConfiguration<Dia
             t.HasCheckConstraint("CK_DiagnosticTests_Slug",
                 $"LEN([Slug]) BETWEEN {DiagnosticTest.SlugMinLength} AND {DiagnosticTest.SlugMaxLength} AND [Slug] NOT LIKE '%[^a-z0-9-]%'");
             t.HasCheckConstraint("CK_DiagnosticTests_AttemptCount", "[AttemptCount] >= 0");
+            t.HasCheckConstraint("CK_DiagnosticTests_Hidden", "([HiddenAtUtc] IS NULL AND [HiddenReason] IS NULL) OR ([HiddenAtUtc] IS NOT NULL AND [HiddenReason] IS NOT NULL)");
             t.HasCheckConstraint("CK_DiagnosticTests_Published", "[Status] = 1 OR [PublishedAtUtc] IS NOT NULL");
         });
+        builder.Property(x => x.HiddenReason).HasMaxLength(500);
         builder.HasKey(x => x.Id);
         builder.HasAlternateKey(x => new { x.WorkspaceId, x.Id });
         builder.Property(x => x.Title).HasMaxLength(DiagnosticTest.TitleMaxLength).IsRequired();

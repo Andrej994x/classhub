@@ -14,6 +14,8 @@ internal sealed class SiteConfiguration : IEntityTypeConfiguration<Site>
         {
             t.HasCheckConstraint("CK_Sites_DraftJson", "ISJSON([DraftJson]) = 1");
             t.HasCheckConstraint("CK_Sites_PublishedJson", "[PublishedJson] IS NULL OR ISJSON([PublishedJson]) = 1");
+            t.HasCheckConstraint("CK_Sites_HiddenSectionsJson", "[HiddenSectionsJson] IS NULL OR ISJSON([HiddenSectionsJson]) = 1");
+            t.HasCheckConstraint("CK_Sites_Hidden", "([HiddenAtUtc] IS NULL AND [HiddenReason] IS NULL) OR ([HiddenAtUtc] IS NOT NULL AND [HiddenReason] IS NOT NULL)");
             t.HasCheckConstraint("CK_Sites_Slug", $"LEN([Slug]) BETWEEN {SiteSlugs.MinLength} AND {SiteSlugs.MaxLength} AND [Slug] NOT LIKE '%[^a-z0-9-]%'");
         });
         builder.HasKey(x => x.Id);
@@ -26,6 +28,7 @@ internal sealed class SiteConfiguration : IEntityTypeConfiguration<Site>
         builder.Property(x => x.Palette).HasMaxLength(20).IsUnicode(false).IsRequired();
         builder.Property(x => x.Language).HasMaxLength(Site.LanguageMaxLength).IsRequired();
         builder.Property(x => x.DraftJson).IsRequired();
+        builder.Property(x => x.HiddenReason).HasMaxLength(Site.HiddenReasonMaxLength);
         builder.Property(x => x.Version).IsConcurrencyToken();
         builder.HasOne(WorkspaceForeignKeyTargets.Workspace, navigationName: null).WithMany().HasForeignKey(nameof(Site.WorkspaceId)).OnDelete(DeleteBehavior.NoAction);
     }

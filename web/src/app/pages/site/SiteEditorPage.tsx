@@ -116,6 +116,18 @@ function SiteEditor({ workspaceId, site }: { workspaceId: string; site: Site }) 
         <h1 className="text-2xl font-semibold tracking-tight">{t('site.title')}</h1>
         <p className="text-sm text-muted-foreground">{t('site.lead')}</p>
       </div>
+      {site.moderation && (
+        <Alert variant="warning">
+          <strong className="block">{site.moderation.siteHidden ? t('moderation.siteHidden') : t('moderation.sectionsHidden')}</strong>
+          {site.moderation.siteHidden && site.moderation.siteReason && <span className="block">{t('moderation.reason', { reason: site.moderation.siteReason })}</span>}
+          {site.moderation.sections.map((section) => (
+            <span key={section.type} className="block">
+              {t('moderation.section', { section: t(`site.sectionTypes.${section.type}`, { defaultValue: section.type }), reason: section.reason })}
+            </span>
+          ))}
+          <span className="mt-1 block text-xs">{t('moderation.contact')}</span>
+        </Alert>
+      )}
       {/* Publishing never touches the draft: unsaved edits stay (keepDirtyValues), only the version follows the server. */}
       <PublishCard workspaceId={workspaceId} site={site} version={formVersion} dirty={isDirty} onChanged={(saved) => form.reset(toForm(saved), { keepDirtyValues: true })} />
       <form noValidate onSubmit={onSubmit} className="flex flex-col gap-6">

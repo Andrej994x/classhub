@@ -49,4 +49,8 @@
 <footer class="mx-auto flex max-w-3xl flex-wrap items-center justify-between gap-3 px-4 pb-10 text-sm text-site-muted">
     <a href="/" class="underline-offset-4 hover:underline">@PublicText.Get(lang, "site.madeWith")</a>
     <vite-island name="copy-link" props="@(new { label = PublicText.Get(lang, "site.copyLink"), copied = PublicText.Get(lang, "site.copied") })" />
+    @* Reports go to the ClassHub team only (R1-P11); the island loads nothing until opened. *@
+    <div class="basis-full">
+        <vite-island name="report-abuse" props="@(new { slug = site.Slug, language = lang, sections = site.Sections.Where(s => s.Type != null).Select(s => new { type = s.Type, label = s.Title ?? (s.Type == "hero" ? site.TeacherName : null) ?? s.Type }) })" />
+    </div>
 </footer>

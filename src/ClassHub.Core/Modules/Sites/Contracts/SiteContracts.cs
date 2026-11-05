@@ -35,7 +35,39 @@ public sealed record SiteResponse(
     /// <summary>True when the saved draft (template, palette, language or sections) differs from the public version.</summary>
     bool HasUnpublishedChanges,
     /// <summary>Page views of the public page in the last 30 days (UTC days; D-32: no cookies, no IP addresses).</summary>
-    int ViewsLast30Days);
+    int ViewsLast30Days,
+    /// <summary>What platform moderation hid (R1-P11) and why; null when nothing is hidden. The teacher cannot change it.</summary>
+    SiteModerationNote? Moderation = null);
+
+public sealed record HiddenSectionNote(string Type, string Reason, DateTime HiddenAtUtc);
+
+public sealed record SiteModerationNote(bool SiteHidden, string? SiteReason, DateTime? SiteHiddenAtUtc, IReadOnlyList<HiddenSectionNote> Sections);
+
+/// <summary>A site as moderation sees it: its address, the sections a visitor can see now, and what is hidden.</summary>
+public sealed record ModeratedSite(Guid WorkspaceId, Guid SiteId, string Slug, bool Published, IReadOnlyList<string> VisibleSectionTypes, SiteModerationNote? Moderation);
+
+/// <summary>Content hidden by moderation, for the admin list. <c>SectionType</c> null: the whole site.</summary>
+public sealed record HiddenSiteContent(Guid WorkspaceId, string Slug, string? SectionType, string Reason, DateTime HiddenAtUtc);
+
+/// <summary>
+/// Moderation of public sites (R1-P11), across tenants (allow-listed queries; the admin endpoints require platform
+/// staff with MFA). Hide/show change tracked rows: the caller saves in its transaction and evicts the public pages after.
+/// </summary>
+public interface ISiteModeration
+{
+    /// <summary>A site a visitor can see now (published, visible owner, not hidden), for reports.</summary>
+    Task<ModeratedSite?> FindPublicAsync(string slug, CancellationToken cancellationToken);
+
+    Task<ModeratedSite?> FindByWorkspaceAsync(Guid workspaceId, CancellationToken cancellationToken);
+
+    /// <summary>Hides the site (<paramref name="sectionType"/> null) or one section type; false when already hidden or no site.</summary>
+    Task<bool> HideAsync(Guid workspaceId, string? sectionType, string reason, DateTime nowUtc, CancellationToken cancellationToken);
+
+    /// <summary>Shows it again; false when it was not hidden.</summary>
+    Task<bool> UnhideAsync(Guid workspaceId, string? sectionType, CancellationToken cancellationToken);
+
+    Task<IReadOnlyList<HiddenSiteContent>> ListHiddenAsync(CancellationToken cancellationToken);
+}
 
 /// <summary>Publish or unpublish the saved draft. <c>Version</c> is the version the client loaded (409 if stale).</summary>
 public sealed record PublishSiteRequest(int? Version);

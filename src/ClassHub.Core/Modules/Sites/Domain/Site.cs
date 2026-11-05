@@ -9,6 +9,7 @@ namespace ClassHub.Core.Modules.Sites.Domain;
 public sealed class Site : ITenantOwned
 {
     public const int LanguageMaxLength = 10;
+    public const int HiddenReasonMaxLength = 500;
 
     public Guid Id { get; set; }
 
@@ -37,4 +38,27 @@ public sealed class Site : ITenantOwned
     public DateTime UpdatedAtUtc { get; set; }
 
     public int Version { get; set; }
+
+    /// <summary>
+    /// Set by platform moderation (R1-P11): the whole site is hidden from the public (404, not in the sitemap, no
+    /// requests or tests) until moderation shows it again. Independent of publishing; the teacher cannot clear it.
+    /// </summary>
+    public DateTime? HiddenAtUtc { get; set; }
+
+    public string? HiddenReason { get; set; }
+
+    /// <summary>JSON array of sections hidden by moderation (<see cref="HiddenSection"/>); null when none.</summary>
+    public string? HiddenSectionsJson { get; set; }
+}
+
+/// <summary>One section type of a site hidden by moderation, with the reason shown to the teacher.</summary>
+public sealed record HiddenSection(string Type, string Reason, DateTime HiddenAtUtc)
+{
+    private static readonly System.Text.Json.JsonSerializerOptions Json = new(System.Text.Json.JsonSerializerDefaults.Web);
+
+    public static IReadOnlyList<HiddenSection> Read(string? json) =>
+        string.IsNullOrEmpty(json) ? [] : System.Text.Json.JsonSerializer.Deserialize<List<HiddenSection>>(json, Json) ?? [];
+
+    public static string? Write(IReadOnlyCollection<HiddenSection> sections) =>
+        sections.Count == 0 ? null : System.Text.Json.JsonSerializer.Serialize(sections, Json);
 }

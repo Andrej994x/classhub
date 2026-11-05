@@ -41,6 +41,11 @@ npm run e2e                                # builds the SPA and the API, then ru
 
 Flows (each in **mk and en**, on **desktop and mobile**): register → dev mailbox → confirm → sign in → the dashboard shows the workspace → sign out; forgot password → reset link → the old password fails, the new one works; a second teacher opening the first teacher's workspace URL sees "not found". Texts come from the app's locale files, so wording changes do not break tests. CI job `e2e` uploads the HTML report and traces on failure.
 
+## Moderation & catalog tests (R1-P11)
+
+- Integration: `ModerationTests` (report validation, unknown content, honeypot drop; cap per site per hour; hiding a site removes the page, test page, lead form, sitemap entry and new reports, resolves all open reports about it, tells the teacher the reason without the reporter, survives republishing, restore brings it back, audit; hiding a section removes only that section and the hero photo; hiding a test removes its page, link, sitemap entry and attempts while the teacher's data stays; dismissing once, teachers cannot see the queue; catalog create/duplicate/invalid code, deactivation hides the subject from new choices but keeps saved references, permanent codes, audit).
+- Vitest: `ReportAbuse.test.tsx` (mk/en text parity, section report without cookies and with an empty honeypot, validation and rate-limit message), `AdminModeration.test.tsx` (queue with reporter details and hide with reason, restore, catalog deactivate/add, teacher notice without reporter details).
+
 ## Plan & entitlement tests (R1-P10)
 
 - Integration: `PlanTests` (Free on registration with the D-29 limits and isolation; the fourth published test blocked on Free, drafts unaffected, Pro raises the limit; **parallel publications near the limit: exactly one of four succeeds**; activation records the payment and extension adds months to the end, audited, overview numbers; activation validation; expiry: limits follow the end date at once, the job moves back to Free once with history and a system audit entry, over-limit tests stay published and a new one is blocked; teachers cannot activate Pro or change limits; owner-only limit changes with version conflict and audit).

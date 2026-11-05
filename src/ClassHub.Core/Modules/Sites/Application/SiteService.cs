@@ -234,7 +234,15 @@ internal sealed class SiteService(
         var published = site.PublishedAtUtc is not null;
         var changed = published && site.PublishedJson != SiteSnapshot.FromDraft(site).Serialize();
         return new(true, site.Slug, site.Template, site.Palette, site.Language, Read(site.DraftJson), published, site.UpdatedAtUtc, site.Version,
-            site.PublishedAtUtc, changed, views);
+            site.PublishedAtUtc, changed, views, ModerationNote(site));
+    }
+
+    internal static SiteModerationNote? ModerationNote(Site site)
+    {
+        var sections = HiddenSection.Read(site.HiddenSectionsJson);
+        return site.HiddenAtUtc is null && sections.Count == 0
+            ? null
+            : new SiteModerationNote(site.HiddenAtUtc is not null, site.HiddenReason, site.HiddenAtUtc, [.. sections.Select(h => new HiddenSectionNote(h.Type, h.Reason, h.HiddenAtUtc))]);
     }
 }
 

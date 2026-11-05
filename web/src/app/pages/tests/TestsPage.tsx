@@ -56,6 +56,7 @@ export function TestsPage() {
                   <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${test.status === 'Published' ? 'bg-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground'}`}>
                     {t(`tests.statuses.${test.status}`)}
                   </span>
+                  {test.hiddenByModeration && <span className="rounded-full bg-destructive px-2 py-0.5 text-xs font-medium text-destructive-foreground">{t('moderation.hiddenBadge')}</span>}
                 </span>
                 <span className="text-sm text-muted-foreground">
                   {[subject(test.subjectId), t(`tests.difficulties.${test.difficulty}`), t('tests.questionCount', { count: num(test.questionCount) ?? 0 }), t('tests.points', { count: num(test.totalPoints) ?? 0 }), t('tests.attempts', { count: num(test.attemptCount) ?? 0 })]

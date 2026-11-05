@@ -39,7 +39,7 @@ internal sealed class DiagnosticTestService(
         [
             .. tests.Select(t => new DiagnosticTestListItem(
                 t.Id, t.Title, t.Slug, t.SubjectId, t.Difficulty.ToString(), t.Status.ToString(),
-                stats.GetValueOrDefault(t.Id)?.Count ?? 0, stats.GetValueOrDefault(t.Id)?.Points ?? 0, t.AttemptCount, t.UpdatedAtUtc)),
+                stats.GetValueOrDefault(t.Id)?.Count ?? 0, stats.GetValueOrDefault(t.Id)?.Points ?? 0, t.AttemptCount, t.UpdatedAtUtc, t.HiddenAtUtc is not null)),
         ];
     }
 
@@ -457,7 +457,7 @@ internal sealed class DiagnosticTestService(
         ];
         return new DiagnosticTestResponse(
             test.Id, test.Title, test.Slug, test.SubjectId, test.Description, test.Difficulty.ToString(), test.Status.ToString(), test.PublishedAtUtc,
-            test.AttemptCount, test.ArchivedAtUtc is not null, items, items.Sum(q => q.Points), test.UpdatedAtUtc, test.Version);
+            test.AttemptCount, test.ArchivedAtUtc is not null, items, items.Sum(q => q.Points), test.UpdatedAtUtc, test.Version, test.HiddenReason, test.HiddenAtUtc);
     }
 
     private async Task ThrowIfUnknownSubjectAsync(Guid subjectId, CancellationToken cancellationToken)
