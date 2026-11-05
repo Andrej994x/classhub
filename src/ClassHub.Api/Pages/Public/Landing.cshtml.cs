@@ -3,6 +3,7 @@ using ClassHub.Core.Infrastructure.Email;
 using ClassHub.Core.Modules.Sites.Contracts;
 using ClassHub.Core.SharedKernel.Security;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.AspNetCore.OutputCaching;
 using Microsoft.AspNetCore.RateLimiting;
@@ -24,7 +25,8 @@ public sealed class LandingModel(IOptions<AppLinkOptions> links) : PageModel
 
     public string Text(string key) => PublicText.Get(Language, key);
 
-    public void OnGet(string? lang)
+    // Route only: a query value (?lang=en) must never change the shared cached page for "/".
+    public void OnGet([FromRoute] string? lang)
     {
         Language = lang == "en" ? "en" : "mk";
         Response.Headers[HeaderNames.CacheControl] = "no-cache";

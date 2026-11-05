@@ -392,6 +392,22 @@ public sealed partial class PublicSiteTests(ClassHubApiFixture fixture)
     }
 
     [Fact]
+    public async Task Query_strings_cannot_change_the_cached_landing_page()
+    {
+        await fixture.WithServiceAsync<Microsoft.AspNetCore.OutputCaching.IOutputCacheStore, bool>(async store =>
+        {
+            await store.EvictByTagAsync(PublicSiteCaching.LandingTag, Ct); // cold cache
+            return true;
+        });
+        using var visitor = Visitor();
+
+        (await visitor.GetStringAsync("/?lang=en", Ct)).ShouldContain("<html lang=\"mk\">");
+        (await visitor.GetStringAsync("/", Ct)).ShouldContain("<html lang=\"mk\">");
+        using var unknown = await visitor.GetAsync($"/{UniqueSlug()}?slug=other", Ct);
+        unknown.StatusCode.ShouldBe(HttpStatusCode.NotFound);
+    }
+
+    [Fact]
     public async Task A_public_read_only_request_cannot_write_tenant_data()
     {
         using var teacher = await fixture.CreateTeacherAsync();

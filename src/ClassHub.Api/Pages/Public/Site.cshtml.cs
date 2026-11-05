@@ -25,7 +25,7 @@ public sealed class SiteModel(IPublicSites sites) : PageModel
 {
     public PublicSitePage? Current { get; private set; }
 
-    public async Task<IActionResult> OnGetAsync(string slug, CancellationToken cancellationToken)
+    public async Task<IActionResult> OnGetAsync([FromRoute] string slug, CancellationToken cancellationToken)
     {
         // Browsers and proxies revalidate; the server-side output cache does the caching (and can be evicted).
         Response.Headers[HeaderNames.CacheControl] = "no-cache";
