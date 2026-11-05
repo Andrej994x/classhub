@@ -2,6 +2,8 @@ import type { RouteObject } from 'react-router';
 import { AdminLayout, AuthLayout, StudentLayout, TeacherLayout } from './layouts/AppShell.tsx';
 import { DevMailboxPage } from './pages/DevMailboxPage.tsx';
 import { ForgotPasswordPage, LoginPage, RegisterPage, ResetPasswordPage, VerifyEmailPage } from './pages/auth/AuthPages.tsx';
+import { OfferEditPage } from './pages/offers/OfferEditPage.tsx';
+import { OffersPage } from './pages/offers/OffersPage.tsx';
 import { ProfilePage } from './pages/profile/ProfilePage.tsx';
 import {
   AdminHomePage,
@@ -39,6 +41,9 @@ export const routes: RouteObject[] = [
       { index: true, element: <TeacherHomePage /> },
       { path: 'w/:workspaceId', element: <WorkspaceDashboardPage /> },
       { path: 'w/:workspaceId/profile', element: <ProfilePage /> },
+      { path: 'w/:workspaceId/offers', element: <OffersPage /> },
+      { path: 'w/:workspaceId/offers/new', element: <OfferEditPage /> },
+      { path: 'w/:workspaceId/offers/:offerId', element: <OfferEditPage /> },
       { path: '*', element: <NotFoundContent /> },
     ],
   },

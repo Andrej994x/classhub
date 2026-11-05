@@ -21,6 +21,7 @@ export function OnboardingChecklist({ workspaceId }: { workspaceId: string }) {
   const links: Record<string, string> = {
     profile: `/app/w/${workspaceId}/profile`,
     subjects: `/app/w/${workspaceId}/profile#teaching`,
+    'first-offer': `/app/w/${workspaceId}/offers/new`,
   };
   return (
     <Card>

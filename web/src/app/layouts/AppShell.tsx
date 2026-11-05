@@ -90,7 +90,12 @@ function TeacherShell() {
       areaKey="layout.teacherArea"
       nav={[
         { to: first ? `/app/w/${first.id}` : '/app', labelKey: 'nav.dashboard', end: true },
-        ...(first ? [{ to: `/app/w/${first.id}/profile`, labelKey: 'nav.profile' }] : []),
+        ...(first
+          ? [
+              { to: `/app/w/${first.id}/offers`, labelKey: 'nav.offers' },
+              { to: `/app/w/${first.id}/profile`, labelKey: 'nav.profile' },
+            ]
+          : []),
       ]}
     />
   );

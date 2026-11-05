@@ -43,6 +43,9 @@ internal sealed class WorkspaceProvisioning(ClassHubDbContext db, IAuditLog audi
 /// <summary>Workspace settings of the current (verified) workspace.</summary>
 internal sealed class WorkspaceService(ClassHubDbContext db, ITenantContext tenant, IAuditLog audit) : IWorkspaceSettings
 {
+    public async Task<string> GetCurrencyAsync(CancellationToken cancellationToken) =>
+        (await LoadCurrentAsync(cancellationToken)).Currency;
+
     public async Task ApplyAsync(string? timeZone, string? currency, CancellationToken cancellationToken)
     {
         if (timeZone is null && currency is null)

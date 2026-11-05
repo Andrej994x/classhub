@@ -84,6 +84,15 @@ Details and tests: [SECURITY.md](SECURITY.md#tenant-isolation-r0-p5).
 - API access: `src/api/client.ts` wraps `openapi-fetch` with the generated types. It sends cookies, keeps the antiforgery request token in memory, fetches it from `GET /api/auth/antiforgery` before the first unsafe request, adopts tokens re-issued in the `X-XSRF-TOKEN` response header, retries once on `ANTIFORGERY_INVALID`, and turns ProblemDetails into `ApiError`. `errorMessage()` shows only translated messages for error codes, never server text. TanStack Query is provided in `src/app/Providers.tsx`.
 - Hosting: `npm run build` writes to `src/ClassHub.Api/wwwroot/dist` (git-ignored, base `/dist/`). `Platform/SpaHosting.cs` serves static files before routing (hashed `/dist/assets` immutable, everything else `no-cache`) and maps `dist/index.html` as the fallback for `/` and the SPA prefixes only. `/api`, health checks and unknown paths never get the SPA, and the deny-by-default policy still applies to them.
 
+## Offers & programs (R1-P2)
+
+- `Modules/Offers`: `Offer` (`ITenantOwned`, `IArchivable`): kind (single lesson / package / group program), title, description, subject (catalog FK), duration, price in **minor units** with an ISO 4217 currency (default: the workspace currency), mode, lesson count (packages only), seats (group programs only), active, show on public site, display order, `Version` (optimistic concurrency).
+- The rules are also **database CHECK constraints**: price ≥ 0, duration 15–600, lessons only and 1–200 for packages, seats only and 1–500 for groups, currency shape.
+- Endpoints under `/api/w/{workspaceId}/offers` (`ws:offers.read` / `ws:offers.manage`): list, create, get, update (version required, stale → 409), archive (`DELETE`: hidden, never bookable, history kept), `PUT /order` (complete list).
+- `IOfferLookup` (Contracts) for other modules: `CanReceiveRequestsAsync` (only active, non-archived offers of the current workspace: M05 "inactive offers receive no new requests") and `CountAsync` (onboarding "first offer").
+- Price changes are not retroactive: packages keep their own price snapshot when they are sold (R2-P10).
+- SPA: `/app/w/{id}/offers` (list, reorder, archive with confirmation) and `/offers/new`, `/offers/{offerId}` (form; prices typed in major units and converted with `parseMoney`).
+
 ## Teacher profile, catalog and files (R1-P1)
 
 - `Modules/Catalog`: platform reference data (not tenant-owned): `SubjectCategory`, `Subject`, `EducationLevel` seeded in the migration with deterministic ids (from their codes), mk/en names; teaching languages (ISO 639-1 list in Contracts); `GET /api/catalog` (also the ISO 3166 country codes). Admin editing comes in R1-P11.

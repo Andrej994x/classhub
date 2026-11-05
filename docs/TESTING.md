@@ -41,6 +41,12 @@ npm run e2e                                # builds the SPA and the API, then ru
 
 Flows (each in **mk and en**, on **desktop and mobile**): register → dev mailbox → confirm → sign in → the dashboard shows the workspace → sign out; forgot password → reset link → the old password fails, the new one works; a second teacher opening the first teacher's workspace URL sees "not found". Texts come from the app's locale files, so wording changes do not break tests. CI job `e2e` uploads the HTML report and traces on failure.
 
+## Offer tests (R1-P2)
+
+- Unit: `OfferRulesTests` (kind-specific fields, price, duration, mode, currency).
+- Integration: `OfferTests` (all three kinds, default currency, ordering, validation, **CHECK constraints via raw SQL** bypassing the API, version conflicts, archive/inactive → not bookable through `IOfferLookup`, reorder, isolation kit, onboarding "first offer").
+- Vitest: `OffersPage.test.tsx` (money parsing, list, create package, browser validation, edit with version and conflict, reorder, archive).
+
 ## Teacher profile tests (R1-P1)
 
 - Unit: `ImageProcessorTests` (magic bytes, limits, disguised files, EXIF/comment removal and orientation with real JPEGs that carry injected metadata, built in memory by `TestImages`).

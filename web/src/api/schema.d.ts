@@ -184,6 +184,55 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/w/{workspaceId}/offers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["ListOffers"];
+        put?: never;
+        post: operations["CreateOffer"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/w/{workspaceId}/offers/{offerId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetOffer"];
+        put: operations["UpdateOffer"];
+        post?: never;
+        /** Archive the offer (hidden, never bookable again; history is kept). */
+        delete: operations["ArchiveOffer"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/w/{workspaceId}/offers/order": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["ReorderOffers"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/w/{workspaceId}/profile": {
         parameters: {
             query?: never;
@@ -329,6 +378,33 @@ export interface components {
             name: string;
             role: string;
         };
+        OfferResponse: {
+            /** Format: uuid */
+            id: string;
+            kind: string;
+            title: string;
+            description: null | string;
+            /** Format: uuid */
+            subjectId: string;
+            /** Format: int32 */
+            durationMinutes: number | string;
+            /** Format: int64 */
+            priceMinor: number | string;
+            currency: string;
+            mode: string;
+            /** Format: int32 */
+            lessonCount: null | number | string;
+            /** Format: int32 */
+            seats: null | number | string;
+            isActive: boolean;
+            showOnPublicSite: boolean;
+            /** Format: int32 */
+            displayOrder: number | string;
+            /** Format: date-time */
+            updatedAtUtc: string;
+            /** Format: int32 */
+            version: number | string;
+        };
         OnboardingResponse: {
             steps: components["schemas"]["OnboardingStep"][];
             /** Format: int32 */
@@ -346,10 +422,34 @@ export interface components {
             password: null | string;
             locale: null | string;
         };
+        ReorderOffersRequest: {
+            offerIds: null | string[];
+        };
         ResetPasswordRequest: {
             email: null | string;
             token: null | string;
             newPassword: null | string;
+        };
+        SaveOfferRequest: {
+            kind: null | string;
+            title: null | string;
+            description: null | string;
+            /** Format: uuid */
+            subjectId: null | string;
+            /** Format: int32 */
+            durationMinutes: null | number | string;
+            /** Format: int64 */
+            priceMinor: null | number | string;
+            currency: null | string;
+            mode: null | string;
+            /** Format: int32 */
+            lessonCount: null | number | string;
+            /** Format: int32 */
+            seats: null | number | string;
+            isActive: boolean;
+            showOnPublicSite: boolean;
+            /** Format: int32 */
+            version?: null | number | string;
         };
         TeacherProfileResponse: {
             firstName: null | string;
@@ -732,6 +832,169 @@ export interface operations {
                 };
                 content: {
                     "application/problem+json": components["schemas"]["HttpValidationProblemDetails"];
+                };
+            };
+        };
+    };
+    ListOffers: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OfferResponse"][];
+                };
+            };
+        };
+    };
+    CreateOffer: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SaveOfferRequest"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OfferResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["HttpValidationProblemDetails"];
+                };
+            };
+        };
+    };
+    GetOffer: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                offerId: string;
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OfferResponse"];
+                };
+            };
+        };
+    };
+    UpdateOffer: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                offerId: string;
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SaveOfferRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OfferResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["HttpValidationProblemDetails"];
+                };
+            };
+        };
+    };
+    ArchiveOffer: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                offerId: string;
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ReorderOffers: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReorderOffersRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OfferResponse"][];
                 };
             };
         };
