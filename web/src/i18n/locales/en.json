@@ -414,7 +414,8 @@
     },
     "types": {
       "Message": "Message",
-      "LessonRequest": "Lesson request"
+      "LessonRequest": "Lesson request",
+      "Diagnostic": "Test result"
     },
     "moveTo": {
       "New": "Mark as new",
@@ -436,7 +437,10 @@
     "notes": "Private notes",
     "noNotes": "No notes yet. Only you see notes.",
     "addNote": "Add a note",
-    "saveNote": "Save note"
+    "saveNote": "Save note",
+    "test": "Test",
+    "resultShared": "{{points}} of {{max}} points (shared by the visitor)",
+    "resultNotShared": "the visitor did not share the result"
   },
   "tests": {
     "title": "Diagnostic tests",
@@ -518,6 +522,16 @@
       "slug": "Use 3–60 lowercase letters, digits and single hyphens.",
       "subjectRequired": "Choose a subject.",
       "points": "Use a whole number from 0 to 100."
+    },
+    "results": {
+      "title": "Results",
+      "summary_one": "Taken {{count}} time.",
+      "summary_other": "Taken {{count}} times.",
+      "shared_one": "{{count}} visitor shared the result with a request.",
+      "shared_other": "{{count}} visitors shared their result with a request.",
+      "sharedList": "Shared results",
+      "score": "{{points}} of {{max}} points",
+      "openRequest": "Open the request"
     }
   }
 }

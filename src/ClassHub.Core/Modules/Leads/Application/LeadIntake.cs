@@ -2,6 +2,7 @@ using ClassHub.Core.Infrastructure.Email;
 using ClassHub.Core.Infrastructure.Persistence;
 using ClassHub.Core.Infrastructure.Tenancy;
 using ClassHub.Core.Modules.Catalog.Contracts;
+using ClassHub.Core.Modules.DiagnosticTests.Contracts;
 using ClassHub.Core.Modules.Leads.Contracts;
 using ClassHub.Core.Modules.Leads.Domain;
 using ClassHub.Core.Modules.Leads.Persistence;
@@ -29,6 +30,7 @@ internal sealed partial class LeadIntake(
     IOfferLookup offers,
     ITeacherPublicProfile profiles,
     ICatalogLookup catalog,
+    IDiagnosticAttemptLink attempts,
     LeadFormTokens tokens,
     IServiceScopeFactory scopes,
     IOptions<LeadOptions> options,
@@ -97,6 +99,12 @@ internal sealed partial class LeadIntake(
             throw Invalid("subjectId", "Choose one of the teacher's subjects.");
         }
 
+        // A test result request must name an attempt of this teacher that has no request yet.
+        if (request.AttemptId is { } attemptId && !await attempts.CanLinkAsync(attemptId, cancellationToken))
+        {
+            throw Invalid("attemptId", "This test result cannot receive a request.");
+        }
+
         await using var scope = scopes.CreateAsyncScope();
         var db = scope.ServiceProvider.GetRequiredService<ClassHubDbContext>();
         var intake = scope.ServiceProvider.GetRequiredService<LeadQueries>();
@@ -109,9 +117,10 @@ internal sealed partial class LeadIntake(
         }
 
         var type = Enum.Parse<LeadType>(request.Type!);
+        var leadId = Guid.NewGuid();
         db.Set<Lead>().Add(new Lead
         {
-            Id = Guid.NewGuid(),
+            Id = leadId,
             WorkspaceId = site.WorkspaceId,
             Type = type,
             Status = LeadStatus.New,
@@ -122,14 +131,29 @@ internal sealed partial class LeadIntake(
             OfferId = request.OfferId,
             OfferTitle = offerTitle,
             SubjectId = request.SubjectId,
+            AttemptId = request.AttemptId,
             ConsentVersion = request.ConsentVersion!,
             ConsentedAtUtc = now.UtcDateTime,
             CreatedAtUtc = now.UtcDateTime,
             UpdatedAtUtc = now.UtcDateTime,
         });
+        if (request.AttemptId is { } linkedAttempt)
+        {
+            // Same transaction: the attempt gets this lead (and the sharing consent) or nothing is written.
+            await scope.ServiceProvider.GetRequiredService<IDiagnosticAttemptLink>()
+                .LinkAsync(site.WorkspaceId, linkedAttempt, leadId, request.ShareResult, now.UtcDateTime, cancellationToken);
+        }
+
         var inbox = $"{links.Value.PublicBaseUrl.TrimEnd('/')}/app/w/{site.WorkspaceId}/leads";
-        scope.ServiceProvider.GetRequiredService<IEmailOutbox>().Enqueue(LeadEmails.NewLead(owner.Email, owner.Locale, inbox, type == LeadType.LessonRequest));
-        await db.SaveChangesAsync(cancellationToken);
+        scope.ServiceProvider.GetRequiredService<IEmailOutbox>().Enqueue(LeadEmails.NewLead(owner.Email, owner.Locale, inbox, type));
+        try
+        {
+            await db.SaveChangesAsync(cancellationToken);
+        }
+        catch (Microsoft.EntityFrameworkCore.DbUpdateException ex) when (SqlServerErrors.IsUniqueViolation(ex))
+        {
+            throw new ConflictException("A request was already sent for this result.");
+        }
         await transaction.CommitAsync(cancellationToken);
     }
 

@@ -20,8 +20,9 @@ public sealed record LeadFormResponse(
 public sealed record LeadFormOption(Guid Id, string Name);
 
 /// <summary>
-/// A visitor's request. <c>Type</c>: <c>Message</c> or <c>LessonRequest</c>. <c>Website</c> is a honeypot that people
-/// never fill in. <c>Consent</c> and <c>AgeConfirmed</c> must be true and <c>ConsentVersion</c> current.
+/// A visitor's request. <c>Type</c>: <c>Message</c>, <c>LessonRequest</c> or <c>Diagnostic</c> (after a test, with the
+/// <c>AttemptId</c> the attempt returned; <c>ShareResult</c> lets the teacher see the score, D-18). <c>Website</c> is a
+/// honeypot that people never fill in. <c>Consent</c> and <c>AgeConfirmed</c> must be true and <c>ConsentVersion</c> current.
 /// </summary>
 public sealed record SubmitLeadRequest(
     string? Type,
@@ -35,7 +36,9 @@ public sealed record SubmitLeadRequest(
     bool AgeConfirmed,
     string? ConsentVersion,
     string? FormToken,
-    string? Website);
+    string? Website,
+    Guid? AttemptId = null,
+    bool ShareResult = false);
 
 /// <summary>Always the same answer: nothing the visitor sent is echoed back.</summary>
 public sealed record LeadReceivedResponse(bool Received);
@@ -73,7 +76,9 @@ public sealed record LeadResponse(
     DateTime UpdatedAtUtc,
     bool Archived,
     IReadOnlyList<LeadNoteResponse> Notes,
-    int Version);
+    int Version,
+    /// <summary>For diagnostic requests: the test and, when the visitor shared it, the score.</summary>
+    ClassHub.Core.Modules.DiagnosticTests.Contracts.DiagnosticResultSummary? DiagnosticResult);
 
 /// <summary><c>Status</c>: New, Contacted, Converted or Closed. <c>Version</c>: the version the client loaded.</summary>
 public sealed record ChangeLeadStatusRequest(string? Status, int? Version);

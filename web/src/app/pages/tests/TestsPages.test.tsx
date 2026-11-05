@@ -130,6 +130,26 @@ describe('diagnostic tests', () => {
     expect(screen.getByLabelText('Бодови за прашање 1')).toBeEnabled();
   });
 
+  it('shows how often the test was taken and the results visitors shared', async () => {
+    const api = fakeApi({
+      me: teacher(),
+      extra: [
+        (call) =>
+          call.path === `${API}/test-1/attempts`
+            ? new Response(JSON.stringify({ total: 5, sharedCount: 1, shared: [{ attemptId: 'a1', points: 4, maxPoints: 5, correctQuestions: 2, totalQuestions: 3, completedAtUtc: '2026-11-05T09:00:00Z', leadId: 'lead-7' }] }), { status: 200, headers: { 'content-type': 'application/json' } })
+            : undefined,
+      ],
+    });
+    api.state.tests = [TEST({ status: 'Published', attemptCount: 5 })];
+    await renderRoute(`${LIST}/test-1`);
+
+    const card = await screen.findByTestId('test-results');
+    expect(card).toHaveTextContent('Решаван 5 пати.');
+    expect(card).toHaveTextContent('1 посетител го сподели резултатот со барање.');
+    expect(within(card).getByText('4 од 5 бода')).toBeInTheDocument();
+    expect(within(card).getByRole('link', { name: 'Отвори го барањето' })).toHaveAttribute('href', `/app/w/${WORKSPACE_ID}/leads/lead-7`);
+  });
+
   it('archives a test after a confirmation', async () => {
     const user = userEvent.setup();
     const api = fakeApi({ me: teacher() });

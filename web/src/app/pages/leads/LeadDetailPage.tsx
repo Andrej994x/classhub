@@ -96,6 +96,20 @@ function LeadDetail({ workspaceId, lead }: { workspaceId: string; lead: Lead }) 
                 <dd>{language === 'en' ? subject.nameEn : subject.nameMk}</dd>
               </>
             )}
+            {lead.diagnosticResult && (
+              <>
+                <dt className="font-medium">{t('leads.test')}</dt>
+                <dd>
+                  <Link className="text-primary underline-offset-4 hover:underline" to={`/app/w/${workspaceId}/tests/${lead.diagnosticResult.testId}`}>
+                    {lead.diagnosticResult.testTitle}
+                  </Link>
+                  {' · '}
+                  {lead.diagnosticResult.points === null || lead.diagnosticResult.points === undefined
+                    ? t('leads.resultNotShared')
+                    : t('leads.resultShared', { points: num(lead.diagnosticResult.points) ?? 0, max: num(lead.diagnosticResult.maxPoints) ?? 0 })}
+                </dd>
+              </>
+            )}
             <dt className="font-medium">{t('leads.consent')}</dt>
             <dd className="text-muted-foreground">{t('leads.consentGiven', { date: formatDateTime(lead.consentedAtUtc, language, browserTimeZone), version: lead.consentVersion })}</dd>
           </dl>

@@ -1,0 +1,60 @@
+@page "/{slug:siteslug}/tests/{testSlug:testslug}"
+@model ClassHub.Api.Pages.Public.TestModel
+@{
+    Layout = "_PublicLayout";
+    var current = Model.Current;
+}
+@if (current is null)
+{
+    ViewData["Lang"] = "mk";
+    ViewData["Title"] = PublicText.Get("mk", "notFound.title");
+    ViewData["Robots"] = "noindex";
+    ViewData["BodyClass"] = "palette-brand";
+    <partial name="_NotFound" model="@("mk")" />
+    return;
+}
+@{
+    var site = current.Site;
+    var test = current.Test;
+    var seo = current.Seo;
+    var lang = site.Language;
+    ViewData["Lang"] = lang;
+    ViewData["Title"] = seo.Title;
+    ViewData["BodyClass"] = $"palette-{site.Palette.Key}";
+}
+@section Head {
+    <meta name="description" content="@seo.Description" />
+    <link rel="canonical" href="@seo.CanonicalUrl" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="ClassHub" />
+    <meta property="og:title" content="@seo.Title" />
+    <meta property="og:description" content="@seo.Description" />
+    <meta property="og:url" content="@seo.CanonicalUrl" />
+    <meta property="og:locale" content="@seo.OgLocale" />
+    <meta name="twitter:card" content="summary" />
+}
+<main class="mx-auto flex max-w-3xl flex-col gap-6 px-4 py-8 sm:py-12">
+    <p><a href="/@site.Slug" class="text-sm text-site-primary underline-offset-4 hover:underline">← @(site.TeacherName ?? site.Slug)</a></p>
+    <section class="rounded-2xl bg-site-surface p-6 shadow-sm" data-section="test-intro">
+        <p class="text-xs font-semibold uppercase tracking-wide text-site-muted">@PublicText.Get(lang, "test.kicker")</p>
+        <h1 class="mt-1 text-3xl font-bold leading-tight text-site-primary">@test.Title</h1>
+        <p class="mt-2 text-sm text-site-muted">
+            @string.Join(" · ", new[]
+            {
+                test.Subject,
+                PublicText.Get(lang, $"test.difficulty.{test.Difficulty}"),
+                PublicText.Format(lang, "test.questions", test.Questions.Count),
+                PublicText.Format(lang, "test.points", test.TotalPoints),
+            }.Where(p => !string.IsNullOrEmpty(p)))
+        </p>
+        @if (test.Description is not null)
+        {
+            <p class="site-text mt-4">@test.Description</p>
+        }
+        <p class="mt-4 text-sm text-site-muted">@PublicText.Get(lang, "test.privacy")</p>
+    </section>
+    <section class="rounded-2xl bg-site-surface p-6 shadow-sm" data-section="test">
+        <vite-island name="diagnostic-test" props="@(new { siteSlug = site.Slug, testSlug = test.Slug, language = lang })" />
+        <noscript><p class="text-sm text-site-muted">@PublicText.Get(lang, "test.noScript")</p></noscript>
+    </section>
+</main>

@@ -41,6 +41,12 @@ npm run e2e                                # builds the SPA and the API, then ru
 
 Flows (each in **mk and en**, on **desktop and mobile**): register → dev mailbox → confirm → sign in → the dashboard shows the workspace → sign out; forgot password → reset link → the old password fails, the new one works; a second teacher opening the first teacher's workspace URL sees "not found". Texts come from the app's locale files, so wording changes do not break tests. CI job `e2e` uploads the HTML report and traces on failure.
 
+## Public test tests (R1-P7)
+
+- Integration: `PublicTestTests` (no correct answers in the raw public JSON, `SelectSeveral`; drafts, inactive and unpublished sites hidden, cached page evicted; server-side scoring incl. partial and empty answers, random attempt ids, anonymous columns, attempt count; tampered submissions refused and not stored; **8 parallel attempts against a cap of 3**; contact with shared and unshared results, teacher views; one request per attempt and only from its own site; type/attempt rules; attempts lock destructive edits; indexable test page, link from the site page, sitemap; isolation of the results view).
+- Vitest: `DiagnosticTest.test.tsx` (choices sent without cookies, score, request with the result and opt-in sharing, unanswered hint, busy test, unavailable test, text parity); results card and the lead's test result.
+- Playwright `diagnostic.spec.ts`: phone visitor opens the test from the site, answers, sees the score, sends a request sharing the result → the teacher sees it on the lead and in the test's results.
+
 ## Diagnostic test builder tests (R1-P6)
 
 - Unit: `DiagnosticTestRulesTests` (scoring: all correct, several correct options all-or-nothing, duplicates, unanswered/unknown, zero-point questions; publish readiness; request validation incl. null questions; slugs).

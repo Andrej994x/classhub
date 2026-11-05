@@ -90,16 +90,18 @@ internal static class LeadEmails
 {
     public const string NewLeadTemplate = "leads.new";
 
-    public static EmailMessage NewLead(string to, string locale, string inboxLink, bool lessonRequest)
+    public static EmailMessage NewLead(string to, string locale, string inboxLink, Domain.LeadType type)
     {
         var en = locale == "en";
         var subject = en ? "New request on your ClassHub page" : "Ново барање на вашата ClassHub страница";
-        var intro = (en, lessonRequest) switch
+        var intro = (en, type) switch
         {
-            (true, true) => "Someone asked for a lesson on your public page.",
-            (true, false) => "Someone sent you a message on your public page.",
-            (false, true) => "Некој побара час на вашата јавна страница.",
-            (false, false) => "Некој ви испрати порака на вашата јавна страница.",
+            (true, Domain.LeadType.LessonRequest) => "Someone asked for a lesson on your public page.",
+            (true, Domain.LeadType.Diagnostic) => "Someone took one of your tests and would like to be contacted.",
+            (true, _) => "Someone sent you a message on your public page.",
+            (false, Domain.LeadType.LessonRequest) => "Некој побара час на вашата јавна страница.",
+            (false, Domain.LeadType.Diagnostic) => "Некој реши еден од вашите тестови и сака да го контактирате.",
+            (false, _) => "Некој ви испрати порака на вашата јавна страница.",
         };
         var action = en ? "Open your requests" : "Отворете ги барањата";
         var safeLink = WebUtility.HtmlEncode(inboxLink);

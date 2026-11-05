@@ -67,6 +67,16 @@ export function useDuplicateTest(workspaceId: string, testId: string) {
   );
 }
 
+/** Attempt count and the results visitors chose to share (D-18). */
+export function useTestAttempts(workspaceId: string, testId: string) {
+  return useQuery({
+    queryKey: [...keys.one(workspaceId, testId), 'attempts'] as const,
+    refetchOnMount: 'always',
+    queryFn: async () =>
+      (await api.client.GET('/api/w/{workspaceId}/tests/{testId}/attempts', { params: { path: { workspaceId, testId } } })).data!,
+  });
+}
+
 export function useArchiveTest(workspaceId: string, testId: string) {
   const queryClient = useQueryClient();
   return useMutation({

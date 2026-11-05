@@ -32,7 +32,8 @@ public sealed partial class PublicSiteRulesTests
                 .. faq is null ? Array.Empty<SiteSection>() : [new SiteSection(SiteSectionTypes.Faq, true, "ЧПП", null, Items: faq)],
             ],
             name, photo, new SiteTeaching(["Математика"], [], [], "Online"),
-            offers ?? [new SiteOfferView("Час", null, "SingleLesson", "Математика", 60, 1200.00m, "MKD", "Online", null, null)]);
+            offers ?? [new SiteOfferView("Час", null, "SingleLesson", "Математика", 60, 1200.00m, "MKD", "Online", null, null)],
+            []);
 
     [Fact]
     public void The_seo_head_uses_the_configured_base_url_and_the_visible_texts()
@@ -212,6 +213,7 @@ public sealed partial class PublicSiteRulesTests
             "Site.TeacherName",
             "Site.Teaching.Languages", "Site.Teaching.Levels", "Site.Teaching.Mode", "Site.Teaching.Subjects",
             "Site.Template",
+            "Site.Tests.Slug", "Site.Tests.Title",
         ]);
     }
 

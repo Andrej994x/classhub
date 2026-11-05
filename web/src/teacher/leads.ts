@@ -7,7 +7,7 @@ export type LeadList = components['schemas']['LeadListResponse'];
 export type LeadListItem = components['schemas']['LeadListItem'];
 
 export const LEAD_STATUSES = ['New', 'Contacted', 'Converted', 'Closed'] as const;
-export const LEAD_TYPES = ['Message', 'LessonRequest'] as const;
+export const LEAD_TYPES = ['Message', 'LessonRequest', 'Diagnostic'] as const;
 export type LeadStatus = (typeof LEAD_STATUSES)[number];
 
 /** Allowed changes, mirroring LeadStatusRules in the API (which stays authoritative). */

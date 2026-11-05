@@ -80,6 +80,12 @@ ASP.NET Core Identity with cookie sessions. See [ARCHITECTURE.md](ARCHITECTURE.m
 - Policies: `Authenticated`; workspace policies `ws:<permission>` (for example `ws:workspace.read`). Permissions are code constants (`WorkspacePermissions`), mapped from workspace roles (`WorkspaceRolePermissions`; today `Owner` has all workspace permissions). Unknown permission names fail when the policy is resolved.
 - Platform roles (`PlatformOwner`, `PlatformAdmin`) are Identity roles. **They grant no workspace access**: a platform admin without membership gets 404 on workspace routes (tested). The first Platform Owner is created only with the local CLI `dotnet run --project src/ClassHub.Api -- grant-platform-owner <email> [--force-add]` (audited, never exposed over HTTP). The owner check, the grant, the session revocation and the audit entry run in one transaction under an application lock (`sp_getapplock`), so concurrent bootstraps cannot both add an owner without `--force-add`.
 
+## Public test taking (R1-P7)
+
+- Correct answers never leave the server: the public test carries none (architecture test and an integration test on the raw JSON), scoring is server-side, and the result is totals only (no per-question correctness that would reveal answers).
+- Submissions are validated against the test; tampered ones (foreign questions or options, repeats) are refused and never stored. Abuse limits: per-IP `public-form` limiter and an atomic hourly cap per test.
+- Attempts are anonymous (no personal data; random, unguessable ids). Personal data enters only through the explicit contact step with consent (text version and time stored); the score is shared with the teacher only on the visitor's opt-in (D-18), and an attempt accepts one request, only from its own site.
+
 ## Diagnostic tests (R1-P6)
 
 - Correct options are only in the teacher's workspace-scoped endpoints. `PublicProjectionTests` (architecture) fails if any public projection could carry an answer-revealing member or a domain entity; scoring happens on the server only (`TestScoring`).

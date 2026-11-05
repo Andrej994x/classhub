@@ -201,4 +201,17 @@
                 break;
         }
     }
+        @if (site.Tests.Count > 0)
+        {
+            <section class="@sectionClass" data-section="tests">
+                <h2 class="mb-1 text-xl font-semibold text-site-primary">@PublicText.Get(lang, "site.tests")</h2>
+                <p class="mb-3 text-sm text-site-muted">@PublicText.Get(lang, "site.testsLead")</p>
+                <ul class="flex flex-col gap-2">
+                    @foreach (var link in site.Tests)
+                    {
+                        <li><a href="/@site.Slug/tests/@link.Slug" class="font-semibold text-site-primary underline-offset-4 hover:underline">@link.Title</a></li>
+                    }
+                </ul>
+            </section>
+        }
 </main>

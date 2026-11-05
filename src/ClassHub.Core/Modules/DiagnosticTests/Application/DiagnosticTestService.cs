@@ -3,6 +3,7 @@ using ClassHub.Core.Modules.Catalog.Contracts;
 using ClassHub.Core.Modules.DiagnosticTests.Contracts;
 using ClassHub.Core.Modules.DiagnosticTests.Domain;
 using ClassHub.Core.Modules.DiagnosticTests.Persistence;
+using ClassHub.Core.Modules.Sites.Contracts;
 using ClassHub.Core.SharedKernel.Errors;
 using ClassHub.Core.SharedKernel.Globalization;
 using ClassHub.Core.SharedKernel.Tenancy;
@@ -22,6 +23,7 @@ internal sealed class DiagnosticTestService(
     ITenantContext tenant,
     ICatalogLookup catalog,
     IPublishedTestQuota quota,
+    IPublicSiteCache siteCache,
     TimeProvider clock)
 {
     public async Task<IReadOnlyList<DiagnosticTestListItem>> ListAsync(CancellationToken cancellationToken)
@@ -240,6 +242,19 @@ internal sealed class DiagnosticTestService(
             items.Sum(q => q.Points), DateTime.MinValue, 0);
     }
 
+    /// <summary>Attempts of a test: the count, and the results visitors chose to share (D-18), newest first.</summary>
+    public async Task<TestAttemptsResponse> AttemptsAsync(Guid testId, CancellationToken cancellationToken)
+    {
+        var test = await queries.WithArchived().AsNoTracking().SingleOrDefaultAsync(t => t.Id == testId, cancellationToken) ?? throw new NotFoundException();
+        var attempts = db.Set<TestAttempt>().AsNoTracking().Where(a => a.TestId == test.Id);
+        var total = await attempts.CountAsync(cancellationToken);
+        var shared = await attempts.Where(a => a.ResultSharedAtUtc != null).OrderByDescending(a => a.CompletedAtUtc).Take(100)
+            .Select(a => new SharedAttemptResult(a.Id, a.Points, a.MaxPoints, a.CorrectQuestions, a.TotalQuestions, a.CompletedAtUtc, a.LeadId))
+            .ToListAsync(cancellationToken);
+        var sharedCount = await attempts.CountAsync(a => a.ResultSharedAtUtc != null, cancellationToken);
+        return new TestAttemptsResponse(total, sharedCount, shared);
+    }
+
     /// <summary>Why the test cannot be published yet, by field (empty when it is ready).</summary>
     internal static Dictionary<string, string[]> PublishProblems(DiagnosticTestResponse test)
     {
@@ -362,6 +377,9 @@ internal sealed class DiagnosticTestService(
         try
         {
             await db.SaveChangesAsync(cancellationToken);
+            // The public site lists published tests and the test pages are cached: every change may show there.
+            await siteCache.EvictCurrentWorkspaceAsync(cancellationToken);
+            await siteCache.EvictSitemapAsync(cancellationToken);
         }
         catch (DbUpdateException ex) when (SqlServerErrors.IsUniqueViolation(ex))
         {

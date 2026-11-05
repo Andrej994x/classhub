@@ -164,7 +164,11 @@ public sealed record SiteRenderModel(
     /// <summary>Relative photo URL, or null when the hero does not show the photo or there is none.</summary>
     string? PhotoUrl,
     SiteTeaching Teaching,
-    IReadOnlyList<SiteOfferView> Offers);
+    IReadOnlyList<SiteOfferView> Offers,
+    /// <summary>Published diagnostic tests, linked from the page (<c>/{slug}/tests/{testSlug}</c>).</summary>
+    IReadOnlyList<SiteTestLink> Tests);
+
+public sealed record SiteTestLink(string Slug, string Title);
 
 /// <summary>From the teacher profile: subject, level and language names in the site language, and the teaching mode.</summary>
 public sealed record SiteTeaching(IReadOnlyList<string> Subjects, IReadOnlyList<string> Levels, IReadOnlyList<string> Languages, string? Mode);
@@ -188,7 +192,8 @@ public sealed record SiteSeoHead(string Title, string Description, string Canoni
 /// <summary>A published, visible public page and the output-cache tag it is stored under.</summary>
 public sealed record PublicSitePage(SiteRenderModel Site, SiteSeoHead Seo, string CacheTag);
 
-public sealed record SitemapEntry(string Slug, DateTime LastModifiedUtc);
+/// <summary>A published site and its published tests (<c>/{slug}/tests/{testSlug}</c>).</summary>
+public sealed record SitemapEntry(string Slug, DateTime LastModifiedUtc, IReadOnlyList<SitemapEntry>? Tests = null);
 
 /// <summary>
 /// Read side of the public sites (Razor pages, photo, sitemap). Only published sites of visible owners (active
@@ -212,7 +217,13 @@ public interface IPublicSites
     /// decide how to read and write for that workspace.
     /// </summary>
     Task<PublishedSiteRef?> FindPublishedWorkspaceAsync(string slug, CancellationToken cancellationToken);
+
+    /// <summary>A published test of a published, visible site (Razor test page), or null.</summary>
+    Task<PublicTestPage?> FindTestAsync(string slug, string testSlug, CancellationToken cancellationToken);
 }
+
+/// <summary>The public test page: the site (palette, language, teacher), the public test (no answers) and its SEO head.</summary>
+public sealed record PublicTestPage(SiteRenderModel Site, ClassHub.Core.Modules.DiagnosticTests.Contracts.PublicTestResponse Test, SiteSeoHead Seo, string CacheTag);
 
 public sealed record PublishedSiteRef(Guid WorkspaceId, string Language);
 
@@ -227,12 +238,16 @@ public interface IPublicSiteCache
 
     /// <summary>Every public site page and the sitemap (account suspension and reactivation; rare).</summary>
     Task EvictAllAsync(CancellationToken cancellationToken);
+
+    /// <summary>The sitemap (sites or tests published, unpublished or moved).</summary>
+    Task EvictSitemapAsync(CancellationToken cancellationToken);
 }
 
 /// <summary>Output-cache policy names and tags of the public pages.</summary>
 public static class PublicSiteCaching
 {
     public const string SitePolicy = "public-site";
+    public const string TestPolicy = "public-test";
     public const string StaticPolicy = "public-static";
     public const string SitemapPolicy = "public-sitemap";
     public const string SitemapTag = "public-sitemap";

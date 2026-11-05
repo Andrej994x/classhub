@@ -86,6 +86,10 @@ internal static class PublicSiteEndpoints
             foreach (var entry in entries)
             {
                 Url($"{baseUrl}/{entry.Slug}", entry.LastModifiedUtc);
+                foreach (var test in entry.Tests ?? [])
+                {
+                    Url($"{baseUrl}/{entry.Slug}/tests/{test.Slug}", test.LastModifiedUtc);
+                }
             }
 
             xml.WriteEndElement();

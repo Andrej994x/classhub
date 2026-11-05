@@ -811,6 +811,64 @@ namespace ClassHub.Core.Infrastructure.Persistence.Migrations
                         });
                 });
 
+            modelBuilder.Entity("ClassHub.Core.Modules.DiagnosticTests.Domain.TestAttempt", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("AnswersJson")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("CompletedAtUtc")
+                        .HasPrecision(3)
+                        .HasColumnType("datetime2(3)");
+
+                    b.Property<int>("CorrectQuestions")
+                        .HasColumnType("int");
+
+                    b.Property<Guid?>("LeadId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("MaxPoints")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Points")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("ResultSharedAtUtc")
+                        .HasPrecision(3)
+                        .HasColumnType("datetime2(3)");
+
+                    b.Property<Guid>("TestId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("TotalQuestions")
+                        .HasColumnType("int");
+
+                    b.Property<Guid>("WorkspaceId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("LeadId")
+                        .IsUnique()
+                        .HasFilter("[LeadId] IS NOT NULL");
+
+                    b.HasIndex("WorkspaceId");
+
+                    b.HasIndex("WorkspaceId", "TestId", "CompletedAtUtc");
+
+                    b.ToTable("TestAttempts", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_TestAttempts_AnswersJson", "ISJSON([AnswersJson]) = 1");
+
+                            t.HasCheckConstraint("CK_TestAttempts_Score", "[Points] >= 0 AND [Points] <= [MaxPoints] AND [CorrectQuestions] >= 0 AND [CorrectQuestions] <= [TotalQuestions]");
+
+                            t.HasCheckConstraint("CK_TestAttempts_Shared", "[ResultSharedAtUtc] IS NULL OR [LeadId] IS NOT NULL");
+                        });
+                });
+
             modelBuilder.Entity("ClassHub.Core.Modules.DiagnosticTests.Domain.TestOption", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1032,6 +1090,9 @@ namespace ClassHub.Core.Infrastructure.Persistence.Migrations
                         .HasPrecision(3)
                         .HasColumnType("datetime2(3)");
 
+                    b.Property<Guid?>("AttemptId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<string>("ConsentVersion")
                         .IsRequired()
                         .HasMaxLength(40)
@@ -1093,9 +1154,15 @@ namespace ClassHub.Core.Infrastructure.Persistence.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("AttemptId")
+                        .IsUnique()
+                        .HasFilter("[AttemptId] IS NOT NULL");
+
                     b.HasIndex("SubjectId");
 
                     b.HasIndex("WorkspaceId");
+
+                    b.HasIndex("WorkspaceId", "AttemptId");
 
                     b.HasIndex("WorkspaceId", "CreatedAtUtc");
 
@@ -1105,13 +1172,15 @@ namespace ClassHub.Core.Infrastructure.Persistence.Migrations
 
                     b.ToTable("Leads", null, t =>
                         {
+                            t.HasCheckConstraint("CK_Leads_Attempt", "([Type] = 3 AND [AttemptId] IS NOT NULL) OR ([Type] <> 3 AND [AttemptId] IS NULL)");
+
                             t.HasCheckConstraint("CK_Leads_Email", "[Email] LIKE '%_@_%'");
 
                             t.HasCheckConstraint("CK_Leads_Name", "LEN([Name]) > 0");
 
                             t.HasCheckConstraint("CK_Leads_Status", "[Status] BETWEEN 1 AND 4");
 
-                            t.HasCheckConstraint("CK_Leads_Type", "[Type] IN (1, 2)");
+                            t.HasCheckConstraint("CK_Leads_Type", "[Type] IN (1, 2, 3)");
                         });
                 });
 
@@ -1707,6 +1776,16 @@ namespace ClassHub.Core.Infrastructure.Persistence.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("ClassHub.Core.Modules.DiagnosticTests.Domain.TestAttempt", b =>
+                {
+                    b.HasOne("ClassHub.Core.Modules.DiagnosticTests.Domain.DiagnosticTest", null)
+                        .WithMany()
+                        .HasForeignKey("WorkspaceId", "TestId")
+                        .HasPrincipalKey("WorkspaceId", "Id")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("ClassHub.Core.Modules.DiagnosticTests.Domain.TestOption", b =>
                 {
                     b.HasOne("ClassHub.Core.Modules.DiagnosticTests.Domain.TestQuestion", null)
@@ -1739,6 +1818,12 @@ namespace ClassHub.Core.Infrastructure.Persistence.Migrations
                         .HasForeignKey("WorkspaceId")
                         .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
+
+                    b.HasOne("ClassHub.Core.Modules.DiagnosticTests.Domain.TestAttempt", null)
+                        .WithMany()
+                        .HasForeignKey("WorkspaceId", "AttemptId")
+                        .HasPrincipalKey("WorkspaceId", "Id")
+                        .OnDelete(DeleteBehavior.NoAction);
 
                     b.HasOne("ClassHub.Core.Modules.Offers.Domain.Offer", null)
                         .WithMany()

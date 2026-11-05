@@ -21,14 +21,38 @@ public sealed class DiagnosticTestsModule : IModule
 {
     public void AddServices(IServiceCollection services, IConfiguration configuration)
     {
+        services.AddOptions<DiagnosticTestOptions>().Bind(configuration.GetSection(DiagnosticTestOptions.SectionName)).ValidateDataAnnotations().ValidateOnStart();
         services.AddScoped<DiagnosticTestQueries>();
+        services.AddScoped<TestAttemptQueries>();
         services.AddScoped<DiagnosticTestService>();
+        services.AddScoped<PublicTestService>();
+        services.AddScoped<IPublicTests, PublishedTests>();
+        services.AddScoped<IDiagnosticAttemptLink, DiagnosticAttemptLink>();
+        // "{testSlug:testslug}": the address shape of a test (also used by the Razor test page).
+        services.Configure<RouteOptions>(options => options.SetParameterPolicy<TestSlugRouteConstraint>(TestSlugRouteConstraint.Name));
         // R1-P10 replaces this with the plan-aware quota.
         services.TryAddScoped<IPublishedTestQuota, UnlimitedPublishedTestQuota>();
     }
 
     public void MapEndpoints(IEndpointRouteBuilder endpoints)
     {
+        // Public, anonymous: the published test without correct answers, and attempt submission (scored on the server).
+        var site = endpoints.MapGroup("/public/sites/{slug:siteslug}/tests/{testSlug:testslug}").WithTags("Public tests").AllowAnonymous();
+        site.MapGet("/", async (string slug, string testSlug, HttpContext http, PublicTestService service, CancellationToken ct) =>
+            {
+                http.Response.Headers.CacheControl = "no-store";
+                return TypedResults.Ok(await service.GetAsync(slug, testSlug, ct));
+            })
+            .RequireRateLimiting(RateLimitPolicies.PublicRead)
+            .WithName("GetPublicTest")
+            .WithSummary("A published test with its questions and options (never the correct answers).");
+
+        site.MapPost("/attempts", async (string slug, string testSlug, SubmitAttemptRequest request, PublicTestService service, CancellationToken ct) =>
+                TypedResults.Ok(await service.SubmitAsync(slug, testSlug, request, ct)))
+            .RequireRateLimiting(RateLimitPolicies.PublicForm)
+            .WithName("SubmitTestAttempt")
+            .WithSummary("Submit the chosen options; the server scores them and returns the totals and an attempt id for an optional contact request.");
+
         var tests = endpoints.MapGroup($"{WorkspacesModule.WorkspaceRoute}/tests").WithTags("Diagnostic tests").RequireAntiforgeryHeader();
         var read = WorkspacePolicies.For(WorkspacePermissions.TestsRead);
         var manage = WorkspacePolicies.For(WorkspacePermissions.TestsManage);
@@ -74,6 +98,10 @@ public sealed class DiagnosticTestsModule : IModule
             .RequireAuthorization(manage).WithName("DuplicateDiagnosticTest")
             .WithSummary("An editable draft copy with new ids and no attempts (D-38: \"duplicate as new version\").");
 
+        tests.MapGet("/{testId:guid}/attempts", async (Guid testId, DiagnosticTestService service, CancellationToken ct) => TypedResults.Ok(await service.AttemptsAsync(testId, ct)))
+            .RequireAuthorization(read).WithName("ListTestAttempts")
+            .WithSummary("How often the test was taken, and the results visitors shared with their contact request.");
+
         tests.MapDelete("/{testId:guid}", async (Guid testId, DiagnosticTestService service, CancellationToken ct) =>
             {
                 await service.ArchiveAsync(testId, ct);
@@ -116,4 +144,21 @@ internal sealed partial class SaveDiagnosticTestRequestValidator : AbstractValid
 internal sealed class TestVersionRequestValidator : AbstractValidator<TestVersionRequest>
 {
     public TestVersionRequestValidator() => RuleFor(x => x.Version).NotNull();
+}
+
+/// <summary>Route constraint <c>{testSlug:testslug}</c>: lowercase letters, digits and single hyphens, 3–60 characters.</summary>
+public sealed partial class TestSlugRouteConstraint : IRouteConstraint
+{
+    public const string Name = "testslug";
+
+    public bool Match(HttpContext? httpContext, IRouter? route, string routeKey, RouteValueDictionary values, RouteDirection routeDirection)
+    {
+        ArgumentNullException.ThrowIfNull(values);
+        return values.TryGetValue(routeKey, out var value)
+            && Convert.ToString(value, System.Globalization.CultureInfo.InvariantCulture) is { Length: >= DiagnosticTest.SlugMinLength and <= DiagnosticTest.SlugMaxLength } slug
+            && Shape().IsMatch(slug);
+    }
+
+    [GeneratedRegex(@"\A[a-z0-9](?:[a-z0-9]|-(?=[a-z0-9]))*\z")]
+    private static partial Regex Shape();
 }

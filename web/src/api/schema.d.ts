@@ -37,6 +37,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/public/sites/{slug}/tests/{testSlug}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** A published test with its questions and options (never the correct answers). */
+        get: operations["GetPublicTest"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/public/sites/{slug}/tests/{testSlug}/attempts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Submit the chosen options; the server scores them and returns the totals and an attempt id for an optional contact request. */
+        post: operations["SubmitTestAttempt"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/w/{workspaceId}/tests": {
         parameters: {
             query?: never;
@@ -117,6 +151,23 @@ export interface paths {
         put?: never;
         /** An editable draft copy with new ids and no attempts (D-38: "duplicate as new version"). */
         post: operations["DuplicateDiagnosticTest"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/w/{workspaceId}/tests/{testId}/attempts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** How often the test was taken, and the results visitors shared with their contact request. */
+        get: operations["ListTestAttempts"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -615,6 +666,11 @@ export interface components {
         AntiforgeryTokenResponse: {
             requestToken: string;
         };
+        AttemptAnswer: {
+            /** Format: uuid */
+            questionId: string;
+            optionIds: null | string[];
+        };
         CatalogItem: {
             /** Format: uuid */
             id: string;
@@ -652,6 +708,15 @@ export interface components {
             /** Format: uuid */
             userId: string;
             token: null | string;
+        };
+        DiagnosticResultSummary: {
+            /** Format: uuid */
+            testId: string;
+            testTitle: string;
+            /** Format: int32 */
+            points: null | number | string;
+            /** Format: int32 */
+            maxPoints: null | number | string;
         };
         DiagnosticTestListItem: {
             /** Format: uuid */
@@ -789,6 +854,7 @@ export interface components {
             notes: components["schemas"]["LeadNoteResponse"][];
             /** Format: int32 */
             version: number | string;
+            diagnosticResult: null | components["schemas"]["DiagnosticResultSummary"];
         };
         LeadVersionRequest: {
             /** Format: int32 */
@@ -852,6 +918,42 @@ export interface components {
             key: string;
             completed: boolean;
             available: boolean;
+        };
+        PublicAttemptResult: {
+            /** Format: uuid */
+            attemptId: string;
+            /** Format: int32 */
+            points: number | string;
+            /** Format: int32 */
+            maxPoints: number | string;
+            /** Format: int32 */
+            questionsRight: number | string;
+            /** Format: int32 */
+            totalQuestions: number | string;
+        };
+        PublicTestOption: {
+            /** Format: uuid */
+            id: string;
+            text: string;
+        };
+        PublicTestQuestion: {
+            /** Format: uuid */
+            id: string;
+            text: string;
+            /** Format: int32 */
+            points: number | string;
+            selectSeveral: boolean;
+            options: components["schemas"]["PublicTestOption"][];
+        };
+        PublicTestResponse: {
+            title: string;
+            slug: string;
+            description: null | string;
+            difficulty: string;
+            subject: null | string;
+            /** Format: int32 */
+            totalPoints: number | string;
+            questions: components["schemas"]["PublicTestQuestion"][];
         };
         PublishSiteRequest: {
             /** Format: int32 */
@@ -925,6 +1027,22 @@ export interface components {
             points: number | string;
             options: null | components["schemas"]["SaveTestOption"][];
         };
+        SharedAttemptResult: {
+            /** Format: uuid */
+            attemptId: string;
+            /** Format: int32 */
+            points: number | string;
+            /** Format: int32 */
+            maxPoints: number | string;
+            /** Format: int32 */
+            correctQuestions: number | string;
+            /** Format: int32 */
+            totalQuestions: number | string;
+            /** Format: date-time */
+            completedAtUtc: string;
+            /** Format: uuid */
+            leadId: null | string;
+        };
         SiteContent: {
             sections: null | components["schemas"]["SiteSection"][];
         };
@@ -970,6 +1088,9 @@ export interface components {
             available: boolean;
             reason: null | string;
         };
+        SubmitAttemptRequest: {
+            answers: null | components["schemas"]["AttemptAnswer"][];
+        };
         SubmitLeadRequest: {
             type: null | string;
             name: null | string;
@@ -985,6 +1106,10 @@ export interface components {
             consentVersion: null | string;
             formToken: null | string;
             website: null | string;
+            /** Format: uuid */
+            attemptId?: null | string;
+            /** @default false */
+            shareResult: boolean;
         };
         TeacherProfileResponse: {
             firstName: null | string;
@@ -1001,6 +1126,13 @@ export interface components {
             updatedAtUtc: null | string;
             /** Format: int32 */
             version: null | number | string;
+        };
+        TestAttemptsResponse: {
+            /** Format: int32 */
+            total: number | string;
+            /** Format: int32 */
+            sharedCount: number | string;
+            shared: components["schemas"]["SharedAttemptResult"][];
         };
         TestOptionResponse: {
             /** Format: uuid */
@@ -1100,6 +1232,56 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["MyWorkspaceResponse"][];
+                };
+            };
+        };
+    };
+    GetPublicTest: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+                testSlug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicTestResponse"];
+                };
+            };
+        };
+    };
+    SubmitTestAttempt: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+                testSlug: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SubmitAttemptRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicAttemptResult"];
                 };
             };
         };
@@ -1332,6 +1514,29 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["DiagnosticTestResponse"];
+                };
+            };
+        };
+    };
+    ListTestAttempts: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                testId: string;
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TestAttemptsResponse"];
                 };
             };
         };
