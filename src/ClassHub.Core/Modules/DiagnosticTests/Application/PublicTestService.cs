@@ -134,7 +134,7 @@ internal sealed class PublicTestService(
     internal static async Task<ResolvedTest?> LoadPublishedAsync(ClassHubDbContext db, Guid workspaceId, string language, string testSlug, CancellationToken cancellationToken)
     {
         var test = await db.Set<DiagnosticTest>().AsNoTracking()
-            .SingleOrDefaultAsync(t => t.Slug == testSlug && t.Status == TestStatus.Published, cancellationToken);
+            .SingleOrDefaultAsync(t => t.Slug == testSlug && t.Status == TestStatus.Published && t.HiddenAtUtc == null, cancellationToken);
         if (test is null)
         {
             return null;
@@ -188,7 +188,7 @@ internal sealed class PublishedTests(ClassHubDbContext db, ITenantContext tenant
 
     public async Task<IReadOnlyList<PublishedTestLink>> ListPublishedAsync(CancellationToken cancellationToken) =>
         await db.Set<DiagnosticTest>().AsNoTracking()
-            .Where(t => t.Status == TestStatus.Published)
+            .Where(t => t.Status == TestStatus.Published && t.HiddenAtUtc == null)
             .OrderByDescending(t => t.PublishedAtUtc)
             .Select(t => new PublishedTestLink(t.Slug, t.Title, t.PublishedAtUtc!.Value))
             .ToListAsync(cancellationToken);

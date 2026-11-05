@@ -23,7 +23,7 @@ internal sealed class TestAttemptQueries(ClassHubDbContext db)
     /// <summary>The test's version while it is still published and not archived (under the attempt lock), or null.</summary>
     public async Task<int?> PublishedVersionAsync(Guid workspaceId, Guid testId, CancellationToken cancellationToken) =>
         await db.Set<DiagnosticTest>().IgnoreQueryFilters().AsNoTracking()
-            .Where(t => t.WorkspaceId == workspaceId && t.Id == testId && t.Status == TestStatus.Published && t.ArchivedAtUtc == null)
+            .Where(t => t.WorkspaceId == workspaceId && t.Id == testId && t.Status == TestStatus.Published && t.ArchivedAtUtc == null && t.HiddenAtUtc == null)
             .Select(t => (int?)t.Version)
             .SingleOrDefaultAsync(cancellationToken);
 
@@ -52,7 +52,7 @@ internal sealed class TestAttemptQueries(ClassHubDbContext db)
         }
 
         var rows = await db.Set<DiagnosticTest>().IgnoreQueryFilters().AsNoTracking()
-            .Where(t => workspaceIds.Contains(t.WorkspaceId) && t.Status == TestStatus.Published && t.ArchivedAtUtc == null)
+            .Where(t => workspaceIds.Contains(t.WorkspaceId) && t.Status == TestStatus.Published && t.ArchivedAtUtc == null && t.HiddenAtUtc == null)
             .OrderBy(t => t.Slug)
             .Select(t => new { t.WorkspaceId, t.Slug, t.Title, PublishedAtUtc = t.PublishedAtUtc!.Value })
             .ToListAsync(cancellationToken);

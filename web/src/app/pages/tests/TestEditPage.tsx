@@ -158,6 +158,13 @@ function TestEditor({ workspaceId, test }: { workspaceId: string; test: Diagnost
         <p className="text-sm text-muted-foreground">{t('tests.editorLead')}</p>
       </div>
 
+      {test?.hiddenReason && (
+        <Alert variant="warning">
+          <strong className="block">{t('moderation.testHidden')}</strong>
+          <span className="block">{t('moderation.reason', { reason: test.hiddenReason })}</span>
+          <span className="mt-1 block text-xs">{t('moderation.contact')}</span>
+        </Alert>
+      )}
       {test && <StatusCard workspaceId={workspaceId} test={test} version={formVersion ?? 0} dirty={isDirty} onChanged={(changed) => form.reset(toForm(changed), { keepDirtyValues: true })} />}
       {locked && <Alert variant="info">{t('tests.locked', { count: num(test?.attemptCount) ?? 0 })}</Alert>}
       {test && <ResultsCard workspaceId={workspaceId} testId={test.id} />}

@@ -25,6 +25,17 @@ public sealed record CatalogResponse(
     /// <summary>ISO 3166-1 alpha-2 codes; the SPA shows localized names (Intl.DisplayNames).</summary>
     IReadOnlyList<string> Countries);
 
+/// <summary>A catalog entry for platform staff, active or not (R1-P11). <c>CategoryId</c> only for subjects.</summary>
+public sealed record AdminCatalogEntry(Guid Id, string Code, string NameMk, string NameEn, int SortOrder, bool IsActive, Guid? CategoryId);
+
+public sealed record AdminCatalogResponse(IReadOnlyList<AdminCatalogEntry> Categories, IReadOnlyList<AdminCatalogEntry> Subjects, IReadOnlyList<AdminCatalogEntry> Levels);
+
+/// <summary>
+/// Create (with a <c>Code</c>, which never changes afterwards) or update a category, subject (with <c>CategoryId</c>) or
+/// level. Entries are deactivated, never deleted: existing references stay, new choices hide them.
+/// </summary>
+public sealed record CatalogEntryRequest(string? Code, string? NameMk, string? NameEn, int? SortOrder, bool? IsActive, Guid? CategoryId);
+
 /// <summary>Used by other modules (through Contracts) to validate catalog references.</summary>
 public interface ICatalogLookup
 {

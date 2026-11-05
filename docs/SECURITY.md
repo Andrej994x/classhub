@@ -82,6 +82,13 @@ ASP.NET Core Identity with cookie sessions. See [ARCHITECTURE.md](ARCHITECTURE.m
 - Policies: `Authenticated`; workspace policies `ws:<permission>` (for example `ws:workspace.read`). Permissions are code constants (`WorkspacePermissions`), mapped from workspace roles (`WorkspaceRolePermissions`; today `Owner` has all workspace permissions). Unknown permission names fail when the policy is resolved.
 - Platform roles (`PlatformOwner`, `PlatformAdmin`) are Identity roles. **They grant no workspace access**: a platform admin without membership gets 404 on workspace routes (tested). The first Platform Owner is created only with the local CLI `dotnet run --project src/ClassHub.Api -- grant-platform-owner <email> [--force-add]` (audited, never exposed over HTTP). The owner check, the grant, the session revocation and the audit entry run in one transaction under an application lock (`sp_getapplock`), so concurrent bootstraps cannot both add an owner without `--force-add`.
 
+## Moderation (R1-P11)
+
+- The reporter's details (text, optional email) are platform data: they are returned only by `/api/admin/*` (platform staff with MFA), never by a teacher endpoint, and the teacher's notice contains only the moderator's reason (tested on the email and the site response).
+- Reports: per-IP rate limit, honeypot, a cap per site per hour, length limits; no IP addresses are stored. CAPTCHA comes with hosting (D-19).
+- Hidden content is excluded in the database queries of every public path (not in the views), and the output cache is evicted after the commit; the teacher cannot clear the flags by publishing again.
+- Every moderation decision and catalog change is audited with the actor.
+
 ## Plans & entitlements (R1-P10)
 
 - Teachers cannot change their own plan: the only write endpoints are under `/api/admin` (`platform:staff`; plan limits `platform:owner`, D-39). Tested with a teacher session.

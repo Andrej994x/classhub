@@ -2,6 +2,7 @@ using ClassHub.Core.Infrastructure.Email;
 using ClassHub.Core.Infrastructure.Tenancy;
 using ClassHub.Core.Modules.DiagnosticTests.Contracts;
 using ClassHub.Core.Modules.Sites.Contracts;
+using ClassHub.Core.Modules.Sites.Domain;
 using ClassHub.Core.Modules.Sites.Persistence;
 using ClassHub.Core.Modules.Teachers.Contracts;
 using ClassHub.Core.Modules.Workspaces.Contracts;
@@ -119,7 +120,14 @@ internal sealed partial class PublicSites(
         }
 
         tenant.SetPublicReadOnly(site.WorkspaceId);
-        return SiteSnapshot.Read(site.PublishedJson) is { } snapshot ? (site, snapshot) : null;
+        if (SiteSnapshot.Read(site.PublishedJson) is not { } snapshot)
+        {
+            return null;
+        }
+
+        // Sections hidden by moderation are never rendered (nor the photo of a hidden hero).
+        var hidden = HiddenSection.Read(site.HiddenSectionsJson).Select(h => h.Type).ToHashSet(StringComparer.Ordinal);
+        return (site, hidden.Count == 0 ? snapshot : snapshot with { Sections = [.. snapshot.Sections.Where(s => !hidden.Contains(s.Type ?? string.Empty))] });
     }
 
     [LoggerMessage(Level = LogLevel.Warning, Message = "A public page view could not be recorded.")]

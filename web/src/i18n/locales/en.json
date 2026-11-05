@@ -32,7 +32,10 @@
     "adminAudit": "Audit log",
     "adminSecurity": "Security",
     "plan": "Plan",
-    "adminPlans": "Plans"
+    "adminPlans": "Plans",
+    "adminReports": "Reports",
+    "adminHidden": "Hidden content",
+    "adminCatalog": "Catalog"
   },
   "layout": {
     "teacherArea": "Teacher workspace",
@@ -260,6 +263,70 @@
         "Extended": "Pro extended",
         "Expired": "Back to Free"
       }
+    },
+    "reports": {
+      "title": "Reports",
+      "lead": "Reports from visitors about public pages. Reporter details are for the ClassHub team only: never share them with the teacher.",
+      "status": "Status",
+      "statuses": {
+        "Open": "Open",
+        "Resolved": "Resolved",
+        "Dismissed": "Dismissed"
+      },
+      "none": "No reports.",
+      "count_one": "{{count}} report",
+      "count_other": "{{count}} reports",
+      "targets": {
+        "site": "Whole page",
+        "section": "Section",
+        "test": "Test"
+      },
+      "reasons": {
+        "spam": "Spam or advertising",
+        "inappropriate": "Inappropriate content",
+        "misleading": "False or misleading information",
+        "copyright": "Copyright infringement",
+        "personal-data": "Someone's personal data",
+        "other": "Something else"
+      },
+      "page": "Page",
+      "reporter": "Reporter",
+      "anonymous": "anonymous",
+      "sameTarget_one": "{{count}} open report about this content",
+      "sameTarget_other": "{{count}} open reports about this content",
+      "alreadyHidden": "Already hidden",
+      "reason": "Reason (the teacher sees it)",
+      "note": "Note (optional, staff only)",
+      "hide": "Hide content",
+      "dismiss": "Dismiss",
+      "resolution": "Handled {{date}}"
+    },
+    "hidden": {
+      "title": "Hidden content",
+      "lead": "Content hidden by moderation. Showing it again tells the teacher.",
+      "none": "Nothing is hidden.",
+      "reason": "Reason for showing it again",
+      "restore": "Show again",
+      "hiddenAt": "Hidden {{date}}"
+    },
+    "catalog": {
+      "title": "Catalog",
+      "lead": "Subjects, categories and levels teachers choose from. Entries are never deleted: deactivated ones stay where teachers already used them, but are not offered for new choices.",
+      "categories": "Categories",
+      "subjects": "Subjects",
+      "levels": "Levels",
+      "code": "Code",
+      "nameMk": "Name (Macedonian)",
+      "nameEn": "Name (English)",
+      "sortOrder": "Order",
+      "category": "Category",
+      "active": "Active",
+      "inactive": "Inactive",
+      "add": "Add",
+      "save": "Save",
+      "deactivate": "Deactivate",
+      "activate": "Activate",
+      "codeHint": "Lowercase letters, digits and hyphens; it never changes."
     }
   },
   "notFound": {
@@ -791,5 +858,14 @@
     },
     "upgradeTitle": "Need more?",
     "upgradeText": "Pro raises the limits. Online payment comes later; for now the ClassHub team activates Pro for you after your payment."
+  },
+  "moderation": {
+    "siteHidden": "The ClassHub team hid your public page from visitors.",
+    "sectionsHidden": "The ClassHub team hid part of your public page from visitors.",
+    "testHidden": "The ClassHub team hid this test from visitors.",
+    "reason": "Reason: {{reason}}",
+    "section": "{{section}}: {{reason}}",
+    "contact": "Nothing was deleted. Publishing again does not change this; write to the ClassHub team if you think it is a mistake.",
+    "hiddenBadge": "Hidden by ClassHub"
   }
 }

@@ -59,13 +59,17 @@ internal sealed partial class TeacherProfileService(
         var levelIds = (request.LevelIds ?? []).Distinct().ToList();
         var languages = (request.Languages ?? []).Distinct(StringComparer.Ordinal).ToList();
 
+        // Entries the ClassHub team deactivated stay valid where the profile already has them (R1-P11): only the
+        // newly added ones must be active.
+        var savedSubjects = await db.Set<TeacherProfileSubject>().AsNoTracking().Select(x => x.SubjectId).ToListAsync(cancellationToken);
+        var savedLevels = await db.Set<TeacherProfileLevel>().AsNoTracking().Select(x => x.LevelId).ToListAsync(cancellationToken);
         var errors = new Dictionary<string, string[]>(StringComparer.Ordinal);
-        if ((await catalog.UnknownSubjectsAsync(subjectIds, cancellationToken)).Count > 0)
+        if ((await catalog.UnknownSubjectsAsync([.. subjectIds.Except(savedSubjects)], cancellationToken)).Count > 0)
         {
             errors["subjectIds"] = ["Unknown subject."];
         }
 
-        if ((await catalog.UnknownLevelsAsync(levelIds, cancellationToken)).Count > 0)
+        if ((await catalog.UnknownLevelsAsync([.. levelIds.Except(savedLevels)], cancellationToken)).Count > 0)
         {
             errors["levelIds"] = ["Unknown education level."];
         }

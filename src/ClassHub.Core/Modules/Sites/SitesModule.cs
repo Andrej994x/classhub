@@ -28,6 +28,7 @@ public sealed class SitesModule : IModule
         services.AddScoped<SiteRenderer>();
         services.AddScoped<PublicSiteQueries>();
         services.AddScoped<ISiteDirectory, SiteDirectoryQueries>();
+        services.AddScoped<ISiteModeration, SiteModerationQueries>();
         services.AddScoped<IPublicSites, PublicSites>();
         services.AddScoped<PublicSiteCache>();
         services.AddScoped<IPublicSiteCache>(sp => sp.GetRequiredService<PublicSiteCache>());

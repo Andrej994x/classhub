@@ -207,8 +207,9 @@ function ProfileFormCard({ workspaceId, profile, workspace, catalog }: { workspa
         bio: empty(values.bio),
         teachingMode: values.teachingMode === '' ? null : values.teachingMode,
         countryCode: empty(values.countryCode),
-        subjectIds: values.subjectIds,
-        levelIds: values.levelIds,
+        // Entries the ClassHub team deactivated are not offered any more (R1-P11): they are dropped on the next save.
+        subjectIds: values.subjectIds.filter((id) => catalog.subjects.some((subject) => subject.id === id)),
+        levelIds: values.levelIds.filter((id) => catalog.levels.some((level) => level.id === id)),
         languages: values.languages,
         timeZone: timeZoneChanged ? values.timeZone : null,
         currency: currencyChanged ? values.currency : null,

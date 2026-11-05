@@ -59,7 +59,11 @@ internal sealed class OfferService(
             throw new ConflictException("The offer was changed elsewhere. Reload it and apply your changes again.", ErrorCodes.ConcurrencyConflict);
         }
 
-        await ThrowIfUnknownSubjectAsync(request.SubjectId!.Value, cancellationToken);
+        // A subject the ClassHub team deactivated stays valid on the offers that already use it (R1-P11).
+        if (request.SubjectId!.Value != offer.SubjectId)
+        {
+            await ThrowIfUnknownSubjectAsync(request.SubjectId.Value, cancellationToken);
+        }
         var now = clock.GetUtcNow().UtcDateTime;
         if (request.Currency is not null)
         {

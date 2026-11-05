@@ -58,6 +58,14 @@ public sealed class DiagnosticTest : ITenantOwned, IArchivable
     public DateTime? ArchivedAtUtc { get; set; }
 
     public int Version { get; set; }
+
+    /// <summary>
+    /// Set by platform moderation (R1-P11): the test is not public (no page, no attempts, not listed or in the
+    /// sitemap) until moderation shows it again. Independent of the status; the teacher cannot clear it.
+    /// </summary>
+    public DateTime? HiddenAtUtc { get; set; }
+
+    public string? HiddenReason { get; set; }
 }
 
 public sealed class TestQuestion : ITenantOwned

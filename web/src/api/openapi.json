@@ -399,7 +399,7 @@
         "tags": [
           "Catalog"
         ],
-        "summary": "Subject categories, subjects, education levels and teaching languages (mk/en names).",
+        "summary": "Active subject categories, subjects, education levels and teaching languages (mk/en names).",
         "operationId": "GetCatalog",
         "responses": {
           "200": {
@@ -431,6 +431,139 @@
                   "items": {
                     "$ref": "#/components/schemas/MyWorkspaceResponse"
                   }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/catalog": {
+      "get": {
+        "tags": [
+          "Admin"
+        ],
+        "operationId": "GetAdminCatalog",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminCatalogResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/catalog/{kind}": {
+      "post": {
+        "tags": [
+          "Admin"
+        ],
+        "summary": "Add a category, subject or level (the code is permanent).",
+        "operationId": "CreateCatalogEntry",
+        "parameters": [
+          {
+            "name": "kind",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "pattern": "^(categories|subjects|levels)$",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CatalogEntryRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminCatalogEntry"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpValidationProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/catalog/{kind}/{id}": {
+      "put": {
+        "tags": [
+          "Admin"
+        ],
+        "summary": "Rename, reorder, activate or deactivate (entries are never deleted).",
+        "operationId": "UpdateCatalogEntry",
+        "parameters": [
+          {
+            "name": "kind",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "pattern": "^(categories|subjects|levels)$",
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CatalogEntryRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminCatalogEntry"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpValidationProblemDetails"
                 }
               }
             }
@@ -1947,6 +2080,283 @@
         }
       }
     },
+    "/api/public/sites/{slug}/reports": {
+      "post": {
+        "tags": [
+          "Public reports"
+        ],
+        "summary": "Report content of a public page: the site, a section or a test. Always 202 once the content exists.",
+        "operationId": "SubmitReport",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SubmitReportRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "description": "Accepted"
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpValidationProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/reports": {
+      "get": {
+        "tags": [
+          "Admin"
+        ],
+        "summary": "The moderation queue, newest first; filter by status (Open, Resolved, Dismissed).",
+        "operationId": "ListReports",
+        "parameters": [
+          {
+            "name": "status",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminReportPage"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/reports/{reportId}": {
+      "get": {
+        "tags": [
+          "Admin"
+        ],
+        "operationId": "GetReport",
+        "parameters": [
+          {
+            "name": "reportId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminReportResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/reports/{reportId}/hide": {
+      "post": {
+        "tags": [
+          "Admin"
+        ],
+        "summary": "Hide the reported content with a reason (shown to the teacher); resolves every open report about it.",
+        "operationId": "HideReportedContent",
+        "parameters": [
+          {
+            "name": "reportId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HideContentRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminReportResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpValidationProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/reports/{reportId}/dismiss": {
+      "post": {
+        "tags": [
+          "Admin"
+        ],
+        "operationId": "DismissReport",
+        "parameters": [
+          {
+            "name": "reportId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ModerationDecisionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminReportResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpValidationProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/moderation/hidden": {
+      "get": {
+        "tags": [
+          "Admin"
+        ],
+        "operationId": "ListHiddenContent",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/HiddenContentResponse"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/moderation/restore": {
+      "post": {
+        "tags": [
+          "Admin"
+        ],
+        "summary": "Show hidden content again, with a reason (audited; the teacher is told).",
+        "operationId": "RestoreHiddenContent",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RestoreContentRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpValidationProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/w/{workspaceId}/offers": {
       "get": {
         "tags": [
@@ -3098,6 +3508,79 @@
           }
         }
       },
+      "AdminCatalogEntry": {
+        "required": [
+          "id",
+          "code",
+          "nameMk",
+          "nameEn",
+          "sortOrder",
+          "isActive",
+          "categoryId"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "code": {
+            "type": "string"
+          },
+          "nameMk": {
+            "type": "string"
+          },
+          "nameEn": {
+            "type": "string"
+          },
+          "sortOrder": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "isActive": {
+            "type": "boolean"
+          },
+          "categoryId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          }
+        }
+      },
+      "AdminCatalogResponse": {
+        "required": [
+          "categories",
+          "subjects",
+          "levels"
+        ],
+        "type": "object",
+        "properties": {
+          "categories": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AdminCatalogEntry"
+            }
+          },
+          "subjects": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AdminCatalogEntry"
+            }
+          },
+          "levels": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AdminCatalogEntry"
+            }
+          }
+        }
+      },
       "AdminOverviewResponse": {
         "required": [
           "users",
@@ -3239,6 +3722,160 @@
           "updatedAtUtc": {
             "type": "string",
             "format": "date-time"
+          }
+        }
+      },
+      "AdminReportPage": {
+        "required": [
+          "items",
+          "total",
+          "page",
+          "pageSize"
+        ],
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AdminReportResponse"
+            }
+          },
+          "total": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "page": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "pageSize": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
+      "AdminReportResponse": {
+        "required": [
+          "id",
+          "createdAtUtc",
+          "status",
+          "target",
+          "reason",
+          "details",
+          "reporterEmail",
+          "workspaceId",
+          "siteSlug",
+          "sectionType",
+          "testId",
+          "testTitle",
+          "targetHidden",
+          "openReportsForTarget",
+          "resolvedAtUtc",
+          "resolvedByUserId",
+          "resolutionNote"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "createdAtUtc": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "status": {
+            "type": "string"
+          },
+          "target": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string"
+          },
+          "details": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "reporterEmail": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "workspaceId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "siteSlug": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "sectionType": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "testId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "testTitle": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "targetHidden": {
+            "type": "boolean"
+          },
+          "openReportsForTarget": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "resolvedAtUtc": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "resolvedByUserId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "resolutionNote": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
@@ -3526,6 +4163,59 @@
           },
           "authenticatorUri": {
             "type": "string"
+          }
+        }
+      },
+      "CatalogEntryRequest": {
+        "required": [
+          "code",
+          "nameMk",
+          "nameEn",
+          "sortOrder",
+          "isActive",
+          "categoryId"
+        ],
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "nameMk": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "nameEn": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "sortOrder": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "isActive": {
+            "type": [
+              "null",
+              "boolean"
+            ]
+          },
+          "categoryId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
           }
         }
       },
@@ -4072,6 +4762,10 @@
           "updatedAtUtc": {
             "type": "string",
             "format": "date-time"
+          },
+          "hiddenByModeration": {
+            "type": "boolean",
+            "default": false
           }
         }
       },
@@ -4163,6 +4857,19 @@
               "string"
             ],
             "format": "int32"
+          },
+          "hiddenReason": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "hiddenAtUtc": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
           }
         }
       },
@@ -4173,6 +4880,94 @@
         "type": "object",
         "properties": {
           "email": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "HiddenContentResponse": {
+        "required": [
+          "workspaceId",
+          "target",
+          "siteSlug",
+          "sectionType",
+          "testId",
+          "testTitle",
+          "reason",
+          "hiddenAtUtc"
+        ],
+        "type": "object",
+        "properties": {
+          "workspaceId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "target": {
+            "type": "string"
+          },
+          "siteSlug": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "sectionType": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "testId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "testTitle": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "reason": {
+            "type": "string"
+          },
+          "hiddenAtUtc": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "HiddenSectionNote": {
+        "required": [
+          "type",
+          "reason",
+          "hiddenAtUtc"
+        ],
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string"
+          },
+          "hiddenAtUtc": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "HideContentRequest": {
+        "required": [
+          "reason"
+        ],
+        "type": "object",
+        "properties": {
+          "reason": {
             "type": [
               "null",
               "string"
@@ -4681,6 +5476,20 @@
               "string"
             ],
             "format": "int32"
+          }
+        }
+      },
+      "ModerationDecisionRequest": {
+        "required": [
+          "reason"
+        ],
+        "type": "object",
+        "properties": {
+          "reason": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
@@ -5201,6 +6010,50 @@
           }
         }
       },
+      "RestoreContentRequest": {
+        "required": [
+          "workspaceId",
+          "target",
+          "sectionType",
+          "testId",
+          "reason"
+        ],
+        "type": "object",
+        "properties": {
+          "workspaceId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "target": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "sectionType": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "testId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "reason": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
       "SaveDiagnosticTestRequest": {
         "required": [
           "title",
@@ -5570,6 +6423,39 @@
           }
         }
       },
+      "SiteModerationNote": {
+        "required": [
+          "siteHidden",
+          "siteReason",
+          "siteHiddenAtUtc",
+          "sections"
+        ],
+        "type": "object",
+        "properties": {
+          "siteHidden": {
+            "type": "boolean"
+          },
+          "siteReason": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "siteHiddenAtUtc": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "sections": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/HiddenSectionNote"
+            }
+          }
+        }
+      },
       "SitePreviewResponse": {
         "required": [
           "url",
@@ -5657,6 +6543,16 @@
               "string"
             ],
             "format": "int32"
+          },
+          "moderation": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/SiteModerationNote"
+              }
+            ]
           }
         }
       },
@@ -5877,6 +6773,62 @@
           "shareResult": {
             "type": "boolean",
             "default": false
+          }
+        }
+      },
+      "SubmitReportRequest": {
+        "required": [
+          "target",
+          "sectionType",
+          "testSlug",
+          "reason",
+          "details",
+          "email",
+          "website"
+        ],
+        "type": "object",
+        "properties": {
+          "target": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "sectionType": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "testSlug": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "reason": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "details": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "email": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "website": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
@@ -6491,6 +7443,9 @@
     },
     {
       "name": "Leads"
+    },
+    {
+      "name": "Public reports"
     },
     {
       "name": "Offers"

@@ -145,7 +145,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Subject categories, subjects, education levels and teaching languages (mk/en names). */
+        /** Active subject categories, subjects, education levels and teaching languages (mk/en names). */
         get: operations["GetCatalog"];
         put?: never;
         post?: never;
@@ -164,6 +164,56 @@ export interface paths {
         };
         get: operations["ListMyWorkspaces"];
         put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/catalog": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetAdminCatalog"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/catalog/{kind}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Add a category, subject or level (the code is permanent). */
+        post: operations["CreateCatalogEntry"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/catalog/{kind}/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Rename, reorder, activate or deactivate (entries are never deleted). */
+        put: operations["UpdateCatalogEntry"];
         post?: never;
         delete?: never;
         options?: never;
@@ -689,6 +739,122 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/public/sites/{slug}/reports": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Report content of a public page: the site, a section or a test. Always 202 once the content exists. */
+        post: operations["SubmitReport"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/reports": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The moderation queue, newest first; filter by status (Open, Resolved, Dismissed). */
+        get: operations["ListReports"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/reports/{reportId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetReport"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/reports/{reportId}/hide": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Hide the reported content with a reason (shown to the teacher); resolves every open report about it. */
+        post: operations["HideReportedContent"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/reports/{reportId}/dismiss": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["DismissReport"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/moderation/hidden": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["ListHiddenContent"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/moderation/restore": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Show hidden content again, with a reason (audited; the teacher is told). */
+        post: operations["RestoreHiddenContent"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/w/{workspaceId}/offers": {
         parameters: {
             query?: never;
@@ -1018,6 +1184,23 @@ export interface components {
             /** Format: int32 */
             pageSize: number | string;
         };
+        AdminCatalogEntry: {
+            /** Format: uuid */
+            id: string;
+            code: string;
+            nameMk: string;
+            nameEn: string;
+            /** Format: int32 */
+            sortOrder: number | string;
+            isActive: boolean;
+            /** Format: uuid */
+            categoryId: null | string;
+        };
+        AdminCatalogResponse: {
+            categories: components["schemas"]["AdminCatalogEntry"][];
+            subjects: components["schemas"]["AdminCatalogEntry"][];
+            levels: components["schemas"]["AdminCatalogEntry"][];
+        };
         AdminOverviewResponse: {
             /** Format: int32 */
             users: number | string;
@@ -1051,6 +1234,41 @@ export interface components {
             version: number | string;
             /** Format: date-time */
             updatedAtUtc: string;
+        };
+        AdminReportPage: {
+            items: components["schemas"]["AdminReportResponse"][];
+            /** Format: int32 */
+            total: number | string;
+            /** Format: int32 */
+            page: number | string;
+            /** Format: int32 */
+            pageSize: number | string;
+        };
+        AdminReportResponse: {
+            /** Format: uuid */
+            id: string;
+            /** Format: date-time */
+            createdAtUtc: string;
+            status: string;
+            target: string;
+            reason: string;
+            details: null | string;
+            reporterEmail: null | string;
+            /** Format: uuid */
+            workspaceId: string;
+            siteSlug: null | string;
+            sectionType: null | string;
+            /** Format: uuid */
+            testId: null | string;
+            testTitle: null | string;
+            targetHidden: boolean;
+            /** Format: int32 */
+            openReportsForTarget: number | string;
+            /** Format: date-time */
+            resolvedAtUtc: null | string;
+            /** Format: uuid */
+            resolvedByUserId: null | string;
+            resolutionNote: null | string;
         };
         AdminRoleRequest: {
             code: null | string;
@@ -1119,6 +1337,16 @@ export interface components {
         AuthenticatorSetupResponse: {
             sharedKey: string;
             authenticatorUri: string;
+        };
+        CatalogEntryRequest: {
+            code: null | string;
+            nameMk: null | string;
+            nameEn: null | string;
+            /** Format: int32 */
+            sortOrder: null | number | string;
+            isActive: null | boolean;
+            /** Format: uuid */
+            categoryId: null | string;
         };
         CatalogItem: {
             /** Format: uuid */
@@ -1254,6 +1482,8 @@ export interface components {
             attemptCount: number | string;
             /** Format: date-time */
             updatedAtUtc: string;
+            /** @default false */
+            hiddenByModeration: boolean;
         };
         DiagnosticTestResponse: {
             /** Format: uuid */
@@ -1277,9 +1507,34 @@ export interface components {
             updatedAtUtc: string;
             /** Format: int32 */
             version: number | string;
+            hiddenReason?: null | string;
+            /** Format: date-time */
+            hiddenAtUtc?: null | string;
         };
         EmailRequest: {
             email: null | string;
+        };
+        HiddenContentResponse: {
+            /** Format: uuid */
+            workspaceId: string;
+            target: string;
+            siteSlug: null | string;
+            sectionType: null | string;
+            /** Format: uuid */
+            testId: null | string;
+            testTitle: null | string;
+            reason: string;
+            /** Format: date-time */
+            hiddenAtUtc: string;
+        };
+        HiddenSectionNote: {
+            type: string;
+            reason: string;
+            /** Format: date-time */
+            hiddenAtUtc: string;
+        };
+        HideContentRequest: {
+            reason: null | string;
         };
         HttpValidationProblemDetails: {
             type?: null | string;
@@ -1403,6 +1658,9 @@ export interface components {
             /** Format: int32 */
             recoveryCodesLeft: number | string;
         };
+        ModerationDecisionRequest: {
+            reason: null | string;
+        };
         MoneyTotal: {
             currency: string;
             /** Format: int64 */
@@ -1523,6 +1781,15 @@ export interface components {
             token: null | string;
             newPassword: null | string;
         };
+        RestoreContentRequest: {
+            /** Format: uuid */
+            workspaceId: null | string;
+            target: null | string;
+            sectionType: null | string;
+            /** Format: uuid */
+            testId: null | string;
+            reason: null | string;
+        };
         SaveDiagnosticTestRequest: {
             title: null | string;
             slug: null | string;
@@ -1597,6 +1864,13 @@ export interface components {
         SiteContent: {
             sections: null | components["schemas"]["SiteSection"][];
         };
+        SiteModerationNote: {
+            siteHidden: boolean;
+            siteReason: null | string;
+            /** Format: date-time */
+            siteHiddenAtUtc: null | string;
+            sections: components["schemas"]["HiddenSectionNote"][];
+        };
         SitePreviewResponse: {
             url: string;
             /** Format: date-time */
@@ -1619,6 +1893,7 @@ export interface components {
             hasUnpublishedChanges: boolean;
             /** Format: int32 */
             viewsLast30Days: number | string;
+            moderation?: null | components["schemas"]["SiteModerationNote"];
         };
         SiteSection: {
             type: null | string;
@@ -1663,6 +1938,15 @@ export interface components {
             attemptId?: null | string;
             /** @default false */
             shareResult: boolean;
+        };
+        SubmitReportRequest: {
+            target: null | string;
+            sectionType: null | string;
+            testSlug: null | string;
+            reason: null | string;
+            details: null | string;
+            email: null | string;
+            website: null | string;
         };
         SubscriptionEventResponse: {
             /** Format: uuid */
@@ -2064,6 +2348,97 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["MyWorkspaceResponse"][];
+                };
+            };
+        };
+    };
+    GetAdminCatalog: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminCatalogResponse"];
+                };
+            };
+        };
+    };
+    CreateCatalogEntry: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                kind: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CatalogEntryRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminCatalogEntry"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["HttpValidationProblemDetails"];
+                };
+            };
+        };
+    };
+    UpdateCatalogEntry: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                kind: string;
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CatalogEntryRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminCatalogEntry"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["HttpValidationProblemDetails"];
                 };
             };
         };
@@ -3075,6 +3450,205 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["LeadResponse"];
                 };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["HttpValidationProblemDetails"];
+                };
+            };
+        };
+    };
+    SubmitReport: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SubmitReportRequest"];
+            };
+        };
+        responses: {
+            /** @description Accepted */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["HttpValidationProblemDetails"];
+                };
+            };
+        };
+    };
+    ListReports: {
+        parameters: {
+            query?: {
+                status?: string;
+                page?: number | string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminReportPage"];
+                };
+            };
+        };
+    };
+    GetReport: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                reportId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminReportResponse"];
+                };
+            };
+        };
+    };
+    HideReportedContent: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                reportId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["HideContentRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminReportResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["HttpValidationProblemDetails"];
+                };
+            };
+        };
+    };
+    DismissReport: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                reportId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ModerationDecisionRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminReportResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["HttpValidationProblemDetails"];
+                };
+            };
+        };
+    };
+    ListHiddenContent: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HiddenContentResponse"][];
+                };
+            };
+        };
+    };
+    RestoreHiddenContent: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RestoreContentRequest"];
+            };
+        };
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Bad Request */
             400: {

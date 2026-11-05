@@ -33,7 +33,10 @@ public sealed record DiagnosticTestResponse(
     IReadOnlyList<TestQuestionResponse> Questions,
     int TotalPoints,
     DateTime UpdatedAtUtc,
-    int Version);
+    int Version,
+    /// <summary>Why platform moderation hid the test from the public (R1-P11); null when it is not hidden.</summary>
+    string? HiddenReason = null,
+    DateTime? HiddenAtUtc = null);
 
 public sealed record TestQuestionResponse(Guid Id, string Text, int Points, IReadOnlyList<TestOptionResponse> Options);
 
@@ -49,7 +52,29 @@ public sealed record DiagnosticTestListItem(
     int QuestionCount,
     int TotalPoints,
     int AttemptCount,
-    DateTime UpdatedAtUtc);
+    DateTime UpdatedAtUtc,
+    bool HiddenByModeration = false);
 
 public sealed record TestVersionRequest(int? Version);
+
+/// <summary>A test as moderation sees it (R1-P11).</summary>
+public sealed record ModeratedTest(Guid WorkspaceId, Guid TestId, string Slug, string Title, bool Public, string? HiddenReason, DateTime? HiddenAtUtc);
+
+/// <summary>
+/// Moderation of diagnostic tests across tenants (allow-listed queries; platform staff with MFA, or the anonymous
+/// report endpoint for <see cref="FindPublicAsync"/>). Hide/show change tracked rows; the caller saves and evicts.
+/// </summary>
+public interface ITestModeration
+{
+    /// <summary>A test a visitor can see now in the workspace (published, not archived, not hidden), for reports.</summary>
+    Task<ModeratedTest?> FindPublicAsync(Guid workspaceId, string testSlug, CancellationToken cancellationToken);
+
+    Task<ModeratedTest?> FindAsync(Guid workspaceId, Guid testId, CancellationToken cancellationToken);
+
+    Task<bool> HideAsync(Guid workspaceId, Guid testId, string reason, DateTime nowUtc, CancellationToken cancellationToken);
+
+    Task<bool> UnhideAsync(Guid workspaceId, Guid testId, CancellationToken cancellationToken);
+
+    Task<IReadOnlyList<ModeratedTest>> ListHiddenAsync(CancellationToken cancellationToken);
+}
 

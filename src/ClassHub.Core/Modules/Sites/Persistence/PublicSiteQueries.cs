@@ -12,17 +12,17 @@ namespace ClassHub.Core.Modules.Sites.Persistence;
 /// </summary>
 internal sealed class PublicSiteQueries(ClassHubDbContext db)
 {
-    internal sealed record PublishedSite(Guid Id, Guid WorkspaceId, string Slug, string PublishedJson, DateTime PublishedAtUtc);
+    internal sealed record PublishedSite(Guid Id, Guid WorkspaceId, string Slug, string PublishedJson, DateTime PublishedAtUtc, string? HiddenSectionsJson);
 
     internal sealed record SitemapRow(Guid WorkspaceId, string Slug, DateTime PublishedAtUtc);
 
     private IQueryable<Site> Published() =>
         db.Set<Site>().IgnoreQueryFilters([TenancyFilters.Tenant]).AsNoTracking()
-            .Where(s => s.PublishedAtUtc != null && s.PublishedJson != null);
+            .Where(s => s.PublishedAtUtc != null && s.PublishedJson != null && s.HiddenAtUtc == null);
 
     public Task<PublishedSite?> FindPublishedAsync(string slug, CancellationToken cancellationToken) =>
         Published().Where(s => s.Slug == slug)
-            .Select(s => new PublishedSite(s.Id, s.WorkspaceId, s.Slug, s.PublishedJson!, s.PublishedAtUtc!.Value))
+            .Select(s => new PublishedSite(s.Id, s.WorkspaceId, s.Slug, s.PublishedJson!, s.PublishedAtUtc!.Value, s.HiddenSectionsJson))
             .SingleOrDefaultAsync(cancellationToken);
 
     public async Task<IReadOnlyList<SitemapRow>> ListPublishedAsync(CancellationToken cancellationToken) =>

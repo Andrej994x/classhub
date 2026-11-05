@@ -2,6 +2,8 @@ import type { RouteObject } from 'react-router';
 import { AdminLayout, AuthLayout, StudentLayout, TeacherLayout } from './layouts/AppShell.tsx';
 import { AdminAuditPage } from './pages/admin/AdminAuditPage.tsx';
 import { AdminOverviewPage } from './pages/admin/AdminOverviewPage.tsx';
+import { AdminCatalogPage } from './pages/admin/AdminCatalogPage.tsx';
+import { AdminHiddenPage, AdminReportsPage } from './pages/admin/AdminModerationPages.tsx';
 import { AdminPlansPage } from './pages/admin/AdminPlansPage.tsx';
 import { AdminSecurityPage } from './pages/admin/AdminSecurityPage.tsx';
 import { AdminUserPage } from './pages/admin/AdminUserPage.tsx';
@@ -75,6 +77,9 @@ export const routes: RouteObject[] = [
       { path: 'users/:userId', element: <AdminUserPage /> },
       { path: 'audit', element: <AdminAuditPage /> },
       { path: 'plans', element: <AdminPlansPage /> },
+      { path: 'reports', element: <AdminReportsPage /> },
+      { path: 'moderation', element: <AdminHiddenPage /> },
+      { path: 'catalog', element: <AdminCatalogPage /> },
       { path: 'security', element: <AdminSecurityPage /> },
       { path: '*', element: <NotFoundContent /> },
     ],
