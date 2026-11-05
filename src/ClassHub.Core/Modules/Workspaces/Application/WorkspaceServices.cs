@@ -41,8 +41,24 @@ internal sealed class WorkspaceProvisioning(ClassHubDbContext db, IAuditLog audi
 }
 
 /// <summary>Workspace settings of the current (verified) workspace.</summary>
-internal sealed class WorkspaceService(ClassHubDbContext db, ITenantContext tenant, IAuditLog audit)
+internal sealed class WorkspaceService(ClassHubDbContext db, ITenantContext tenant, IAuditLog audit) : IWorkspaceSettings
 {
+    public async Task ApplyAsync(string? timeZone, string? currency, CancellationToken cancellationToken)
+    {
+        if (timeZone is null && currency is null)
+        {
+            return;
+        }
+
+        var workspace = await LoadCurrentAsync(cancellationToken);
+        if (!Apply(workspace, new UpdateWorkspaceRequest(null, timeZone, currency, null), out var before, out var after))
+        {
+            return;
+        }
+
+        audit.Record("workspace.settings.updated", "Workspace", workspace.Id.ToString(), workspace.Id, before, after);
+    }
+
     public async Task<WorkspaceResponse> GetAsync(CancellationToken cancellationToken)
     {
         var workspace = await LoadCurrentAsync(cancellationToken);
@@ -52,7 +68,19 @@ internal sealed class WorkspaceService(ClassHubDbContext db, ITenantContext tena
     public async Task<WorkspaceResponse> UpdateAsync(UpdateWorkspaceRequest request, CancellationToken cancellationToken)
     {
         var workspace = await LoadCurrentAsync(cancellationToken);
-        var before = new { workspace.Name, workspace.TimeZone, workspace.Currency, workspace.Locale };
+        if (Apply(workspace, request, out var before, out var after))
+        {
+            audit.Record("workspace.settings.updated", "Workspace", workspace.Id.ToString(), workspace.Id, before, after);
+            await db.SaveChangesAsync(cancellationToken);
+        }
+
+        return ToResponse(workspace);
+    }
+
+    /// <summary>Applies the non-null values; true (with before/after for the audit) when anything changed.</summary>
+    private static bool Apply(Workspace workspace, UpdateWorkspaceRequest request, out object before, out object after)
+    {
+        var old = new { workspace.Name, workspace.TimeZone, workspace.Currency, workspace.Locale };
 
         if (request.Name is not null)
         {
@@ -74,15 +102,11 @@ internal sealed class WorkspaceService(ClassHubDbContext db, ITenantContext tena
             workspace.Locale = request.Locale;
         }
 
-        var after = new { workspace.Name, workspace.TimeZone, workspace.Currency, workspace.Locale };
+        var updated = new { workspace.Name, workspace.TimeZone, workspace.Currency, workspace.Locale };
+        before = old;
+        after = updated;
         // Value equality (anonymous types compare by value with Equals, by reference with !=).
-        if (!before.Equals(after))
-        {
-            audit.Record("workspace.settings.updated", "Workspace", workspace.Id.ToString(), workspace.Id, before, after);
-            await db.SaveChangesAsync(cancellationToken);
-        }
-
-        return ToResponse(workspace);
+        return !old.Equals(updated);
     }
 
     private async Task<Workspace> LoadCurrentAsync(CancellationToken cancellationToken)

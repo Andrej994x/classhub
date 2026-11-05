@@ -4,6 +4,39 @@
  */
 
 export interface paths {
+    "/api/catalog": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Subject categories, subjects, education levels and teaching languages (mk/en names). */
+        get: operations["GetCatalog"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/me/workspaces": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["ListMyWorkspaces"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/auth/antiforgery": {
         parameters: {
             query?: never;
@@ -151,14 +184,48 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/me/workspaces": {
+    "/api/w/{workspaceId}/profile": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        get: operations["ListMyWorkspaces"];
+        get: operations["GetTeacherProfile"];
+        put: operations["UpdateTeacherProfile"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/w/{workspaceId}/profile/photo": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetTeacherProfilePhoto"];
+        /** Upload the profile photo (JPEG, PNG or WebP, at most 5 MB, at least 128 × 128). Stored re-encoded as WebP without metadata. */
+        put: operations["SetTeacherProfilePhoto"];
+        post?: never;
+        delete: operations["RemoveTeacherProfilePhoto"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/w/{workspaceId}/onboarding": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Onboarding checklist derived from the workspace's data (never ticked manually). */
+        get: operations["GetOnboarding"];
         put?: never;
         post?: never;
         delete?: never;
@@ -193,6 +260,34 @@ export interface components {
         AntiforgeryTokenResponse: {
             requestToken: string;
         };
+        CatalogItem: {
+            /** Format: uuid */
+            id: string;
+            code: string;
+            nameMk: string;
+            nameEn: string;
+        };
+        CatalogLanguage: {
+            code: string;
+            nameMk: string;
+            nameEn: string;
+        };
+        CatalogResponse: {
+            categories: components["schemas"]["CatalogItem"][];
+            subjects: components["schemas"]["CatalogSubject"][];
+            levels: components["schemas"]["CatalogItem"][];
+            languages: components["schemas"]["CatalogLanguage"][];
+            countries: string[];
+        };
+        CatalogSubject: {
+            /** Format: uuid */
+            id: string;
+            code: string;
+            /** Format: uuid */
+            categoryId: string;
+            nameMk: string;
+            nameEn: string;
+        };
         ConfirmEmailRequest: {
             /** Format: uuid */
             userId: string;
@@ -212,6 +307,8 @@ export interface components {
                 [key: string]: string[];
             };
         };
+        /** Format: binary */
+        IFormFile: string;
         LoginRequest: {
             email: null | string;
             password: null | string;
@@ -232,6 +329,18 @@ export interface components {
             name: string;
             role: string;
         };
+        OnboardingResponse: {
+            steps: components["schemas"]["OnboardingStep"][];
+            /** Format: int32 */
+            completed: number | string;
+            /** Format: int32 */
+            total: number | string;
+        };
+        OnboardingStep: {
+            key: string;
+            completed: boolean;
+            available: boolean;
+        };
         RegisterRequest: {
             email: null | string;
             password: null | string;
@@ -242,9 +351,39 @@ export interface components {
             token: null | string;
             newPassword: null | string;
         };
+        TeacherProfileResponse: {
+            firstName: null | string;
+            lastName: null | string;
+            bio: null | string;
+            teachingMode: null | string;
+            countryCode: null | string;
+            subjectIds: string[];
+            levelIds: string[];
+            languages: string[];
+            hasPhoto: boolean;
+            photoVersion: null | string;
+            /** Format: date-time */
+            updatedAtUtc: null | string;
+            /** Format: int32 */
+            version: null | number | string;
+        };
         UpdateMeRequest: {
             locale: null | string;
             timeZone: null | string;
+        };
+        UpdateTeacherProfileRequest: {
+            firstName: null | string;
+            lastName: null | string;
+            bio: null | string;
+            teachingMode: null | string;
+            countryCode: null | string;
+            subjectIds: null | string[];
+            levelIds: null | string[];
+            languages: null | string[];
+            timeZone?: null | string;
+            currency?: null | string;
+            /** Format: int32 */
+            version?: null | number | string;
         };
         UpdateWorkspaceRequest: {
             name: null | string;
@@ -272,6 +411,46 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    GetCatalog: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CatalogResponse"];
+                };
+            };
+        };
+    };
+    ListMyWorkspaces: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MyWorkspaceResponse"][];
+                };
+            };
+        };
+    };
     GetAntiforgeryToken: {
         parameters: {
             query?: never;
@@ -557,11 +736,13 @@ export interface operations {
             };
         };
     };
-    ListMyWorkspaces: {
+    GetTeacherProfile: {
         parameters: {
             query?: never;
             header?: never;
-            path?: never;
+            path: {
+                workspaceId: string;
+            };
             cookie?: never;
         };
         requestBody?: never;
@@ -572,7 +753,130 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["MyWorkspaceResponse"][];
+                    "application/json": components["schemas"]["TeacherProfileResponse"];
+                };
+            };
+        };
+    };
+    UpdateTeacherProfile: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateTeacherProfileRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TeacherProfileResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["HttpValidationProblemDetails"];
+                };
+            };
+        };
+    };
+    GetTeacherProfilePhoto: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    SetTeacherProfilePhoto: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["IFormFile"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TeacherProfileResponse"];
+                };
+            };
+        };
+    };
+    RemoveTeacherProfilePhoto: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    GetOnboarding: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OnboardingResponse"];
                 };
             };
         };

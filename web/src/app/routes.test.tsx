@@ -84,7 +84,7 @@ describe('routes and layouts', () => {
 
     await user.click(screen.getByRole('button', { name: 'Отвори мени' }));
     const drawer = await screen.findByRole('dialog', { name: 'Наставнички простор' });
-    await user.click(within(drawer).getByRole('link', { name: 'Поставки' }));
+    await user.click(within(drawer).getByRole('link', { name: 'Профил' }));
 
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });

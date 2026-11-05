@@ -24,4 +24,9 @@
     <Using Include="Shouldly" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- Real images generated in memory, shared with the unit tests (no binary fixtures). -->
+    <Compile Include="..\ClassHub.UnitTests\Files\TestImages.cs" Link="Infrastructure\TestImages.cs" />
+  </ItemGroup>
+
 </Project>

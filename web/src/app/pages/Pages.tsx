@@ -5,6 +5,7 @@ import { api } from '../../api/client.ts';
 import { ApiError, errorMessage } from '../../api/errors.ts';
 import { useMe, useMyWorkspaces } from '../../auth/session.ts';
 import { Alert } from '../../components/ui/alert.tsx';
+import { OnboardingChecklist } from './profile/OnboardingChecklist.tsx';
 import { buttonVariants } from '../../components/ui/button.tsx';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card.tsx';
 import { LanguageSwitcher } from '../components/LanguageSwitcher.tsx';
@@ -89,11 +90,7 @@ export function WorkspaceDashboardPage() {
         <p className="text-sm text-muted-foreground">{t('dashboard.title')}</p>
         <h1 className="text-2xl font-semibold tracking-tight">{workspace.data.name}</h1>
       </div>
-      <Card>
-        <CardHeader>
-          <CardDescription>{t('dashboard.empty')}</CardDescription>
-        </CardHeader>
-      </Card>
+      <OnboardingChecklist workspaceId={workspaceId} />
     </section>
   );
 }

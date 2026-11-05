@@ -541,6 +541,16 @@
           "Serilog": "4.2.0"
         }
       },
+      "SkiaSharp.NativeAssets.macOS": {
+        "type": "Transitive",
+        "resolved": "4.153.2",
+        "contentHash": "pEWP0WMdMka4636YxsEKyXSSpTOHxJDv63Wak1FhcldJ9ZeaYHdKCqtw6lZId1ARfJXSRitoMYh+6gTvWq6oyg=="
+      },
+      "SkiaSharp.NativeAssets.Win32": {
+        "type": "Transitive",
+        "resolved": "4.153.2",
+        "contentHash": "0VFEOI4ED5akfMOrFzjDhdpYkny2irzMl3mp1vVm38/plIufgOXAzxaLBUgqBApnhvD8LT8h6nFJ1u0vCUVt/A=="
+      },
       "System.ClientModel": {
         "type": "Transitive",
         "resolved": "1.8.0",
@@ -694,7 +704,9 @@
           "Microsoft.AspNetCore.DataProtection.EntityFrameworkCore": "[10.0.14, )",
           "Microsoft.AspNetCore.Identity.EntityFrameworkCore": "[10.0.14, )",
           "Microsoft.EntityFrameworkCore.SqlServer": "[10.0.14, )",
-          "Microsoft.Extensions.Diagnostics.HealthChecks.EntityFrameworkCore": "[10.0.14, )"
+          "Microsoft.Extensions.Diagnostics.HealthChecks.EntityFrameworkCore": "[10.0.14, )",
+          "SkiaSharp": "[4.153.2, )",
+          "SkiaSharp.NativeAssets.Linux.NoDependencies": "[4.153.2, )"
         }
       },
       "FluentValidation": {
@@ -786,6 +798,22 @@
           "Serilog.Sinks.Debug": "3.0.0",
           "Serilog.Sinks.File": "7.0.0"
         }
+      },
+      "SkiaSharp": {
+        "type": "CentralTransitive",
+        "requested": "[4.153.2, )",
+        "resolved": "4.153.2",
+        "contentHash": "O/979l8yC6zm14cs0ueS4RrisklZlKmux0GBE23y6pvyb2m7igvyuQmtC0pO0lvEkdluYTPPCTjbafdXV/yPcw==",
+        "dependencies": {
+          "SkiaSharp.NativeAssets.Win32": "4.153.2",
+          "SkiaSharp.NativeAssets.macOS": "4.153.2"
+        }
+      },
+      "SkiaSharp.NativeAssets.Linux.NoDependencies": {
+        "type": "CentralTransitive",
+        "requested": "[4.153.2, )",
+        "resolved": "4.153.2",
+        "contentHash": "uqGapuZhvJ+0hmEJbtxkjIttmxhBmREQc4r+65jrrZGT++0PHC+/VXdZP2qeLRfZtwXtY2s36TFudi0a4nSnog=="
       },
       "System.Security.Cryptography.Pkcs": {
         "type": "CentralTransitive",

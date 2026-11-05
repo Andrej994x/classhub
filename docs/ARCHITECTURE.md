@@ -84,6 +84,15 @@ Details and tests: [SECURITY.md](SECURITY.md#tenant-isolation-r0-p5).
 - API access: `src/api/client.ts` wraps `openapi-fetch` with the generated types. It sends cookies, keeps the antiforgery request token in memory, fetches it from `GET /api/auth/antiforgery` before the first unsafe request, adopts tokens re-issued in the `X-XSRF-TOKEN` response header, retries once on `ANTIFORGERY_INVALID`, and turns ProblemDetails into `ApiError`. `errorMessage()` shows only translated messages for error codes, never server text. TanStack Query is provided in `src/app/Providers.tsx`.
 - Hosting: `npm run build` writes to `src/ClassHub.Api/wwwroot/dist` (git-ignored, base `/dist/`). `Platform/SpaHosting.cs` serves static files before routing (hashed `/dist/assets` immutable, everything else `no-cache`) and maps `dist/index.html` as the fallback for `/` and the SPA prefixes only. `/api`, health checks and unknown paths never get the SPA, and the deny-by-default policy still applies to them.
 
+## Teacher profile, catalog and files (R1-P1)
+
+- `Modules/Catalog`: platform reference data (not tenant-owned): `SubjectCategory`, `Subject`, `EducationLevel` seeded in the migration with deterministic ids (from their codes), mk/en names; teaching languages (ISO 639-1 list in Contracts); `GET /api/catalog` (also the ISO 3166 country codes). Admin editing comes in R1-P11.
+- `Modules/Teachers`: `TeacherProfile` (one per workspace: names, bio, teaching mode, country, photo) with `TeacherProfileSubject`/`Level`/`Language` lists, all `ITenantOwned` with composite tenant FKs. Endpoints under `/api/w/{workspaceId}`: `GET|PUT /profile` (`ws:profile.read` / `ws:profile.manage`), `PUT|DELETE|GET /profile/photo`, `GET /onboarding`. Time zone and currency stay workspace settings (`PATCH /api/w/{id}`, audited); the profile screen edits both.
+- Cross-module database foreign keys go through Contracts: `CatalogForeignKeyTargets` / `WorkspaceForeignKeyTargets` expose the entity **types** (EF `HasOne(Type)`), so Teachers has no compile-time dependency on another module's domain.
+- `Infrastructure/Files`: `IFileStorage` with `LocalDiskFileStorage` (`Files:RootPath`, default `App_Data/uploads` under the content root; outside wwwroot; keys are generated, traversal-checked, never overwritten), `StoredFile` (tenant-owned metadata: purpose, content type, size, SHA-256, dimensions), `ImageProcessor` (SkiaSharp).
+- Onboarding is **derived** from data on every request: profile complete (names, bio, mode, country, ≥ 1 language, photo), subjects chosen; offer and public-site steps are listed but not available until R1-P2–P4.
+- SPA: `/app/w/{id}/profile` (photo, personal, teaching, location/currency), checklist on the dashboard (`src/app/pages/profile`), data hooks in `src/teacher/queries.ts`.
+
 ## Auth UI and session (R0-P7)
 
 - Screens (`src/app/pages/auth`): sign in, register, verify email, forgot and reset password, with React Hook Form + Zod (`src/auth/schemas.ts` mirrors the API rules; the API stays authoritative). Field errors from the API are shown as translated messages, never as server text.

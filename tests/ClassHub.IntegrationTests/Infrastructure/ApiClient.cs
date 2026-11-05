@@ -78,6 +78,20 @@ public sealed class ApiClient : IDisposable
         return response;
     }
 
+    /// <summary>Sends any content (for example multipart/form-data) with the antiforgery header.</summary>
+    public async Task<HttpResponseMessage> SendContentAsync(HttpMethod method, string path, HttpContent content)
+    {
+        using var request = new HttpRequestMessage(method, new Uri(path, UriKind.Relative)) { Content = content };
+        if (AntiforgeryToken is not null)
+        {
+            request.Headers.Add("X-XSRF-TOKEN", AntiforgeryToken);
+        }
+
+        var response = await _http.SendAsync(request, TestContext.Current.CancellationToken);
+        Capture(response);
+        return response;
+    }
+
     public void Dispose() => _http.Dispose();
 
     /// <summary>Like the SPA: keep the latest request token the API returned (sign-in, sign-out, token endpoint).</summary>

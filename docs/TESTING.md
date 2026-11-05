@@ -41,6 +41,12 @@ npm run e2e                                # builds the SPA and the API, then ru
 
 Flows (each in **mk and en**, on **desktop and mobile**): register → dev mailbox → confirm → sign in → the dashboard shows the workspace → sign out; forgot password → reset link → the old password fails, the new one works; a second teacher opening the first teacher's workspace URL sees "not found". Texts come from the app's locale files, so wording changes do not break tests. CI job `e2e` uploads the HTML report and traces on failure.
 
+## Teacher profile tests (R1-P1)
+
+- Unit: `ImageProcessorTests` (magic bytes, limits, disguised files, EXIF/comment removal and orientation with real JPEGs that carry injected metadata, built in memory by `TestImages`).
+- Integration: `TeacherProfileTests` (catalog, profile CRUD and validation, photo storage and cleanup, upload rules, antiforgery, isolation kit, derived onboarding), `LocalDiskFileStorageTests` (traversal, no overwrite). Uploaded files go to a per-run temporary folder (`ClassHubApiFactory.FileRoot`); seeded catalog tables survive the Respawn reset.
+- Playwright: `e2e/profile.spec.ts` completes the profile with a photo (a PNG generated in memory) on desktop and mobile and checks the checklist.
+
 ## Integration test database safety
 
 Integration tests **never** use the local `ClassHubDb`, `.\SQLEXPRESS`, LocalDB, or any shared server. `ClassHubApiFixture` (one per test run, `[Collection(ApiCollection.Name)]`) does, in order:

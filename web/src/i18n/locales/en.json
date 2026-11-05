@@ -18,12 +18,12 @@
   "nav": {
     "main": "Main navigation",
     "dashboard": "Home",
-    "settings": "Settings",
     "studentHome": "My lessons",
     "adminHome": "Administration",
     "signIn": "Sign in",
     "register": "Sign up",
-    "openWorkspace": "Open my workspace"
+    "openWorkspace": "Open my workspace",
+    "profile": "Profile"
   },
   "layout": {
     "teacherArea": "Teacher workspace",
@@ -73,7 +73,8 @@
       "ACCOUNT_SUSPENDED": "This account is suspended.",
       "INVALID_TOKEN": "The link is invalid or has expired. Request a new one.",
       "EMAIL_ALREADY_CONFIRMED": "This email address is already confirmed.",
-      "NETWORK_ERROR": "Cannot reach the server. Check your internet connection."
+      "NETWORK_ERROR": "Cannot reach the server. Check your internet connection.",
+      "IMAGE_INVALID": "This image cannot be used. Choose a JPEG, PNG or WebP photo of at least 128 × 128 pixels and up to 5 MB."
     }
   },
   "auth": {
@@ -142,5 +143,67 @@
     "messages": "Messages",
     "empty": "No messages.",
     "unavailable": "The dev mailbox is not available in this environment."
+  },
+  "onboarding": {
+    "title": "Your first steps",
+    "progress": "{{completed}} of {{total}} done",
+    "done": "Done",
+    "todo": "To do",
+    "soon": "Coming soon",
+    "steps": {
+      "profile": "Complete your profile",
+      "subjects": "Choose your subjects",
+      "first-offer": "Create your first offer",
+      "public-page": "Prepare your public page",
+      "publish": "Publish your page"
+    }
+  },
+  "profile": {
+    "title": "Profile",
+    "lead": "How students will see you. Your public page uses this information later.",
+    "personal": "About you",
+    "teaching": "What and how you teach",
+    "location": "Location and currency",
+    "locationHint": "Lesson times are shown in this time zone; prices use this currency.",
+    "save": "Save profile",
+    "saved": "Profile saved.",
+    "fields": {
+      "firstName": "First name",
+      "lastName": "Last name",
+      "bio": "Short biography",
+      "bioCount": "{{count}} / {{max}} characters",
+      "mode": "Teaching mode",
+      "subjects": "Subjects",
+      "levels": "Education levels",
+      "languages": "Teaching languages",
+      "country": "Country",
+      "timeZone": "Time zone",
+      "currency": "Currency",
+      "choose": "Choose…"
+    },
+    "modes": {
+      "Online": "Online",
+      "InPerson": "In person",
+      "Hybrid": "Hybrid (online and in person)"
+    },
+    "photo": {
+      "title": "Profile photo",
+      "hint": "JPEG, PNG or WebP, at least 128 × 128 pixels, up to 5 MB. Location and camera data are removed.",
+      "alt": "Your profile photo",
+      "choose": "Upload a photo",
+      "change": "Change photo",
+      "remove": "Remove",
+      "saved": "Photo saved.",
+      "wrongType": "Choose a JPEG, PNG or WebP image.",
+      "tooLarge": "The image must be at most 5 MB."
+    },
+    "validation": {
+      "tooLong": "This is too long.",
+      "bioTooLong": "The biography can have at most 1000 characters.",
+      "tooManySubjects": "Choose at most 20 subjects.",
+      "tooManyLevels": "Choose at most 10 education levels.",
+      "tooManyLanguages": "Choose at most 10 teaching languages."
+    },
+    "changedElsewhere": "The profile was changed elsewhere (another tab or device). Reload the page and apply your changes again."
   }
 }

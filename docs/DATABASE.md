@@ -49,6 +49,7 @@ Rules:
 | `EnableReadCommittedSnapshot` | R0-P2 | RCSI on (`suppressTransaction`) |
 | `AddIdentityAndEmailOutbox` | R0-P4 | Identity tables (unique `EmailIndex`), `DataProtectionKeys`, `EmailOutbox`, `DevMailbox` |
 | `AddWorkspacesTenancyAndAudit` | R0-P5 | `Workspaces`, `WorkspaceMembers`, `AuditLog`, seeded platform roles, idempotent workspace backfill for existing accounts |
+| `AddCatalogProfilesAndFiles` | R1-P1 | `SubjectCategories`, `Subjects`, `EducationLevels` (seeded, unique codes), `StoredFiles`, `TeacherProfiles` (unique per workspace, country check), profile subject/level/language lists with composite tenant FKs |
 
 ## Database settings
 
