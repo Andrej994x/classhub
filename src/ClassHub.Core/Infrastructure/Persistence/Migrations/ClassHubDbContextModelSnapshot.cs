@@ -1296,6 +1296,10 @@ namespace ClassHub.Core.Infrastructure.Persistence.Migrations
                     b.Property<Guid?>("TestId")
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<int>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("int");
+
                     b.Property<Guid>("WorkspaceId")
                         .HasColumnType("uniqueidentifier");
 

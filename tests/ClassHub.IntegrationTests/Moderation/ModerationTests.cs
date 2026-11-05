@@ -47,11 +47,10 @@ public sealed class ModerationTests(ClassHubApiFixture fixture)
         using var site = await PublishedAsync();
         using var visitor = fixture.Factory.CreateClient();
 
-        for (var i = 0; i < 22; i++)
-        {
-            (await ReportAsync(visitor, site.Slug, new { target = "site", reason = "spam" })).StatusCode.ShouldBe(HttpStatusCode.Accepted);
-        }
+        // Many visitors at the same moment (the per-IP limit does not help): the cap still holds.
+        var responses = await Task.WhenAll(Enumerable.Range(0, 30).Select(_ => ReportAsync(visitor, site.Slug, new { target = "site", reason = "spam" })));
 
+        responses.ShouldAllBe(r => r.StatusCode == HttpStatusCode.Accepted);
         (await CountReportsAsync(site.Teacher.WorkspaceId)).ShouldBe(20);
     }
 
@@ -192,6 +191,36 @@ public sealed class ModerationTests(ClassHubApiFixture fixture)
         await using var db = fixture.CreateDbContext();
         var key = site.Teacher.WorkspaceId.ToString();
         (await db.Set<AuditLogEntry>().CountAsync(e => e.TargetId == key && e.Action == "moderation.content.hidden", Ct)).ShouldBe(1);
+    }
+
+    [Fact]
+    public async Task Parallel_dismissals_and_hides_of_one_report_let_one_decision_win()
+    {
+        using var admin = await fixture.CreatePlatformStaffAsync(PlatformRoles.Admin);
+        using var otherAdmin = await fixture.CreatePlatformStaffAsync(PlatformRoles.Admin);
+        using var site = await PublishedAsync();
+        using var visitor = fixture.Factory.CreateClient();
+        await ReportAsync(visitor, site.Slug, new { target = "site", reason = "spam" });
+        await ReportAsync(visitor, site.Slug, new { target = "section", sectionType = "hero", reason = "spam" });
+        var reports = (await admin.Client.GetJsonAsync<AdminReportPage>("/api/admin/reports?status=Open")).Items.Where(r => r.WorkspaceId == site.Teacher.WorkspaceId).ToList();
+        var siteReport = reports.Single(r => r.Target == "site");
+        var sectionReport = reports.Single(r => r.Target == "section");
+
+        var dismissals = await Task.WhenAll(
+            admin.Client.PostAsync($"/api/admin/reports/{siteReport.Id}/dismiss", new { reason = "First" }),
+            otherAdmin.Client.PostAsync($"/api/admin/reports/{siteReport.Id}/dismiss", new { reason = "Second" }));
+        dismissals.Count(r => r.StatusCode == HttpStatusCode.OK).ShouldBe(1);
+        dismissals.Count(r => r.StatusCode == HttpStatusCode.Conflict).ShouldBe(1);
+
+        var mixed = await Task.WhenAll(
+            admin.Client.PostAsync($"/api/admin/reports/{sectionReport.Id}/hide", new { reason = "Hide it" }),
+            otherAdmin.Client.PostAsync($"/api/admin/reports/{sectionReport.Id}/dismiss", new { reason = "Keep it" }));
+        mixed.Count(r => r.StatusCode == HttpStatusCode.OK).ShouldBe(1);
+        mixed.Count(r => r.StatusCode == HttpStatusCode.Conflict).ShouldBe(1);
+
+        // The stored decision matches what happened to the content.
+        var detail = await admin.Client.GetJsonAsync<AdminReportResponse>($"/api/admin/reports/{sectionReport.Id}");
+        (detail.Status == "Resolved").ShouldBe(detail.TargetHidden);
     }
 
     [Fact]

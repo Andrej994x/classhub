@@ -21,6 +21,7 @@ public sealed class ModerationModule : IModule
     public void AddServices(IServiceCollection services, IConfiguration configuration)
     {
         services.Configure<ModerationOptions>(configuration.GetSection(ModerationOptions.SectionName));
+        services.AddScoped<Persistence.ReportQueries>();
         services.AddScoped<ReportIntake>();
         services.AddScoped<ModerationService>();
     }

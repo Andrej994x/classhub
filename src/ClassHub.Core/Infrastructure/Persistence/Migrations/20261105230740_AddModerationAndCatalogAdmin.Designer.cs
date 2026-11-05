@@ -12,7 +12,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace ClassHub.Core.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(ClassHubDbContext))]
-    [Migration("20261105222601_AddModerationAndCatalogAdmin")]
+    [Migration("20261105230740_AddModerationAndCatalogAdmin")]
     partial class AddModerationAndCatalogAdmin
     {
         /// <inheritdoc />
@@ -1298,6 +1298,10 @@ namespace ClassHub.Core.Infrastructure.Persistence.Migrations
 
                     b.Property<Guid?>("TestId")
                         .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("int");
 
                     b.Property<Guid>("WorkspaceId")
                         .HasColumnType("uniqueidentifier");

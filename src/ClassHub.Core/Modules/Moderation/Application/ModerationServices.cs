@@ -7,6 +7,7 @@ using ClassHub.Core.Infrastructure.Web;
 using ClassHub.Core.Modules.DiagnosticTests.Contracts;
 using ClassHub.Core.Modules.Moderation.Contracts;
 using ClassHub.Core.Modules.Moderation.Domain;
+using ClassHub.Core.Modules.Moderation.Persistence;
 using ClassHub.Core.Modules.Sites.Contracts;
 using ClassHub.Core.Modules.Workspaces.Contracts;
 using ClassHub.Core.SharedKernel.Errors;
@@ -28,7 +29,7 @@ public sealed class ModerationOptions
 /// Anonymous reports from the public pages (R1-P11): rate-limited per IP (<c>public-form</c>), a honeypot, and a cap per
 /// site. Only content a visitor can see now can be reported.
 /// </summary>
-internal sealed class ReportIntake(ClassHubDbContext db, ISiteModeration sites, ITestModeration tests, IOptions<ModerationOptions> options, TimeProvider clock)
+internal sealed class ReportIntake(ClassHubDbContext db, ReportQueries queries, ISiteModeration sites, ITestModeration tests, IOptions<ModerationOptions> options, TimeProvider clock)
 {
     public async Task SubmitAsync(string slug, SubmitReportRequest request, CancellationToken cancellationToken)
     {
@@ -51,6 +52,9 @@ internal sealed class ReportIntake(ClassHubDbContext db, ISiteModeration sites, 
         }
 
         var now = clock.GetUtcNow().UtcDateTime;
+        // The count and the insert run under one lock per site: parallel reports cannot exceed the cap.
+        await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
+        await queries.LockIntakeAsync(site.WorkspaceId, cancellationToken);
         var recent = await db.Set<AbuseReport>().CountAsync(r => r.WorkspaceId == site.WorkspaceId && r.CreatedAtUtc >= now.AddHours(-1), cancellationToken);
         if (recent >= options.Value.MaxReportsPerSitePerHour)
         {
@@ -70,6 +74,7 @@ internal sealed class ReportIntake(ClassHubDbContext db, ISiteModeration sites, 
             CreatedAtUtc = now,
         });
         await db.SaveChangesAsync(cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
     }
 
     private static string? Clean(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
@@ -91,6 +96,7 @@ internal sealed class ModerationService(
     IPublicSiteCache publicSites,
     IEmailOutbox outbox,
     IAuditLog audit,
+    ReportQueries reportQueries,
     IOptions<AppLinkOptions> links,
     TimeProvider clock)
 {
@@ -136,20 +142,13 @@ internal sealed class ModerationService(
         AbuseReport report;
         await using (var transaction = await db.Database.BeginTransactionAsync(cancellationToken))
         {
-            report = await OpenReportAsync(reportId, cancellationToken);
-            // The content lock (taken by HideAsync) serializes every decision about the same content; the report is
-            // re-read under it, so of two parallel decisions about this report the second one gets a conflict.
+            report = await LockOpenReportAsync(reportId, cancellationToken);
             var hidden = report.Target switch
             {
                 ReportTarget.Test => await tests.HideAsync(report.WorkspaceId, report.TestId!.Value, reason, now, cancellationToken),
                 ReportTarget.Section => await sites.HideAsync(report.WorkspaceId, report.SectionType, reason, now, cancellationToken),
                 _ => await sites.HideAsync(report.WorkspaceId, null, reason, now, cancellationToken),
             };
-            await db.Entry(report).ReloadAsync(cancellationToken);
-            if (report.Status != ReportStatus.Open)
-            {
-                throw new ConflictException("The report was already handled.", ErrorCodes.InvalidStatusTransition);
-            }
 
             var sameTarget = await db.Set<AbuseReport>()
                 .Where(r => r.Status == ReportStatus.Open && r.WorkspaceId == report.WorkspaceId && r.Target == report.Target && r.SectionType == report.SectionType && r.TestId == report.TestId)
@@ -166,7 +165,7 @@ internal sealed class ModerationService(
                 await NotifyTeacherAsync(report.WorkspaceId, report.Target, report.SectionType, report.TestId, reason, hiddenNow: true, cancellationToken);
             }
 
-            await db.SaveChangesAsync(cancellationToken);
+            await SaveDecisionAsync(cancellationToken);
             await transaction.CommitAsync(cancellationToken);
         }
 
@@ -177,11 +176,17 @@ internal sealed class ModerationService(
 
     public async Task<AdminReportResponse> DismissAsync(ClaimsPrincipal actor, Guid reportId, ModerationDecisionRequest request, CancellationToken cancellationToken)
     {
-        var report = await OpenReportAsync(reportId, cancellationToken);
-        var note = string.IsNullOrWhiteSpace(request.Reason) ? null : request.Reason.Trim();
-        Resolve(report, ReportStatus.Dismissed, actor, note, clock.GetUtcNow().UtcDateTime);
-        audit.Record("moderation.report.dismissed", "AbuseReport", report.Id.ToString(), report.WorkspaceId, after: new { note });
-        await db.SaveChangesAsync(cancellationToken);
+        AbuseReport report;
+        await using (var transaction = await db.Database.BeginTransactionAsync(cancellationToken))
+        {
+            report = await LockOpenReportAsync(reportId, cancellationToken);
+            var note = string.IsNullOrWhiteSpace(request.Reason) ? null : request.Reason.Trim();
+            Resolve(report, ReportStatus.Dismissed, actor, note, clock.GetUtcNow().UtcDateTime);
+            audit.Record("moderation.report.dismissed", "AbuseReport", report.Id.ToString(), report.WorkspaceId, after: new { note });
+            await SaveDecisionAsync(cancellationToken);
+            await transaction.CommitAsync(cancellationToken);
+        }
+
         return await GetAsync(report.Id, cancellationToken);
     }
 
@@ -232,6 +237,18 @@ internal sealed class ModerationService(
         await publicSites.EvictAllAsync(cancellationToken);
     }
 
+    /// <summary>
+    /// Takes the decision lock of the report's content, then reads the report: every decision about the same content
+    /// (hide or dismiss, this report or another one about it) runs one after the other and sees the previous one.
+    /// </summary>
+    private async Task<AbuseReport> LockOpenReportAsync(Guid reportId, CancellationToken cancellationToken)
+    {
+        var target = await db.Set<AbuseReport>().AsNoTracking().Where(r => r.Id == reportId)
+            .Select(r => new { r.WorkspaceId, r.Target, r.SectionType, r.TestId }).SingleOrDefaultAsync(cancellationToken) ?? throw new NotFoundException();
+        await reportQueries.LockTargetAsync(target.WorkspaceId, (int)target.Target, target.SectionType, target.TestId, cancellationToken);
+        return await OpenReportAsync(reportId, cancellationToken);
+    }
+
     private async Task<AbuseReport> OpenReportAsync(Guid reportId, CancellationToken cancellationToken)
     {
         var report = await db.Set<AbuseReport>().SingleOrDefaultAsync(r => r.Id == reportId, cancellationToken) ?? throw new NotFoundException();
@@ -240,8 +257,22 @@ internal sealed class ModerationService(
             : throw new ConflictException("The report was already handled.", ErrorCodes.InvalidStatusTransition);
     }
 
+    /// <summary>A report another decision changed meanwhile fails on its version: the losing decision gets 409.</summary>
+    private async Task SaveDecisionAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            await db.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            throw new ConflictException("The report was already handled.", ErrorCodes.InvalidStatusTransition);
+        }
+    }
+
     private static void Resolve(AbuseReport report, ReportStatus status, ClaimsPrincipal actor, string? note, DateTime nowUtc)
     {
+        report.Version++;
         report.Status = status;
         report.ResolvedAtUtc = nowUtc;
         report.ResolvedByUserId = Guid.TryParse(actor.FindFirstValue(ClaimTypes.NameIdentifier), out var id) ? id : null;

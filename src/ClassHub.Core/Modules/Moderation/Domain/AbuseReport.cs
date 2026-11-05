@@ -67,6 +67,9 @@ public sealed class AbuseReport
     public Guid? ResolvedByUserId { get; set; }
 
     public string? ResolutionNote { get; set; }
+
+    /// <summary>Concurrency token: of two decisions about the same report, the second one fails (409).</summary>
+    public int Version { get; set; }
 }
 
 /// <summary>Wire names of the report reasons and targets (kebab-case).</summary>

@@ -22,6 +22,7 @@ internal sealed class AbuseReportConfiguration : IEntityTypeConfiguration<AbuseR
         builder.Property(x => x.Details).HasMaxLength(AbuseReport.DetailsMaxLength);
         builder.Property(x => x.ReporterEmail).HasMaxLength(AbuseReport.EmailMaxLength);
         builder.Property(x => x.ResolutionNote).HasMaxLength(AbuseReport.NoteMaxLength);
+        builder.Property(x => x.Version).IsConcurrencyToken();
         builder.HasIndex(x => new { x.Status, x.CreatedAtUtc });
         builder.HasIndex(x => new { x.WorkspaceId, x.CreatedAtUtc });
         builder.HasOne(WorkspaceForeignKeyTargets.Workspace, navigationName: null).WithMany().HasForeignKey(nameof(AbuseReport.WorkspaceId)).OnDelete(DeleteBehavior.NoAction);
