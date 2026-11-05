@@ -80,6 +80,31 @@ const parseBody = (text: string): unknown => {
   }
 };
 
+export interface FakeOffer {
+  id: string;
+  kind: string;
+  title: string;
+  description: string | null;
+  subjectId: string;
+  durationMinutes: number;
+  priceMinor: number;
+  currency: string;
+  mode: string;
+  lessonCount: number | null;
+  seats: number | null;
+  isActive: boolean;
+  showOnPublicSite: boolean;
+  displayOrder: number;
+  updatedAtUtc: string;
+  version: number;
+}
+
+export const offer = (overrides: Partial<FakeOffer> = {}): FakeOffer => ({
+  id: 'offer-1', kind: 'SingleLesson', title: 'Час по математика', description: null, subjectId: SUBJECT_MATH, durationMinutes: 60,
+  priceMinor: 150_000, currency: 'MKD', mode: 'Online', lessonCount: null, seats: null, isActive: true, showOnPublicSite: true,
+  displayOrder: 1, updatedAtUtc: '2026-11-05T10:00:00Z', version: 0, ...overrides,
+});
+
 export const json = (status: number, body: unknown, headers: Record<string, string> = {}) =>
   new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json', ...headers } });
 
@@ -91,7 +116,7 @@ export const problem = (status: number, code: string, errors?: Record<string, st
  * antiforgery endpoint. `extra` handlers run first and may answer any request.
  */
 export function fakeApi({ me = null as FakeMe | null, extra = [] as Handler[] } = {}) {
-  const state = { me, profile: { ...EMPTY_PROFILE }, onboarding: ONBOARDING(0), catalog: CATALOG };
+  const state = { me, profile: { ...EMPTY_PROFILE }, onboarding: ONBOARDING(0), catalog: CATALOG, offers: [] as FakeOffer[] };
   const calls: FakeCall[] = [];
 
   const fetchMock = vi.fn<(input: RequestInfo | URL, init?: RequestInit) => Promise<Response>>(async (input, init) => {
@@ -129,6 +154,34 @@ export function fakeApi({ me = null as FakeMe | null, extra = [] as Handler[] } 
     if (route === `GET /api/w/${WORKSPACE_ID}/onboarding`) return state.me ? json(200, state.onboarding) : problem(401, 'UNAUTHORIZED');
     if (route === `GET /api/w/${WORKSPACE_ID}/profile`) return state.me ? json(200, state.profile) : problem(401, 'UNAUTHORIZED');
     if (route === 'GET /api/catalog') return state.me ? json(200, state.catalog) : problem(401, 'UNAUTHORIZED');
+    const offersPath = `/api/w/${WORKSPACE_ID}/offers`;
+    if (state.me && call.path === offersPath && call.method === 'GET') return json(200, state.offers);
+    if (state.me && call.path === offersPath && call.method === 'POST') {
+      const created = { ...(call.body as object), id: `offer-${state.offers.length + 1}`, displayOrder: state.offers.length + 1, version: 0, updatedAtUtc: '2026-11-05T10:00:00Z' } as FakeOffer;
+      state.offers.push(created);
+      return json(201, created);
+    }
+    if (state.me && call.path === `${offersPath}/order` && call.method === 'PUT') {
+      const ids = (call.body as { offerIds: string[] }).offerIds;
+      state.offers = ids.map((id, i) => ({ ...state.offers.find((o) => o.id === id)!, displayOrder: i + 1 }));
+      return json(200, state.offers);
+    }
+    const offerMatch = state.me ? /^\/api\/w\/[^/]+\/offers\/([^/]+)$/.exec(call.path) : null;
+    if (offerMatch && call.path.startsWith(offersPath)) {
+      const index = state.offers.findIndex((o) => o.id === offerMatch[1]);
+      if (index < 0) return problem(404, 'NOT_FOUND');
+      if (call.method === 'GET') return json(200, state.offers[index]);
+      if (call.method === 'DELETE') {
+        state.offers.splice(index, 1);
+        return new Response(null, { status: 204 });
+      }
+      if (call.method === 'PUT') {
+        const body = call.body as { version: number };
+        if (body.version !== state.offers[index]!.version) return problem(409, 'CONCURRENCY_CONFLICT');
+        state.offers[index] = { ...state.offers[index]!, ...body, version: body.version + 1 };
+        return json(200, state.offers[index]);
+      }
+    }
     if (call.method === 'GET' && call.path.startsWith('/api/w/')) return problem(404, 'NOT_FOUND');
     return problem(404, 'NOT_FOUND');
   });

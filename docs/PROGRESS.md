@@ -9,8 +9,8 @@ This is the live status of the autonomous implementation loop ([ROADMAP.md](ROAD
 | Release | R1 — Teacher presence (R0 complete) |
 | Current phase | R1-P2 — Offers & programs |
 | Branch | `feature/r1-p2-offers` (from `main` @ `3bb6b95`) |
-| Workflow step | 2 — implementation |
-| Next action | Offers module (single lesson / package / group program, DB check constraints, active, show on site, order, archive, version), IOfferLookup for leads, onboarding "first offer", offers UI |
+| Workflow step | 5 — signed Codex review, then PR |
+| Next action | R1-P2 PR; then R1-P3 (public site model & editor) |
 | Open blockers | None. User actions (optional): direct-push probe (R0-P8); remove the now redundant required `pr-gate` check (see Decisions) |
 
 ## Phase status

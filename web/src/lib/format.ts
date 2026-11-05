@@ -25,3 +25,27 @@ export function formatMoney(amountMinor: number, currency: string, language: str
   const digits = format.resolvedOptions().maximumFractionDigits ?? 2;
   return format.format(amountMinor / 10 ** digits);
 }
+
+/** Number of minor-unit digits of a currency (2 for EUR/MKD, 0 for JPY). */
+export function currencyDigits(currency: string): number {
+  return new Intl.NumberFormat('en', { style: 'currency', currency }).resolvedOptions().maximumFractionDigits ?? 2;
+}
+
+/**
+ * Parses a price typed by the teacher ("1500", "25,50", "25.50") into integer minor units, or null when it is not a
+ * valid non-negative amount with at most the currency's decimals. Thousands separators are not accepted.
+ */
+export function parseMoney(input: string, currency: string): number | null {
+  const digits = currencyDigits(currency);
+  const text = input.trim().replace(',', '.');
+  const pattern = digits > 0 ? new RegExp(String.raw`^\d{1,9}(\.\d{1,${digits}})?$`) : /^\d{1,9}$/;
+  if (!pattern.test(text)) return null;
+  const [whole, fraction = ''] = text.split('.');
+  return Number(whole) * 10 ** digits + Number(fraction.padEnd(digits, '0') || '0');
+}
+
+/** Minor units → the plain amount for an input field (no currency symbol, "." as decimal separator). */
+export function moneyInput(amountMinor: number, currency: string): string {
+  const digits = currencyDigits(currency);
+  return digits === 0 ? String(amountMinor) : (amountMinor / 10 ** digits).toFixed(digits);
+}

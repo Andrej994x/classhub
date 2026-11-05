@@ -23,7 +23,8 @@
     "signIn": "Sign in",
     "register": "Sign up",
     "openWorkspace": "Open my workspace",
-    "profile": "Profile"
+    "profile": "Profile",
+    "offers": "Offers"
   },
   "layout": {
     "teacherArea": "Teacher workspace",
@@ -205,5 +206,68 @@
       "tooManyLanguages": "Choose at most 10 teaching languages."
     },
     "changedElsewhere": "The profile was changed elsewhere (another tab or device). Reload the page and apply your changes again."
+  },
+  "offers": {
+    "title": "Offers",
+    "lead": "The lessons, packages and group programs you offer. Active offers can receive requests.",
+    "create": "New offer",
+    "empty": "You have no offers yet. Create your first one.",
+    "newTitle": "New offer",
+    "editTitle": "Edit offer",
+    "save": "Save offer",
+    "cancel": "Cancel",
+    "active": "Active",
+    "inactive": "Inactive (no new requests)",
+    "onSite": "Shown on your page",
+    "hiddenFromSite": "Not shown on your page",
+    "edit": "Edit",
+    "moveUp": "Move “{{title}}” up",
+    "moveDown": "Move “{{title}}” down",
+    "archive": "Archive",
+    "archiveConfirm": "Archive this offer? It is hidden and cannot receive requests anymore.",
+    "archiveYes": "Yes, archive",
+    "archiveNo": "Keep",
+    "changedElsewhere": "This offer was changed elsewhere (another tab or device). Reload the page and apply your changes again.",
+    "minutes_one": "{{count}} minute",
+    "minutes_other": "{{count}} minutes",
+    "lessons_one": "{{count}} lesson",
+    "lessons_other": "{{count}} lessons",
+    "seatsCount_one": "{{count}} seat",
+    "seatsCount_other": "{{count}} seats",
+    "kinds": {
+      "SingleLesson": "Single lesson",
+      "Package": "Lesson package",
+      "GroupProgram": "Group program"
+    },
+    "sections": {
+      "what": "What you offer",
+      "terms": "Duration, price and format"
+    },
+    "fields": {
+      "kind": "Type",
+      "title": "Title",
+      "description": "Description",
+      "subject": "Subject",
+      "duration": "Lesson duration (minutes)",
+      "durationHint": "Between 15 and 600 minutes.",
+      "price": "Price",
+      "priceHint": "For packages: the price of the whole package. 0 for free.",
+      "currency": "Currency",
+      "mode": "Format",
+      "lessonCount": "Lessons in the package",
+      "seats": "Seats",
+      "isActive": "Active (can receive new requests)",
+      "showOnPublicSite": "Show on my public page"
+    },
+    "validation": {
+      "titleRequired": "Enter a title.",
+      "tooLong": "This is too long.",
+      "subjectRequired": "Choose a subject.",
+      "number": "Enter a whole number.",
+      "range": "Enter a value between 15 and 600.",
+      "price": "Enter a price of 0 or more, with at most two decimals.",
+      "lessons": "A package has between 1 and 200 lessons.",
+      "seats": "A group program has between 1 and 500 seats."
+    }
   }
 }
