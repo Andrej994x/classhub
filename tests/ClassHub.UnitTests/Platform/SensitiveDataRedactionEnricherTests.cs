@@ -38,6 +38,20 @@ public sealed class SensitiveDataRedactionEnricherTests
         events.Single().RenderMessage().ShouldContain("ws-42");
     }
 
+    [Theory]
+    [InlineData("RequestPath", "/preview/CfDJ8abc-_123", "/preview/***")]
+    [InlineData("Path", "/preview/CfDJ8abc-_123/photo", "/preview/***/photo")]
+    [InlineData("Url", "http://localhost/preview/CfDJ8abc?v=1", "http://localhost/preview/***?v=1")]
+    [InlineData("RequestPath", "/api/w/1/site/preview", "/api/w/1/site/preview")]
+    public void Preview_tokens_in_paths_are_redacted_whatever_the_property_name(string name, string value, string expected)
+    {
+        var events = Capture(logger => logger.Information("Request {" + name + "}", value));
+
+        var logEvent = events.Single();
+        ((ScalarValue)logEvent.Properties[name]).Value.ShouldBe(expected);
+        logEvent.RenderMessage().ShouldNotContain("CfDJ8abc");
+    }
+
     [Fact]
     public void Email_addresses_are_masked()
     {

@@ -7,10 +7,19 @@ namespace ClassHub.Api.Platform;
 /// Redacts sensitive log event properties before any sink sees them: secrets (passwords, tokens, keys,
 /// cookies, authorization headers, security stamps, 2FA and recovery codes) become <c>***</c>, email
 /// addresses are masked (<c>a***@example.com</c>). Works on nested objects, dictionaries and lists.
+/// Capability URLs are redacted by value, whatever the property is called: the token segment of
+/// <c>/preview/{token}</c> (request paths, URLs) becomes <c>***</c>.
 /// Message text itself is not scanned: never interpolate secrets into log messages.
 /// </summary>
-public sealed class SensitiveDataRedactionEnricher : ILogEventEnricher
+public sealed partial class SensitiveDataRedactionEnricher : ILogEventEnricher
 {
+    /// <summary>The token segment of a site-preview URL (a bearer capability for the draft).</summary>
+    [System.Text.RegularExpressions.GeneratedRegex(@"(/preview/)[^/?#\s""']+", System.Text.RegularExpressions.RegexOptions.IgnoreCase)]
+    private static partial System.Text.RegularExpressions.Regex PreviewToken();
+
+    internal static string RedactCapabilities(string text) =>
+        text.Contains("/preview/", StringComparison.OrdinalIgnoreCase) ? PreviewToken().Replace(text, "$1" + Redacted) : text;
+
     public const string Redacted = "***";
 
     private static readonly HashSet<string> SensitiveNames = new(StringComparer.OrdinalIgnoreCase)
@@ -76,6 +85,9 @@ public sealed class SensitiveDataRedactionEnricher : ILogEventEnricher
 
         switch (value)
         {
+            case ScalarValue { Value: string path } when path.Contains("/preview/", StringComparison.OrdinalIgnoreCase):
+                return new ScalarValue(RedactCapabilities(path));
+
             case ScalarValue { Value: string text } when IsEmailName(name):
                 return new ScalarValue(MaskEmail(text));
 
