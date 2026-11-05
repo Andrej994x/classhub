@@ -44,8 +44,9 @@ test('the platform owner signs in with the authenticator and suspends a teacher'
   // Find the teacher and suspend the account with a reason.
   await page.goto('/admin/users');
   await page.getByLabel(text('mk', 'admin.users.search')).fill(teacherEmail);
-  await page.getByRole('link', { name: new RegExp(teacherEmail.replace(/[.]/g, '\\.')) }).click();
-  await expect(page.getByRole('heading', { level: 1, name: new RegExp(teacherEmail.replace(/[.]/g, '\\.')) })).toBeVisible();
+  // A string name matches as a case-insensitive substring: the link and heading also hold the status badge.
+  await page.getByRole('link', { name: teacherEmail }).click();
+  await expect(page.getByRole('heading', { level: 1, name: teacherEmail })).toBeVisible();
   await page.getByLabel(text('mk', 'admin.user.reason')).fill('Spam on the public page');
   await page.getByRole('button', { name: text('mk', 'admin.user.suspend') }).click();
   await expect(page.getByRole('button', { name: text('mk', 'admin.user.reactivate') })).toBeVisible();
