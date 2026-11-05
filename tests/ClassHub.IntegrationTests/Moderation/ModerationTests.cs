@@ -4,8 +4,10 @@ using ClassHub.Core.Infrastructure.Audit;
 using ClassHub.Core.Modules.Catalog.Contracts;
 using ClassHub.Core.Modules.DiagnosticTests.Contracts;
 using ClassHub.Core.Modules.Moderation.Contracts;
+using ClassHub.Core.Modules.Offers.Contracts;
 using ClassHub.Core.Modules.Sites.Application;
 using ClassHub.Core.Modules.Sites.Contracts;
+using Microsoft.Extensions.DependencyInjection;
 using ClassHub.Core.SharedKernel.Errors;
 using ClassHub.Core.SharedKernel.Security;
 using ClassHub.IntegrationTests.Infrastructure;
@@ -140,6 +142,59 @@ public sealed class ModerationTests(ClassHubApiFixture fixture)
     }
 
     [Fact]
+    public async Task Parallel_decisions_about_different_sections_of_one_site_are_both_kept()
+    {
+        using var admin = await fixture.CreatePlatformStaffAsync(PlatformRoles.Admin);
+        using var otherAdmin = await fixture.CreatePlatformStaffAsync(PlatformRoles.Admin);
+        using var site = await PublishedAsync();
+        using var visitor = fixture.Factory.CreateClient();
+        var moderated = await fixture.WithServiceAsync<ISiteModeration, ModeratedSite?>(s => s.FindPublicAsync(site.Slug, Ct));
+        var sections = moderated!.VisibleSectionTypes.Take(2).ToList();
+        sections.Count.ShouldBe(2);
+        foreach (var section in sections)
+        {
+            await ReportAsync(visitor, site.Slug, new { target = "section", sectionType = section, reason = "spam" });
+        }
+
+        var reports = (await admin.Client.GetJsonAsync<AdminReportPage>("/api/admin/reports?status=Open")).Items.Where(r => r.WorkspaceId == site.Teacher.WorkspaceId).ToList();
+        reports.Count.ShouldBe(2);
+
+        var responses = await Task.WhenAll(
+            admin.Client.PostAsync($"/api/admin/reports/{reports[0].Id}/hide", new { reason = "First decision" }),
+            otherAdmin.Client.PostAsync($"/api/admin/reports/{reports[1].Id}/hide", new { reason = "Second decision" }));
+
+        responses.ShouldAllBe(r => r.StatusCode == HttpStatusCode.OK);
+        var own = await site.Teacher.Client.GetJsonAsync<SiteResponse>($"/api/w/{site.Teacher.WorkspaceId}/site");
+        own.Moderation!.Sections.Select(h => h.Type).ShouldBe(sections, ignoreOrder: true);
+        var page = await visitor.GetStringAsync($"/{site.Slug}", Ct);
+        foreach (var section in sections)
+        {
+            page.ShouldNotContain($"data-section=\"{section}\"");
+        }
+    }
+
+    [Fact]
+    public async Task Parallel_decisions_about_one_report_conflict()
+    {
+        using var admin = await fixture.CreatePlatformStaffAsync(PlatformRoles.Admin);
+        using var otherAdmin = await fixture.CreatePlatformStaffAsync(PlatformRoles.Admin);
+        using var site = await PublishedAsync();
+        using var visitor = fixture.Factory.CreateClient();
+        await ReportAsync(visitor, site.Slug, new { target = "site", reason = "spam" });
+        var report = (await admin.Client.GetJsonAsync<AdminReportPage>("/api/admin/reports?status=Open")).Items.First(r => r.WorkspaceId == site.Teacher.WorkspaceId);
+
+        var responses = await Task.WhenAll(
+            admin.Client.PostAsync($"/api/admin/reports/{report.Id}/hide", new { reason = "First decision" }),
+            otherAdmin.Client.PostAsync($"/api/admin/reports/{report.Id}/hide", new { reason = "Second decision" }));
+
+        responses.Count(r => r.StatusCode == HttpStatusCode.OK).ShouldBe(1);
+        responses.Count(r => r.StatusCode == HttpStatusCode.Conflict).ShouldBe(1);
+        await using var db = fixture.CreateDbContext();
+        var key = site.Teacher.WorkspaceId.ToString();
+        (await db.Set<AuditLogEntry>().CountAsync(e => e.TargetId == key && e.Action == "moderation.content.hidden", Ct)).ShouldBe(1);
+    }
+
+    [Fact]
     public async Task Hiding_a_test_removes_its_page_attempts_link_and_sitemap_entry()
     {
         using var admin = await fixture.CreatePlatformStaffAsync(PlatformRoles.Owner);
@@ -240,10 +295,61 @@ public sealed class ModerationTests(ClassHubApiFixture fixture)
             reuse.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
         }
 
+        // Where it is already used it stays valid: the teacher can still edit and save.
+        var loaded = await (await teacher.Client.GetAsync($"/api/w/{teacher.WorkspaceId}/profile")).ReadJsonAsync();
+        using (var profile = await teacher.Client.PutAsync($"/api/w/{teacher.WorkspaceId}/profile", new { firstName = "Ана", lastName = "Петровска-Ристова", subjectIds = new[] { created.Id }, version = loaded.GetProperty("version").GetInt32() }))
+        {
+            profile.StatusCode.ShouldBe(HttpStatusCode.OK, await profile.Content.ReadAsStringAsync(Ct));
+        }
+
         (await teacher.Client.GetAsync("/api/admin/catalog")).StatusCode.ShouldBe(HttpStatusCode.Forbidden);
         await using var check = fixture.CreateDbContext();
         (await check.Set<AuditLogEntry>().Where(e => e.TargetId == code).Select(e => e.Action).ToListAsync(Ct))
             .ShouldBe(["catalog.subject.created", "catalog.subject.updated"], ignoreOrder: true);
+    }
+
+    [Fact]
+    public async Task Tests_and_offers_that_already_use_a_deactivated_subject_stay_editable()
+    {
+        using var admin = await fixture.CreatePlatformStaffAsync(PlatformRoles.Admin);
+        using var teacher = await fixture.CreateTeacherAsync();
+        var category = (await admin.Client.GetJsonAsync<AdminCatalogResponse>("/api/admin/catalog")).Categories.First();
+        AdminCatalogEntry subject;
+        using (var create = await admin.Client.PostAsync("/api/admin/catalog/subjects", new { code = $"chess-{Guid.NewGuid():N}"[..16], nameMk = "Шах", nameEn = "Chess", categoryId = category.Id }))
+        {
+            subject = (await create.Content.ReadFromJsonAsync<AdminCatalogEntry>(Ct))!;
+        }
+
+        var questions = new[] { new { text = "?", points = 1, options = new[] { new { text = "a", isCorrect = true }, new { text = "b", isCorrect = false } } } };
+        DiagnosticTestResponse test;
+        using (var created = await teacher.Client.PostAsync($"/api/w/{teacher.WorkspaceId}/tests", new { title = "Шах 1", subjectId = subject.Id, difficulty = "Beginner", questions }))
+        {
+            created.StatusCode.ShouldBe(HttpStatusCode.Created);
+            test = (await created.Content.ReadFromJsonAsync<DiagnosticTestResponse>(Ct))!;
+        }
+
+        OfferResponse offer;
+        var offerBody = new { kind = "SingleLesson", title = "Шах час", description = "Час", subjectId = subject.Id, durationMinutes = 60, priceMinor = 100_000, mode = "Online", isActive = true, showOnPublicSite = true };
+        using (var created = await teacher.Client.PostAsync($"/api/w/{teacher.WorkspaceId}/offers", offerBody))
+        {
+            created.StatusCode.ShouldBe(HttpStatusCode.Created);
+            offer = (await created.Content.ReadFromJsonAsync<OfferResponse>(Ct))!;
+        }
+
+        (await admin.Client.PutAsync($"/api/admin/catalog/subjects/{subject.Id}", new { nameMk = "Шах", nameEn = "Chess", isActive = false })).StatusCode.ShouldBe(HttpStatusCode.OK);
+
+        using (var edit = await teacher.Client.PutAsync($"/api/w/{teacher.WorkspaceId}/tests/{test.Id}", new { title = "Шах 1 (поправено)", subjectId = subject.Id, difficulty = "Beginner", questions, version = test.Version }))
+        {
+            edit.StatusCode.ShouldBe(HttpStatusCode.OK, await edit.Content.ReadAsStringAsync(Ct));
+        }
+
+        using (var edit = await teacher.Client.PutAsync($"/api/w/{teacher.WorkspaceId}/offers/{offer.Id}", new { offerBody.kind, title = "Шах час (нов)", offerBody.description, offerBody.subjectId, offerBody.durationMinutes, offerBody.priceMinor, offerBody.mode, offerBody.isActive, offerBody.showOnPublicSite, version = offer.Version }))
+        {
+            edit.StatusCode.ShouldBe(HttpStatusCode.OK, await edit.Content.ReadAsStringAsync(Ct));
+        }
+
+        // A new test cannot pick the deactivated subject.
+        (await teacher.Client.PostAsync($"/api/w/{teacher.WorkspaceId}/tests", new { title = "Шах 2", subjectId = subject.Id, difficulty = "Beginner", questions })).StatusCode.ShouldBe(HttpStatusCode.BadRequest);
     }
 
     private sealed record Published(TeacherSession Teacher, string Slug, DiagnosticTestResponse? Test) : IDisposable

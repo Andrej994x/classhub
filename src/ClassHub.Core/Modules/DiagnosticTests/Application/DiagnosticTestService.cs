@@ -76,7 +76,11 @@ internal sealed class DiagnosticTestService(
         await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
         await attemptLock.LockAttemptsAsync(testId, cancellationToken);
         var test = await LoadForChangeAsync(testId, request.Version, cancellationToken);
-        await ThrowIfUnknownSubjectAsync(request.SubjectId!.Value, cancellationToken);
+        // A subject the ClassHub team deactivated stays valid on the tests that already use it (R1-P11).
+        if (request.SubjectId!.Value != test.SubjectId)
+        {
+            await ThrowIfUnknownSubjectAsync(request.SubjectId.Value, cancellationToken);
+        }
         var questions = await db.Set<TestQuestion>().Where(q => q.TestId == test.Id).ToListAsync(cancellationToken);
         var questionIds = questions.Select(q => q.Id).ToList();
         var options = await db.Set<TestOption>().Where(o => questionIds.Contains(o.QuestionId)).ToListAsync(cancellationToken);

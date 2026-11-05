@@ -137,12 +137,19 @@ internal sealed class ModerationService(
         await using (var transaction = await db.Database.BeginTransactionAsync(cancellationToken))
         {
             report = await OpenReportAsync(reportId, cancellationToken);
+            // The content lock (taken by HideAsync) serializes every decision about the same content; the report is
+            // re-read under it, so of two parallel decisions about this report the second one gets a conflict.
             var hidden = report.Target switch
             {
                 ReportTarget.Test => await tests.HideAsync(report.WorkspaceId, report.TestId!.Value, reason, now, cancellationToken),
                 ReportTarget.Section => await sites.HideAsync(report.WorkspaceId, report.SectionType, reason, now, cancellationToken),
                 _ => await sites.HideAsync(report.WorkspaceId, null, reason, now, cancellationToken),
             };
+            await db.Entry(report).ReloadAsync(cancellationToken);
+            if (report.Status != ReportStatus.Open)
+            {
+                throw new ConflictException("The report was already handled.", ErrorCodes.InvalidStatusTransition);
+            }
 
             var sameTarget = await db.Set<AbuseReport>()
                 .Where(r => r.Status == ReportStatus.Open && r.WorkspaceId == report.WorkspaceId && r.Target == report.Target && r.SectionType == report.SectionType && r.TestId == report.TestId)

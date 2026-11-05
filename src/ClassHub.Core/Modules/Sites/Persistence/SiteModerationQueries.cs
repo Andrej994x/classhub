@@ -16,6 +16,24 @@ internal sealed class SiteModerationQueries(ClassHubDbContext db, IWorkspacePubl
 {
     private IQueryable<Site> Sites() => db.Set<Site>().IgnoreQueryFilters([TenancyFilters.Tenant]);
 
+    /// <summary>
+    /// Serializes moderation changes of one site until the caller's transaction ends: the hidden sections are a JSON
+    /// list (read, change, write), so two staff hiding different sections at once must not overwrite each other.
+    /// </summary>
+    private async Task<Site?> LockedSiteAsync(Guid workspaceId, CancellationToken cancellationToken)
+    {
+        if (db.Database.CurrentTransaction is null)
+        {
+            throw new InvalidOperationException("Moderation changes run inside the caller's transaction.");
+        }
+
+        var resource = $"classhub:site-moderation:{workspaceId:N}";
+        await db.Database.ExecuteSqlAsync(
+            $"DECLARE @result int; EXEC @result = sp_getapplock @Resource = {resource}, @LockMode = 'Exclusive', @LockOwner = 'Transaction', @LockTimeout = 10000; IF @result < 0 THROW 50005, 'Could not acquire the site moderation lock.', 1;",
+            cancellationToken);
+        return await Sites().SingleOrDefaultAsync(s => s.WorkspaceId == workspaceId, cancellationToken);
+    }
+
     public async Task<ModeratedSite?> FindPublicAsync(string slug, CancellationToken cancellationToken)
     {
         if (SiteSlugs.Problem(slug) is not null)
@@ -38,7 +56,7 @@ internal sealed class SiteModerationQueries(ClassHubDbContext db, IWorkspacePubl
 
     public async Task<bool> HideAsync(Guid workspaceId, string? sectionType, string reason, DateTime nowUtc, CancellationToken cancellationToken)
     {
-        var site = await Sites().SingleOrDefaultAsync(s => s.WorkspaceId == workspaceId, cancellationToken);
+        var site = await LockedSiteAsync(workspaceId, cancellationToken);
         if (site is null)
         {
             return false;
@@ -69,7 +87,7 @@ internal sealed class SiteModerationQueries(ClassHubDbContext db, IWorkspacePubl
 
     public async Task<bool> UnhideAsync(Guid workspaceId, string? sectionType, CancellationToken cancellationToken)
     {
-        var site = await Sites().SingleOrDefaultAsync(s => s.WorkspaceId == workspaceId, cancellationToken);
+        var site = await LockedSiteAsync(workspaceId, cancellationToken);
         if (site is null)
         {
             return false;
