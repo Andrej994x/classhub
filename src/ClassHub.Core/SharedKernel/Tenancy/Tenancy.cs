@@ -45,6 +45,12 @@ public interface ITenantContext
 
     WorkspaceRole? Role { get; }
 
+    /// <summary>
+    /// True for anonymous public reads (public site pages): the request sees one workspace's rows through the
+    /// normal tenant filters, but may not write any tenant-owned data.
+    /// </summary>
+    bool IsReadOnly => false;
+
     bool HasWorkspace => WorkspaceId is not null;
 
     /// <summary>The current workspace; throws when the request is not workspace-scoped.</summary>

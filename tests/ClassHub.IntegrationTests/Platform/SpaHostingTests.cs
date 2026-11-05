@@ -23,6 +23,9 @@ public sealed class SpaHostingTests : IClassFixture<SpaHostingTests.Host>
             Directory.CreateDirectory(Path.Combine(WebRoot, "dist", "assets"));
             File.WriteAllText(Path.Combine(WebRoot, "dist", "index.html"), $"<!doctype html><html><body>{IndexMarker}<div id=\"root\"></div></body></html>");
             File.WriteAllText(Path.Combine(WebRoot, "dist", "assets", "index-abc123.js"), "console.log('spa')");
+            Directory.CreateDirectory(Path.Combine(WebRoot, "dist", ".vite"));
+            File.WriteAllText(Path.Combine(WebRoot, "dist", ".vite", "manifest.json"),
+                """{ "src/public/public.css": { "file": "assets/public-abc123.css", "isEntry": true } }""");
             Factory = new PlatformApiFactory(includeProbeModule: false, settings: new Dictionary<string, string?>
             {
                 [WebHostDefaults.WebRootKey] = WebRoot,
@@ -46,7 +49,6 @@ public sealed class SpaHostingTests : IClassFixture<SpaHostingTests.Host>
     private static CancellationToken Ct => TestContext.Current.CancellationToken;
 
     [Theory]
-    [InlineData("/")]
     [InlineData("/app")]
     [InlineData("/app/settings")]
     [InlineData("/student")]
@@ -93,10 +95,27 @@ public sealed class SpaHostingTests : IClassFixture<SpaHostingTests.Host>
         (await response.Content.ReadAsStringAsync(Ct)).ShouldNotContain(IndexMarker);
     }
 
+    [Theory]
+    [InlineData("/", "mk")]
+    [InlineData("/en", "en")]
+    public async Task The_root_is_the_server_rendered_landing_page_with_the_built_public_stylesheet(string path, string language)
+    {
+        using var client = _host.Factory.CreateClient(new() { AllowAutoRedirect = false });
+
+        using var response = await client.GetAsync(new Uri(path, UriKind.Relative), Ct);
+        var html = await response.Content.ReadAsStringAsync(Ct);
+
+        response.StatusCode.ShouldBe(HttpStatusCode.OK);
+        html.ShouldNotContain(IndexMarker);
+        html.ShouldContain($"<html lang=\"{language}\">");
+        html.ShouldContain("<link rel=\"stylesheet\" href=\"/dist/assets/public-abc123.css\" />");
+        response.Headers.GetValues("Content-Security-Policy").ShouldBe([ClassHub.Api.Platform.SecurityHeadersMiddleware.PublicPageContentSecurityPolicy]);
+    }
+
     [Fact]
     public async Task Paths_outside_the_spa_areas_are_not_answered_with_the_spa()
     {
-        // Top-level paths belong to public teacher sites (/{slug}, Razor Pages from R1-P4).
+        // Top-level paths belong to public teacher sites (/{slug}, Razor Pages).
         using var client = _host.Factory.CreateClient(new() { AllowAutoRedirect = false });
 
         using var response = await client.GetAsync(new Uri("/ana-math", UriKind.Relative), Ct);

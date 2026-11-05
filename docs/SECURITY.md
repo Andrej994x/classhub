@@ -80,6 +80,15 @@ ASP.NET Core Identity with cookie sessions. See [ARCHITECTURE.md](ARCHITECTURE.m
 - Policies: `Authenticated`; workspace policies `ws:<permission>` (for example `ws:workspace.read`). Permissions are code constants (`WorkspacePermissions`), mapped from workspace roles (`WorkspaceRolePermissions`; today `Owner` has all workspace permissions). Unknown permission names fail when the policy is resolved.
 - Platform roles (`PlatformOwner`, `PlatformAdmin`) are Identity roles. **They grant no workspace access**: a platform admin without membership gets 404 on workspace routes (tested). The first Platform Owner is created only with the local CLI `dotnet run --project src/ClassHub.Api -- grant-platform-owner <email> [--force-add]` (audited, never exposed over HTTP). The owner check, the grant, the session revocation and the audit entry run in one transaction under an application lock (`sp_getapplock`), so concurrent bootstraps cannot both add an owner without `--force-add`.
 
+## Public sites (R1-P4)
+
+- Only **published** sites of **visible** owners (active owner membership, account not suspended) are public; everything else is a 404 with `noindex`. Hidden sections, unpublished drafts, non-public/inactive/archived offers and private profile fields never reach a template: the render model is an allow-list (snapshot-tested), and anonymous requests are bound to the workspace **read-only** (any tenant-owned write throws).
+- Strict CSP for public pages (`PublicPageContentSecurityPolicy`): `default-src 'none'`, same-origin scripts (islands) and stylesheets only, no inline script or style, `frame-ancestors 'none'` (+ `X-Frame-Options: DENY`). Teacher text is Razor-encoded; JSON-LD is serialized with an encoder that escapes `<`, `>` and `&`, so it cannot close its script element (tested with `</script>` payloads). Island props travel as attribute-encoded JSON and are parsed, never evaluated.
+- Absolute URLs (canonical, Open Graph, sitemap, robots) come from `App:PublicBaseUrl`, never from the request's Host header, so cached pages cannot be poisoned with another host.
+- Output cache: only anonymous GET 200 responses without `Set-Cookie`; signed-in requests neither read nor fill it; nothing on a public page depends on the viewer; previews are never cached (`no-store`, no policy). Query strings do not create new cache entries. Evictions follow every change that shows on a page, and suspension evicts all site pages.
+- The public photo is served only while the published hero shows it (`Cache-Control: public, max-age=3600`, versioned URL); the private profile photo endpoint still requires a member session.
+- Page views (D-32) store a per-day counter only: no cookies, IP addresses, user agents or visit records. Public reads are rate-limited (`public-read`).
+
 ## Site preview (R1-P3)
 
 - The preview URL carries a Data Protection token (authenticated encryption) naming one site, its workspace and the requesting member, valid 15 minutes. Invalid, tampered or expired tokens get a plain 404; the member's active membership is re-checked on every view before the request is bound to the workspace.
@@ -91,7 +100,7 @@ ASP.NET Core Identity with cookie sessions. See [ARCHITECTURE.md](ARCHITECTURE.m
 - Accepted by **magic bytes** only (JPEG, PNG, WebP), never by name or client content type; at most 5 MB, at least 128 × 128 px; image dimensions are read from the header and limited (6000 × 6000, 36 MP) **before** pixels are decoded (decompression bombs).
 - Every image is decoded and **re-encoded** (SkiaSharp → WebP, ≤ 1024 px): EXIF (including GPS), comments and any appended payload are dropped; the EXIF orientation is applied first.
 - Files live outside wwwroot (`Files:RootPath`) under generated keys (`{workspaceId}/{fileId}.webp`), with path-traversal checks and no overwrites; metadata rows are tenant-owned with composite tenant FKs.
-- Photos are served only through an authorized endpoint (`ws:profile.read`), never publicly cacheable, with `nosniff`; the public variant comes with the published site (R1-P4).
+- Photos are served only through an authorized endpoint (`ws:profile.read`), never publicly cacheable, with `nosniff`; the public variant (`/{slug}/photo`) exists only while the published site's hero shows it (R1-P4).
 - Uploads use the same antiforgery header as every unsafe request (no automatic form antiforgery binding).
 
 ## E2E environment safety (R0-P7)

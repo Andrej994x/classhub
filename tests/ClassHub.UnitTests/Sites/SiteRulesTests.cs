@@ -53,6 +53,10 @@ public sealed class SiteRulesTests
             Contrast(palette.Muted, palette.Surface).ShouldBeGreaterThanOrEqualTo(4.5, $"{palette.Key} muted");
             Contrast(palette.OnPrimary, palette.Primary).ShouldBeGreaterThanOrEqualTo(4.5, $"{palette.Key} button");
             Contrast(palette.Primary, palette.Surface).ShouldBeGreaterThanOrEqualTo(4.5, $"{palette.Key} headings");
+            // The minimal template puts text, muted text and headings directly on the page background.
+            Contrast(palette.Text, palette.Background).ShouldBeGreaterThanOrEqualTo(4.5, $"{palette.Key} text on background");
+            Contrast(palette.Muted, palette.Background).ShouldBeGreaterThanOrEqualTo(4.5, $"{palette.Key} muted on background");
+            Contrast(palette.Primary, palette.Background).ShouldBeGreaterThanOrEqualTo(4.5, $"{palette.Key} headings on background");
         }
     }
 

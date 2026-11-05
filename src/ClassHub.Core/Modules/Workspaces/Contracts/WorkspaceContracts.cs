@@ -33,3 +33,12 @@ public interface IWorkspaceSettings
     /// <summary>The current workspace's content language (mk/en).</summary>
     Task<string> GetLocaleAsync(CancellationToken cancellationToken);
 }
+
+/// <summary>
+/// Which workspaces may be shown publicly: the owner's membership is active and the owner's account is not
+/// suspended. Public sites of other workspaces are hidden (404, not in the sitemap).
+/// </summary>
+public interface IWorkspacePublicVisibility
+{
+    Task<IReadOnlySet<Guid>> VisibleAsync(IReadOnlyCollection<Guid> workspaceIds, CancellationToken cancellationToken);
+}

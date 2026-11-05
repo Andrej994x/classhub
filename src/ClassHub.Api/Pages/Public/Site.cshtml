@@ -1,0 +1,51 @@
+@page "/{slug:siteslug}"
+@model ClassHub.Api.Pages.Public.SiteModel
+@{
+    Layout = "_PublicLayout";
+    var current = Model.Current;
+}
+@if (current is null)
+{
+    ViewData["Lang"] = "mk";
+    ViewData["Title"] = PublicText.Get("mk", "notFound.title");
+    ViewData["Robots"] = "noindex";
+    ViewData["BodyClass"] = "palette-brand";
+    <partial name="_NotFound" model="@("mk")" />
+    return;
+}
+@{
+    var site = current.Site;
+    var seo = current.Seo;
+    var lang = site.Language;
+    ViewData["Lang"] = lang;
+    ViewData["Title"] = seo.Title;
+    ViewData["BodyClass"] = $"palette-{site.Palette.Key}";
+}
+@section Head {
+    <meta name="description" content="@seo.Description" />
+    <link rel="canonical" href="@seo.CanonicalUrl" />
+    <meta property="og:type" content="profile" />
+    <meta property="og:site_name" content="ClassHub" />
+    <meta property="og:title" content="@seo.Title" />
+    <meta property="og:description" content="@seo.Description" />
+    <meta property="og:url" content="@seo.CanonicalUrl" />
+    <meta property="og:locale" content="@seo.OgLocale" />
+    @if (seo.ImageUrl is not null)
+    {
+        <meta property="og:image" content="@seo.ImageUrl" />
+    }
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content="@seo.Title" />
+    <meta name="twitter:description" content="@seo.Description" />
+    @if (seo.ImageUrl is not null)
+    {
+        <meta name="twitter:image" content="@seo.ImageUrl" />
+    }
+    @* "!" opts out of tag-helper processing, which would rewrite the type attribute. The JSON escapes < > &. *@
+    <!script type="application/ld+json">@Html.Raw(seo.JsonLd)</!script>
+}
+<partial name="_SiteBody" model="site" />
+<footer class="mx-auto flex max-w-3xl flex-wrap items-center justify-between gap-3 px-4 pb-10 text-sm text-site-muted">
+    <a href="/" class="underline-offset-4 hover:underline">@PublicText.Get(lang, "site.madeWith")</a>
+    <vite-island name="copy-link" props="@(new { label = PublicText.Get(lang, "site.copyLink"), copied = PublicText.Get(lang, "site.copied") })" />
+</footer>

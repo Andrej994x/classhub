@@ -33,8 +33,9 @@ Creates or updates `ClassHubDb` on `.\SQLEXPRESS` with Windows authentication. D
 
 | Part | Command | URL |
 |---|---|---|
-| API + (later) Razor public pages | `dotnet run --project src/ClassHub.Api` | http://localhost:5080 (`/health`, `/health/live`, `/health/ready`) |
-| React SPA (dev server, proxies `/api` to 5080) | `cd web; npm run dev` | http://localhost:5173 |
+| API + Razor public pages (landing `/`, sites `/{slug}`) | `dotnet run --project src/ClassHub.Api` | http://localhost:5080 (`/health`, `/health/live`, `/health/ready`) |
+| React SPA (dev server, proxies `/api`, `/preview` and the public pages to 5080) | `cd web; npm run dev` | http://localhost:5173 |
+| Public page styles and islands (built assets, rebuilt on change) | `cd web; npx vite build --watch` | used by the Razor pages on 5080 and 5173 |
 | Built SPA served by the API (same origin as production) | `cd web; npm run build`, then run the API | http://localhost:5080/app |
 
 The SPA areas are `/app` (teacher), `/student`, `/admin` and the auth pages. Language: Macedonian by default, switchable to English in the header (remembered per browser). New UI text goes into both `web/src/i18n/locales/mk.json` and `en.json` (`npm run i18n:check`).

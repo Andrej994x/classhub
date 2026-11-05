@@ -37,10 +37,17 @@ public sealed class TenantSaveChangesInterceptor : SaveChangesInterceptor
             return;
         }
 
-        var current = (context as ITenantAwareDbContext)?.TenantContext?.WorkspaceId;
+        var tenant = (context as ITenantAwareDbContext)?.TenantContext;
+        var current = tenant?.WorkspaceId;
+        var readOnly = tenant?.IsReadOnly == true;
 
         foreach (var entry in context.ChangeTracker.Entries<ITenantOwned>())
         {
+            if (readOnly && entry.State is EntityState.Added or EntityState.Modified or EntityState.Deleted)
+            {
+                throw Violation(entry, "cannot be written by a public read-only request");
+            }
+
             var workspaceProperty = entry.Property(nameof(ITenantOwned.WorkspaceId));
             switch (entry.State)
             {

@@ -92,6 +92,9 @@ export interface FakeSite {
   isPublished: boolean;
   updatedAtUtc: string | null;
   version: number | null;
+  publishedAtUtc: string | null;
+  hasUnpublishedChanges: boolean;
+  viewsLast30Days: number;
 }
 
 export const NEW_SITE = (): FakeSite => ({
@@ -113,6 +116,9 @@ export const NEW_SITE = (): FakeSite => ({
   isPublished: false,
   updatedAtUtc: null,
   version: null,
+  publishedAtUtc: null,
+  hasUnpublishedChanges: false,
+  viewsLast30Days: 0,
 });
 
 export interface FakeOffer {
@@ -195,7 +201,20 @@ export function fakeApi({ me = null as FakeMe | null, extra = [] as Handler[] } 
       const body = call.body as { version: number | null; slug: string };
       if ((body.version ?? 0) !== (state.site.version ?? 0)) return problem(409, 'CONCURRENCY_CONFLICT');
       if (state.slugTaken.includes(body.slug)) return problem(409, 'SLUG_TAKEN');
-      state.site = { ...state.site, ...(body as object), exists: true, version: (state.site.version ?? 0) + 1 } as FakeSite;
+      state.site = { ...state.site, ...(body as object), exists: true, version: (state.site.version ?? 0) + 1, hasUnpublishedChanges: state.site.isPublished } as FakeSite;
+      return json(200, state.site);
+    }
+    if (state.me && (call.path === `${sitePath}/publish` || call.path === `${sitePath}/unpublish`) && call.method === 'POST') {
+      if (!state.site.exists) return problem(422, 'SITE_NOT_CREATED');
+      if ((call.body as { version: number | null }).version !== state.site.version) return problem(409, 'CONCURRENCY_CONFLICT');
+      const publish = call.path.endsWith('/publish');
+      state.site = {
+        ...state.site,
+        isPublished: publish,
+        publishedAtUtc: publish ? '2026-11-05T10:30:00Z' : null,
+        hasUnpublishedChanges: false,
+        version: (state.site.version ?? 0) + 1,
+      };
       return json(200, state.site);
     }
     if (state.me && call.path === `${sitePath}/slug-availability`) {

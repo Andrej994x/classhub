@@ -51,4 +51,23 @@ public interface IOfferLookup
 
     /// <summary>Number of the current workspace's offers that are not archived.</summary>
     Task<int> CountAsync(CancellationToken cancellationToken);
+
+    /// <summary>
+    /// The current workspace's offers a public site may show: marked "show on public site", active and not archived,
+    /// in the teacher's order. Only the public fields.
+    /// </summary>
+    Task<IReadOnlyList<PublicOffer>> ListPublicAsync(CancellationToken cancellationToken);
 }
+
+/// <summary>The public fields of an offer (public site, JSON-LD). Kind and mode are the API's enum names.</summary>
+public sealed record PublicOffer(
+    string Title,
+    string? Description,
+    string Kind,
+    Guid SubjectId,
+    int DurationMinutes,
+    long PriceMinor,
+    string Currency,
+    string Mode,
+    int? LessonCount,
+    int? Seats);

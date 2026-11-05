@@ -242,9 +242,43 @@ export interface paths {
         };
         /** The site draft, or suggestions to start from when it does not exist yet (exists = false). */
         get: operations["GetSite"];
-        /** Save the draft (slug, template, palette, language, sections). Visitors see nothing until publishing (R1-P4). */
+        /** Save the draft (slug, template, palette, language, sections). Visitors see the draft only after publishing. */
         put: operations["SaveSite"];
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/w/{workspaceId}/site/publish": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Publish the saved draft at /{slug}. 422 SITE_NOT_CREATED before the first save; 409 when the version is stale. */
+        post: operations["PublishSite"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/w/{workspaceId}/site/unpublish": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Take the public page offline (404). The draft is kept. */
+        post: operations["UnpublishSite"];
         delete?: never;
         options?: never;
         head?: never;
@@ -468,6 +502,10 @@ export interface components {
             completed: boolean;
             available: boolean;
         };
+        PublishSiteRequest: {
+            /** Format: int32 */
+            version: null | number | string;
+        };
         RegisterRequest: {
             email: null | string;
             password: null | string;
@@ -531,6 +569,11 @@ export interface components {
             updatedAtUtc: null | string;
             /** Format: int32 */
             version: null | number | string;
+            /** Format: date-time */
+            publishedAtUtc: null | string;
+            hasUnpublishedChanges: boolean;
+            /** Format: int32 */
+            viewsLast30Days: number | string;
         };
         SiteSection: {
             type: null | string;
@@ -1152,6 +1195,58 @@ export interface operations {
                 };
                 content: {
                     "application/problem+json": components["schemas"]["HttpValidationProblemDetails"];
+                };
+            };
+        };
+    };
+    PublishSite: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PublishSiteRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SiteResponse"];
+                };
+            };
+        };
+    };
+    UnpublishSite: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PublishSiteRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SiteResponse"];
                 };
             };
         };

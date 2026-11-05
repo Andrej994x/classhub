@@ -50,6 +50,7 @@ Rules:
 | `AddIdentityAndEmailOutbox` | R0-P4 | Identity tables (unique `EmailIndex`), `DataProtectionKeys`, `EmailOutbox`, `DevMailbox` |
 | `AddWorkspacesTenancyAndAudit` | R0-P5 | `Workspaces`, `WorkspaceMembers`, `AuditLog`, seeded platform roles, idempotent workspace backfill for existing accounts |
 | `AddSites` | R1-P3 | `Sites` (unique workspace, unique slug with `Latin1_General_100_BIN2` collation and a shape CHECK, ISJSON checks for draft/published content) |
+| `AddSitePageViews` | R1-P4 | `SitePageViews` (PK site + UTC day, `Views ≥ 0` CHECK, composite tenant FK to `Sites`): the D-32 counter, no visitor data |
 | `AddOffers` | R1-P2 | `Offers` with CHECK constraints (price ≥ 0, duration, package lessons, group seats, currency), alternate key `(WorkspaceId, Id)`, subject and workspace FKs |
 | `AddCatalogProfilesAndFiles` | R1-P1 | `SubjectCategories`, `Subjects`, `EducationLevels` (seeded, unique codes), `StoredFiles`, `TeacherProfiles` (unique per workspace, country check), profile subject/level/language lists with composite tenant FKs |
 

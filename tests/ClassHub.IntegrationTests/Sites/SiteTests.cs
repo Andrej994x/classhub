@@ -200,7 +200,7 @@ public sealed class SiteTests(ClassHubApiFixture fixture)
         html.ShouldContain("&lt;script&gt;alert(&#x27;x&#x27;)&lt;/script&gt; &amp; physics.");
         html.ShouldNotContain("<script>alert");
         html.ShouldContain("Yes, &lt;b&gt;always&lt;/b&gt;.");
-        html.ShouldContain("#6B2D8C"); // the plum palette
+        html.ShouldContain("class=\"palette-plum "); // the plum palette (a class of the public stylesheet, no inline styles)
         html.ShouldNotContain("Hidden quote"); // hidden sections are not rendered
     }
 

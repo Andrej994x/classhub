@@ -59,6 +59,23 @@ export function useSlugAvailability(workspaceId: string, slug: string, enabled: 
   });
 }
 
+/** Publish or unpublish the saved draft (with the version the editor loaded). */
+export function usePublishSite(workspaceId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ publish, version }: { publish: boolean; version: number | null }) => {
+      const options = { params: { path: { workspaceId } }, body: { version } };
+      return publish
+        ? (await api.client.POST('/api/w/{workspaceId}/site/publish', options)).data!
+        : (await api.client.POST('/api/w/{workspaceId}/site/unpublish', options)).data!;
+    },
+    onSuccess: async (saved) => {
+      queryClient.setQueryData(keys.site(workspaceId), saved);
+      await queryClient.invalidateQueries({ queryKey: keys.onboarding(workspaceId) });
+    },
+  });
+}
+
 export function usePreview(workspaceId: string) {
   return useMutation({
     mutationFn: async () => (await api.client.POST('/api/w/{workspaceId}/site/preview', { params: { path: { workspaceId } } })).data!,

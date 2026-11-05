@@ -60,7 +60,7 @@ internal sealed class SitePreview(
     TenantContext tenant,
     IWorkspaceMembershipLookup memberships,
     ClassHubDbContext db,
-    ITeacherSummary teacher,
+    SiteRenderer renderer,
     ITeacherPhoto photos) : ISitePreview
 {
     /// <summary>Validates the token and the member, then binds the request to the workspace. Null when not allowed.</summary>
@@ -84,7 +84,7 @@ internal sealed class SitePreview(
     public async Task<(Stream Content, string ContentType)?> OpenPhotoAsync(string token, CancellationToken cancellationToken) =>
         await AuthorizeAsync(token, cancellationToken) is null ? null : await photos.OpenAsync(cancellationToken);
 
-    public async Task<SitePreviewModel?> ReadAsync(string token, CancellationToken cancellationToken)
+    public async Task<SiteRenderModel?> ReadAsync(string token, CancellationToken cancellationToken)
     {
         if (await AuthorizeAsync(token, cancellationToken) is not { } payload)
         {
@@ -97,18 +97,9 @@ internal sealed class SitePreview(
             return null;
         }
 
-        var summary = await teacher.GetSummaryAsync(cancellationToken);
-        var name = $"{summary.FirstName} {summary.LastName}".Trim();
-        // Served through the same token (the preview may be opened without a session); the private profile photo
-        // endpoint keeps requiring a member's session.
-        var photo = summary.PhotoVersion is { } version ? $"/preview/{Uri.EscapeDataString(token)}/photo?v={Uri.EscapeDataString(version)}" : null;
-        return new SitePreviewModel(
-            site.Slug,
-            site.Template,
-            SitePalettes.Find(site.Palette) ?? SitePalettes.All[0],
-            site.Language,
-            [.. SiteService.Read(site.DraftJson).Sections ?? []],
-            name.Length == 0 ? null : name,
-            photo);
+        // The draft through the same renderer as the public page. The photo is served through the same token (the
+        // preview may be opened without a session); the private profile photo endpoint keeps requiring a session.
+        return await renderer.RenderAsync(site.Slug, SiteSnapshot.FromDraft(site),
+            version => $"/preview/{Uri.EscapeDataString(token)}/photo?v={Uri.EscapeDataString(version)}", cancellationToken);
     }
 }

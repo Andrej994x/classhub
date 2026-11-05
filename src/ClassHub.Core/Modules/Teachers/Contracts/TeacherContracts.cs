@@ -56,6 +56,25 @@ public interface ITeacherSummary
     Task<TeacherSummary> GetSummaryAsync(CancellationToken cancellationToken);
 }
 
+/// <summary>
+/// The profile fields a published site shows (never bio drafts, country or account data): name, teaching mode,
+/// subjects, levels, teaching languages and the photo version.
+/// </summary>
+public sealed record PublicTeacherProfile(
+    string? FirstName,
+    string? LastName,
+    string? TeachingMode,
+    IReadOnlyList<Guid> SubjectIds,
+    IReadOnlyList<Guid> LevelIds,
+    IReadOnlyList<string> Languages,
+    string? PhotoVersion);
+
+public interface ITeacherPublicProfile
+{
+    /// <summary>The current workspace's public profile fields (empty values when no profile exists).</summary>
+    Task<PublicTeacherProfile> GetPublicProfileAsync(CancellationToken cancellationToken);
+}
+
 /// <summary>The current workspace's teacher photo, for other modules that authorize access themselves (preview).</summary>
 public interface ITeacherPhoto
 {

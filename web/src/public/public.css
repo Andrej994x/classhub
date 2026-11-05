@@ -1,0 +1,86 @@
+/*
+ * Stylesheet of the server-rendered public pages (Razor: landing page, teacher sites, preview) and their islands.
+ * Tailwind scans only the Razor views and the island sources; no SPA styles are loaded on public pages.
+ * Built by Vite as its own entry (manifest key "src/public/public.css") and linked by the <vite-asset> tag helper.
+ */
+@import 'tailwindcss' source(none);
+@source '../../../src/ClassHub.Api/Pages';
+@source '../islands';
+
+/* Site palettes: the same values as SitePalettes in ClassHub.Core (a unit test keeps them in sync). */
+.palette-ocean {
+  --site-primary: #0b5fa5;
+  --site-on-primary: #ffffff;
+  --site-bg: #f7fafc;
+  --site-surface: #ffffff;
+  --site-text: #102a43;
+  --site-muted: #486581;
+}
+
+.palette-forest {
+  --site-primary: #1f6f43;
+  --site-on-primary: #ffffff;
+  --site-bg: #f6faf7;
+  --site-surface: #ffffff;
+  --site-text: #132a1e;
+  --site-muted: #4a6355;
+}
+
+.palette-sunset {
+  --site-primary: #b23a1e;
+  --site-on-primary: #ffffff;
+  --site-bg: #fff8f3;
+  --site-surface: #ffffff;
+  --site-text: #2b1a12;
+  --site-muted: #6b4a3a;
+}
+
+.palette-plum {
+  --site-primary: #6b2d8c;
+  --site-on-primary: #ffffff;
+  --site-bg: #faf7fc;
+  --site-surface: #ffffff;
+  --site-text: #24132e;
+  --site-muted: #5e4a6b;
+}
+
+.palette-graphite {
+  --site-primary: #1f2933;
+  --site-on-primary: #ffffff;
+  --site-bg: #f5f7fa;
+  --site-surface: #ffffff;
+  --site-text: #1f2933;
+  --site-muted: #52606d;
+}
+
+/* The landing page uses the ClassHub brand colours through the same tokens. */
+.palette-brand {
+  --site-primary: #1d4ed8;
+  --site-on-primary: #ffffff;
+  --site-bg: #f8fafc;
+  --site-surface: #ffffff;
+  --site-text: #0f172a;
+  --site-muted: #475569;
+}
+
+@theme inline {
+  --color-site-primary: var(--site-primary);
+  --color-site-on-primary: var(--site-on-primary);
+  --color-site-bg: var(--site-bg);
+  --color-site-surface: var(--site-surface);
+  --color-site-text: var(--site-text);
+  --color-site-muted: var(--site-muted);
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  font-family: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Noto Sans', sans-serif;
+}
+
+/* Teacher texts are plain text: keep their line breaks. */
+.site-text {
+  white-space: pre-line;
+}

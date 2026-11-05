@@ -33,8 +33,13 @@ builder.Services.AddClassHubPersistence(builder.Configuration);
 builder.Services.AddClassHubEmail(builder.Configuration, builder.Environment);
 builder.Services.AddClassHubModules(builder.Configuration);
 builder.Services.AddOpenApi("v1", options => options.AddOperationTransformer<RouteParameterOperationTransformer>());
-// Server-rendered pages: the site preview now (R1-P3), the public teacher sites with R1-P4.
+// Server-rendered pages: landing page, public teacher sites and the editor preview (Pages/).
 builder.Services.AddRazorPages();
+builder.Services.AddSingleton<ViteManifest>();
+// Razor keeps Cyrillic (and all other letters) as text instead of numeric entities; HTML-sensitive characters
+// (< > & " ') are still always encoded.
+builder.Services.Configure<Microsoft.Extensions.WebEncoders.WebEncoderOptions>(options =>
+    options.TextEncoderSettings = new System.Text.Encodings.Web.TextEncoderSettings(System.Text.Unicode.UnicodeRanges.All));
 
 var app = builder.Build();
 
@@ -69,6 +74,10 @@ app.UseAuthentication();
 // against the client's limits. After routing, so endpoint-specific policies apply.
 app.UseRateLimiter();
 app.UseAuthorization();
+// Page views of public sites are counted around the output cache, so cached responses count too (D-32).
+app.UseMiddleware<SitePageViewMiddleware>();
+// Anonymous public pages only (see the policies in SitesModule); after authentication, so signed-in requests bypass it.
+app.UseOutputCache();
 
 // Liveness: the process answers. No dependencies, no details.
 app.MapGet("/health", () => TypedResults.Ok(new HealthResponse("ok")))
@@ -87,16 +96,7 @@ app.MapHealthChecks("/health/ready", new HealthCheckOptions
 
 app.MapClassHubModules();
 app.MapRazorPages();
-// The hero photo of a site preview, authorized by the same signed token as the page.
-app.MapGet("/preview/{token}/photo", async Task<IResult> (string token, HttpContext http, ClassHub.Core.Modules.Sites.Contracts.ISitePreview preview, CancellationToken ct) =>
-    {
-        http.Response.Headers.CacheControl = "no-store";
-        http.Response.Headers["Referrer-Policy"] = "no-referrer";
-        http.Response.Headers["X-Robots-Tag"] = "noindex";
-        return await preview.OpenPhotoAsync(token, ct) is { } photo ? Results.Stream(photo.Content, photo.ContentType) : Results.NotFound();
-    })
-    .AllowAnonymous()
-    .ExcludeFromDescription();
+app.MapPublicSiteEndpoints();
 
 // The OpenAPI document is the contract for the generated TypeScript types (web/src/api/schema.d.ts).
 if (app.Environment.IsDevelopment() || app.Environment.IsEnvironment("Testing"))

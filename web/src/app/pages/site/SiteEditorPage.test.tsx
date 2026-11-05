@@ -111,4 +111,52 @@ describe('site editor', () => {
     expect(await screen.findByText(/Страницата е променета на друго место/)).toBeInTheDocument();
     expect((api.to(API, 'PUT')[0]!.body as SavedBody).version).toBe(3);
   });
+
+  it('publishes the saved draft, shows the public address and views, and unpublishes after a confirmation', async () => {
+    const user = userEvent.setup();
+    const api = fakeApi({ me: teacher() });
+    api.state.site = { ...api.state.site, exists: true, version: 2, viewsLast30Days: 7 };
+    await renderRoute(PAGE);
+
+    const card = await screen.findByTestId('publish-card');
+    expect(within(card).getByText('Страницата не е објавена')).toBeInTheDocument();
+    await user.click(within(card).getByRole('button', { name: 'Објави' }));
+
+    expect(await within(card).findByText('Страницата е објавена')).toBeInTheDocument();
+    expect(api.to(`${API}/publish`, 'POST')[0]?.body).toEqual({ version: 2 });
+    expect(within(card).getByRole('link', { name: /classhub\.app\/ana-petrovska/ })).toHaveAttribute('href', '/ana-petrovska');
+    expect(within(card).getByText('7 посети во последните 30 дена')).toBeInTheDocument();
+
+    // The form follows the new version: a later save sends it (no false "changed elsewhere").
+    await user.type(screen.getByLabelText('Наслов'), '!');
+    expect(within(card).getByRole('button', { name: 'Објави ги промените' })).toBeDisabled();
+    expect(within(card).getByText('Зачувајте ги промените пред објавување.')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Зачувај скица' }));
+    expect(await screen.findByText('Скицата е зачувана.')).toBeInTheDocument();
+    expect((api.to(API, 'PUT')[0]!.body as SavedBody).version).toBe(3);
+    expect(within(card).getByText(/Имате зачувани промени што сè уште не се објавени/)).toBeInTheDocument();
+
+    await user.click(within(card).getByRole('button', { name: 'Повлечи од објава' }));
+    expect(api.to(`${API}/unpublish`, 'POST')).toHaveLength(0);
+    await user.click(within(card).getByRole('button', { name: 'Да, повлечи' }));
+    expect(await within(card).findByText('Страницата не е објавена')).toBeInTheDocument();
+    expect(api.to(`${API}/unpublish`, 'POST')[0]?.body).toEqual({ version: 4 });
+  });
+
+  it('cannot publish before the first save', async () => {
+    fakeApi({ me: teacher() });
+    await renderRoute(PAGE);
+    expect(within(await screen.findByTestId('publish-card')).getByRole('button', { name: 'Објави' })).toBeDisabled();
+  });
+
+  it('warns that a new address moves a published page', async () => {
+    const user = userEvent.setup();
+    const api = fakeApi({ me: teacher() });
+    api.state.site = { ...api.state.site, exists: true, isPublished: true, publishedAtUtc: '2026-11-05T10:30:00Z', version: 1 };
+    await renderRoute(PAGE);
+    const slug = await screen.findByLabelText('Веб-адреса');
+    await user.clear(slug);
+    await user.type(slug, 'ana-nova');
+    expect(screen.getByText(/со зачувување на новата адреса се преместува веднаш/)).toBeInTheDocument();
+  });
 });

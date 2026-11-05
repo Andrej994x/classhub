@@ -23,6 +23,7 @@ export function OnboardingChecklist({ workspaceId }: { workspaceId: string }) {
     subjects: `/app/w/${workspaceId}/profile#teaching`,
     'first-offer': `/app/w/${workspaceId}/offers/new`,
     'public-page': `/app/w/${workspaceId}/site`,
+    publish: `/app/w/${workspaceId}/site`,
   };
   return (
     <Card>

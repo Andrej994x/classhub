@@ -1,29 +1,19 @@
-import { act, screen, within } from '@testing-library/react';
+import { act, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { meQueryKey } from '../auth/session.ts';
 import { i18n } from '../i18n/index.ts';
+import { loadFromServer } from '../lib/navigation.ts';
 import { fakeApi, teacher, WORKSPACE_ID } from '../test/fakeApi.ts';
 import { renderRoute } from '../test/render.tsx';
 
+vi.mock('../lib/navigation.ts', () => ({ loadFromServer: vi.fn<(path: string) => void>() }));
+
 describe('routes and layouts', () => {
-  it('renders the home page in Macedonian by default', async () => {
+  it('hands / over to the server-rendered landing page', async () => {
     fakeApi();
     await renderRoute('/');
-    expect(screen.getByRole('heading', { level: 1, name: 'Добредојдовте во ClassHub' })).toBeInTheDocument();
-    expect(await screen.findByRole('link', { name: 'Регистрација' })).toHaveAttribute('href', '/register');
-  });
-
-  it('renders the home page in English', async () => {
-    fakeApi();
-    await renderRoute('/', 'en');
-    expect(screen.getByRole('heading', { level: 1, name: 'Welcome to ClassHub' })).toBeInTheDocument();
-  });
-
-  it('offers the workspace instead of sign-up when signed in', async () => {
-    fakeApi({ me: teacher() });
-    await renderRoute('/');
-    expect(await screen.findByRole('link', { name: 'Отвори го мојот простор' })).toHaveAttribute('href', '/app');
+    await waitFor(() => expect(loadFromServer).toHaveBeenCalledWith('/'));
   });
 
   it.each([
@@ -92,11 +82,11 @@ describe('routes and layouts', () => {
   it('switches the UI language and remembers it', async () => {
     const user = userEvent.setup();
     const api = fakeApi();
-    await renderRoute('/');
+    await renderRoute('/login');
 
-    await user.selectOptions(screen.getByRole('combobox', { name: 'Јазик' }), 'en');
+    await user.selectOptions(await screen.findByRole('combobox', { name: 'Јазик' }), 'en');
 
-    expect(await screen.findByRole('heading', { level: 1, name: 'Welcome to ClassHub' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { level: 1, name: 'Sign in' })).toBeInTheDocument();
     expect(window.localStorage.getItem('classhub.language')).toBe('en');
     expect(document.documentElement.lang).toBe('en');
     expect(api.to('/api/auth/me', 'PATCH')).toHaveLength(0); // anonymous: nothing saved on the server

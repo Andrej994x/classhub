@@ -661,7 +661,7 @@
         "tags": [
           "Site"
         ],
-        "summary": "Save the draft (slug, template, palette, language, sections). Visitors see nothing until publishing (R1-P4).",
+        "summary": "Save the draft (slug, template, palette, language, sections). Visitors see the draft only after publishing.",
         "operationId": "SaveSite",
         "parameters": [
           {
@@ -701,6 +701,90 @@
               "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/HttpValidationProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/w/{workspaceId}/site/publish": {
+      "post": {
+        "tags": [
+          "Site"
+        ],
+        "summary": "Publish the saved draft at /{slug}. 422 SITE_NOT_CREATED before the first save; 409 when the version is stale.",
+        "operationId": "PublishSite",
+        "parameters": [
+          {
+            "name": "workspaceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PublishSiteRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SiteResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/w/{workspaceId}/site/unpublish": {
+      "post": {
+        "tags": [
+          "Site"
+        ],
+        "summary": "Take the public page offline (404). The draft is kept.",
+        "operationId": "UnpublishSite",
+        "parameters": [
+          {
+            "name": "workspaceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PublishSiteRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SiteResponse"
                 }
               }
             }
@@ -1519,6 +1603,23 @@
           }
         }
       },
+      "PublishSiteRequest": {
+        "required": [
+          "version"
+        ],
+        "type": "object",
+        "properties": {
+          "version": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
       "RegisterRequest": {
         "required": [
           "email",
@@ -1798,7 +1899,10 @@
           "draft",
           "isPublished",
           "updatedAtUtc",
-          "version"
+          "version",
+          "publishedAtUtc",
+          "hasUnpublishedChanges",
+          "viewsLast30Days"
         ],
         "type": "object",
         "properties": {
@@ -1834,6 +1938,24 @@
             "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": [
               "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "publishedAtUtc": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "hasUnpublishedChanges": {
+            "type": "boolean"
+          },
+          "viewsLast30Days": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
               "integer",
               "string"
             ],

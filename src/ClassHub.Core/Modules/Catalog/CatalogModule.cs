@@ -60,4 +60,16 @@ internal sealed class CatalogLookup(ClassHubDbContext db) : ICatalogLookup
         var known = await db.Set<EducationLevel>().AsNoTracking().Where(l => ids.Contains(l.Id)).Select(l => l.Id).ToListAsync(cancellationToken);
         return [.. ids.Except(known)];
     }
+
+    public async Task<IReadOnlyList<CatalogItem>> SubjectsAsync(IReadOnlyCollection<Guid> ids, CancellationToken cancellationToken) =>
+        ids.Count == 0
+            ? []
+            : await db.Set<Subject>().AsNoTracking().Where(s => s.IsActive && ids.Contains(s.Id)).OrderBy(s => s.SortOrder)
+                .Select(s => new CatalogItem(s.Id, s.Code, s.NameMk, s.NameEn)).ToListAsync(cancellationToken);
+
+    public async Task<IReadOnlyList<CatalogItem>> LevelsAsync(IReadOnlyCollection<Guid> ids, CancellationToken cancellationToken) =>
+        ids.Count == 0
+            ? []
+            : await db.Set<EducationLevel>().AsNoTracking().Where(l => ids.Contains(l.Id)).OrderBy(l => l.SortOrder)
+                .Select(l => new CatalogItem(l.Id, l.Code, l.NameMk, l.NameEn)).ToListAsync(cancellationToken);
 }

@@ -1,7 +1,7 @@
 import { Menu } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Link, NavLink, Outlet } from 'react-router';
+import { NavLink, Outlet } from 'react-router';
 import { Button } from '../../components/ui/button.tsx';
 import { Sheet } from '../../components/ui/sheet.tsx';
 import { cn } from '../../lib/utils.ts';
@@ -52,9 +52,9 @@ export function AppShell({ areaKey, nav, actions }: { areaKey: string; nav: NavI
         <Button variant="ghost" size="icon" className="md:hidden" aria-label={t('common.openMenu')} onClick={() => setOpen(true)}>
           <Menu className="h-5 w-5" aria-hidden />
         </Button>
-        <Link to="/" className="font-semibold">
+        <a href="/" className="font-semibold">
           {t('app.name')}
-        </Link>
+        </a>
         <span className="hidden text-sm text-muted-foreground sm:inline">· {t(areaKey)}</span>
         <div className="ml-auto flex items-center gap-2">
           {actions}
@@ -126,9 +126,9 @@ export function AuthLayout() {
   return (
     <div className="flex min-h-dvh flex-col bg-muted/40">
       <header className="flex h-14 items-center justify-between px-4">
-        <Link to="/" className="font-semibold">
+        <a href="/" className="font-semibold">
           {t('app.name')}
-        </Link>
+        </a>
         <LanguageSwitcher />
       </header>
       <main className="flex flex-1 items-start justify-center px-4 py-8 sm:items-center">

@@ -1,0 +1,51 @@
+@page "/{lang:regex(^en$)?}"
+@model ClassHub.Api.Pages.Public.LandingModel
+@{
+    Layout = "_PublicLayout";
+    var lang = Model.Language;
+    var canonical = lang == "en" ? $"{Model.BaseUrl}/en" : $"{Model.BaseUrl}/";
+    ViewData["Lang"] = lang;
+    ViewData["Title"] = Model.Text("landing.title");
+    ViewData["BodyClass"] = "palette-brand";
+}
+@section Head {
+    <meta name="description" content="@Model.Text("landing.description")" />
+    <link rel="canonical" href="@canonical" />
+    <link rel="alternate" hreflang="mk" href="@Model.BaseUrl/" />
+    <link rel="alternate" hreflang="en" href="@Model.BaseUrl/en" />
+    <link rel="alternate" hreflang="x-default" href="@Model.BaseUrl/" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="ClassHub" />
+    <meta property="og:title" content="@Model.Text("landing.title")" />
+    <meta property="og:description" content="@Model.Text("landing.description")" />
+    <meta property="og:url" content="@canonical" />
+    <meta property="og:locale" content="@(lang == "en" ? "en_US" : "mk_MK")" />
+    <meta name="twitter:card" content="summary" />
+}
+<header class="mx-auto flex max-w-5xl items-center justify-between px-4 py-4">
+    <a href="@(lang == "en" ? "/en" : "/")" class="text-lg font-bold text-site-primary">ClassHub</a>
+    <nav class="flex items-center gap-4 text-sm">
+        <a href="@(lang == "en" ? "/" : "/en")" hreflang="@(lang == "en" ? "mk" : "en")" class="text-site-muted underline-offset-4 hover:underline">@Model.Text("landing.otherLanguage")</a>
+        <a href="/login" class="font-semibold underline-offset-4 hover:underline">@Model.Text("landing.signIn")</a>
+    </nav>
+</header>
+<main class="mx-auto flex max-w-5xl flex-col gap-16 px-4 pb-16 pt-8 sm:pt-16">
+    <section class="flex max-w-2xl flex-col gap-6">
+        <h1 class="text-4xl font-bold leading-tight tracking-tight sm:text-5xl">@Model.Text("landing.headline")</h1>
+        <p class="text-lg text-site-muted">@Model.Text("landing.lead")</p>
+        <p class="flex flex-wrap gap-3">
+            <a href="/register" class="rounded-full bg-site-primary px-6 py-3 font-semibold text-site-on-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-site-text">@Model.Text("landing.register")</a>
+            <a href="/login" class="rounded-full border border-site-muted/40 px-6 py-3 font-semibold">@Model.Text("landing.signIn")</a>
+        </p>
+    </section>
+    <section class="grid gap-6 sm:grid-cols-3">
+        @foreach (var feature in new[] { "feature1", "feature2", "feature3" })
+        {
+            <div class="rounded-2xl bg-site-surface p-6 shadow-sm">
+                <h2 class="mb-2 text-lg font-semibold text-site-primary">@Model.Text($"landing.{feature}.title")</h2>
+                <p class="text-site-muted">@Model.Text($"landing.{feature}.text")</p>
+            </div>
+        }
+    </section>
+</main>
+<footer class="mx-auto max-w-5xl px-4 pb-10 text-sm text-site-muted">@Model.Text("landing.footer")</footer>

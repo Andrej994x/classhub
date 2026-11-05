@@ -33,6 +33,12 @@ public interface ICatalogLookup
 
     /// <summary>The ids among <paramref name="ids"/> that are not education levels.</summary>
     Task<IReadOnlyList<Guid>> UnknownLevelsAsync(IReadOnlyCollection<Guid> ids, CancellationToken cancellationToken);
+
+    /// <summary>The given subjects (active ones only), in catalog order (public site).</summary>
+    Task<IReadOnlyList<CatalogItem>> SubjectsAsync(IReadOnlyCollection<Guid> ids, CancellationToken cancellationToken);
+
+    /// <summary>The given education levels, in catalog order (public site).</summary>
+    Task<IReadOnlyList<CatalogItem>> LevelsAsync(IReadOnlyCollection<Guid> ids, CancellationToken cancellationToken);
 }
 
 /// <summary>
