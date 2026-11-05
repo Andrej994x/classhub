@@ -80,6 +80,41 @@ const parseBody = (text: string): unknown => {
   }
 };
 
+export const SECTION_TYPES = ['hero', 'about', 'subjects', 'experience', 'offers', 'testimonials', 'faq', 'contact'];
+
+export interface FakeSite {
+  exists: boolean;
+  slug: string;
+  template: string;
+  palette: string;
+  language: string;
+  draft: { sections: { type: string; visible: boolean; title: string | null; text: string | null; showPhoto: boolean; items: { title: string | null; subtitle: string | null; text: string | null }[] | null }[] };
+  isPublished: boolean;
+  updatedAtUtc: string | null;
+  version: number | null;
+}
+
+export const NEW_SITE = (): FakeSite => ({
+  exists: false,
+  slug: 'ana-petrovska',
+  template: 'classic',
+  palette: 'ocean',
+  language: 'mk',
+  draft: {
+    sections: SECTION_TYPES.map((type) => ({
+      type,
+      visible: !['experience', 'testimonials', 'faq'].includes(type),
+      title: `Наслов ${type}`,
+      text: null,
+      showPhoto: type === 'hero',
+      items: ['experience', 'testimonials', 'faq'].includes(type) ? [] : null,
+    })),
+  },
+  isPublished: false,
+  updatedAtUtc: null,
+  version: null,
+});
+
 export interface FakeOffer {
   id: string;
   kind: string;
@@ -116,7 +151,7 @@ export const problem = (status: number, code: string, errors?: Record<string, st
  * antiforgery endpoint. `extra` handlers run first and may answer any request.
  */
 export function fakeApi({ me = null as FakeMe | null, extra = [] as Handler[] } = {}) {
-  const state = { me, profile: { ...EMPTY_PROFILE }, onboarding: ONBOARDING(0), catalog: CATALOG, offers: [] as FakeOffer[] };
+  const state = { me, profile: { ...EMPTY_PROFILE }, onboarding: ONBOARDING(0), catalog: CATALOG, offers: [] as FakeOffer[], site: NEW_SITE(), slugTaken: [] as string[] };
   const calls: FakeCall[] = [];
 
   const fetchMock = vi.fn<(input: RequestInfo | URL, init?: RequestInit) => Promise<Response>>(async (input, init) => {
@@ -154,6 +189,22 @@ export function fakeApi({ me = null as FakeMe | null, extra = [] as Handler[] } 
     if (route === `GET /api/w/${WORKSPACE_ID}/onboarding`) return state.me ? json(200, state.onboarding) : problem(401, 'UNAUTHORIZED');
     if (route === `GET /api/w/${WORKSPACE_ID}/profile`) return state.me ? json(200, state.profile) : problem(401, 'UNAUTHORIZED');
     if (route === 'GET /api/catalog') return state.me ? json(200, state.catalog) : problem(401, 'UNAUTHORIZED');
+    const sitePath = `/api/w/${WORKSPACE_ID}/site`;
+    if (state.me && call.path === sitePath && call.method === 'GET') return json(200, state.site);
+    if (state.me && call.path === sitePath && call.method === 'PUT') {
+      const body = call.body as { version: number | null; slug: string };
+      if ((body.version ?? 0) !== (state.site.version ?? 0)) return problem(409, 'CONCURRENCY_CONFLICT');
+      if (state.slugTaken.includes(body.slug)) return problem(409, 'SLUG_TAKEN');
+      state.site = { ...state.site, ...(body as object), exists: true, version: (state.site.version ?? 0) + 1 } as FakeSite;
+      return json(200, state.site);
+    }
+    if (state.me && call.path === `${sitePath}/slug-availability`) {
+      const slug = new URLSearchParams(call.search).get('slug') ?? '';
+      return json(200, { slug, available: !state.slugTaken.includes(slug), reason: state.slugTaken.includes(slug) ? 'taken' : null });
+    }
+    if (state.me && call.path === `${sitePath}/preview` && call.method === 'POST') {
+      return state.site.exists ? json(200, { url: '/preview/token-123', expiresAtUtc: '2026-11-05T10:15:00Z' }) : problem(422, 'SITE_NOT_CREATED');
+    }
     const offersPath = `/api/w/${WORKSPACE_ID}/offers`;
     if (state.me && call.path === offersPath && call.method === 'GET') return json(200, state.offers);
     if (state.me && call.path === offersPath && call.method === 'POST') {

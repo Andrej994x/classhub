@@ -80,6 +80,12 @@ ASP.NET Core Identity with cookie sessions. See [ARCHITECTURE.md](ARCHITECTURE.m
 - Policies: `Authenticated`; workspace policies `ws:<permission>` (for example `ws:workspace.read`). Permissions are code constants (`WorkspacePermissions`), mapped from workspace roles (`WorkspaceRolePermissions`; today `Owner` has all workspace permissions). Unknown permission names fail when the policy is resolved.
 - Platform roles (`PlatformOwner`, `PlatformAdmin`) are Identity roles. **They grant no workspace access**: a platform admin without membership gets 404 on workspace routes (tested). The first Platform Owner is created only with the local CLI `dotnet run --project src/ClassHub.Api -- grant-platform-owner <email> [--force-add]` (audited, never exposed over HTTP). The owner check, the grant, the session revocation and the audit entry run in one transaction under an application lock (`sp_getapplock`), so concurrent bootstraps cannot both add an owner without `--force-add`.
 
+## Site preview (R1-P3)
+
+- The preview URL carries a Data Protection token (authenticated encryption) naming one site, its workspace and the requesting member, valid 15 minutes. Invalid, tampered or expired tokens get a plain 404; the member's active membership is re-checked on every view before the request is bound to the workspace.
+- The page is read-only, Razor-encoded (draft text is never HTML), `noindex, nofollow, noarchive` (meta + header), `no-store`, `Referrer-Policy: no-referrer` (the token is in the URL), and framed only by the same origin (sandboxed iframe without scripts).
+- Slug availability answers yes/no only; the cross-workspace query is allow-listed (`*Queries.cs`).
+
 ## File uploads (R1-P1)
 
 - Accepted by **magic bytes** only (JPEG, PNG, WebP), never by name or client content type; at most 5 MB, at least 128 × 128 px; image dimensions are read from the header and limited (6000 × 6000, 36 MP) **before** pixels are decoded (decompression bombs).

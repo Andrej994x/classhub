@@ -5,6 +5,7 @@ import { ForgotPasswordPage, LoginPage, RegisterPage, ResetPasswordPage, VerifyE
 import { OfferEditPage } from './pages/offers/OfferEditPage.tsx';
 import { OffersPage } from './pages/offers/OffersPage.tsx';
 import { ProfilePage } from './pages/profile/ProfilePage.tsx';
+import { SiteEditorPage } from './pages/site/SiteEditorPage.tsx';
 import {
   AdminHomePage,
   HomePage,
@@ -44,6 +45,7 @@ export const routes: RouteObject[] = [
       { path: 'w/:workspaceId/offers', element: <OffersPage /> },
       { path: 'w/:workspaceId/offers/new', element: <OfferEditPage /> },
       { path: 'w/:workspaceId/offers/:offerId', element: <OfferEditPage /> },
+      { path: 'w/:workspaceId/site', element: <SiteEditorPage /> },
       { path: '*', element: <NotFoundContent /> },
     ],
   },
