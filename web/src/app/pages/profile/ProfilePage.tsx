@@ -217,6 +217,8 @@ function ProfileFormCard({ workspaceId, profile, workspace, catalog }: { workspa
   const selectClass = 'h-11 w-full rounded-md border border-input bg-background px-3 text-base sm:h-10 sm:text-sm';
   return (
     <form noValidate onSubmit={onSubmit} className="flex flex-col gap-6">
+      {/* While saving, nothing can be edited: the success reset must not overwrite edits made in between. */}
+      <fieldset disabled={isSubmitting} aria-busy={isSubmitting} className="contents">
       <Card>
         <CardHeader>
           <CardTitle className="text-lg">{t('profile.personal')}</CardTitle>
@@ -331,6 +333,7 @@ function ProfileFormCard({ workspaceId, profile, workspace, catalog }: { workspa
           {isSubmitting ? t('common.loading') : t('profile.save')}
         </Button>
       </div>
+      </fieldset>
     </form>
   );
 }

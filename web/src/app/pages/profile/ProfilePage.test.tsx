@@ -81,6 +81,27 @@ describe('profile page', () => {
     expect(api.to(PROFILE_PATH, 'PUT')[0]?.body).toMatchObject({ version: 3 });
   });
 
+  it('locks the form while a save is pending, so no edit can be lost by the reset afterwards', async () => {
+    const user = userEvent.setup();
+    let finish!: (response: Response) => void;
+    const pending = new Promise<Response>((resolve) => {
+      finish = resolve;
+    });
+    fakeApi({ me: teacher(), extra: [(call) => (call.method === 'PUT' && call.path === PROFILE_PATH ? pending : undefined)] });
+    await renderRoute(`/app/w/${WORKSPACE_ID}/profile`);
+
+    await user.type(await screen.findByLabelText('Име'), 'Ана');
+    await user.click(screen.getByRole('button', { name: 'Зачувај профил' }));
+
+    expect(await screen.findByRole('button', { name: 'Се вчитува…' })).toBeDisabled();
+    expect(screen.getByLabelText('Презиме')).toBeDisabled();
+    expect(screen.getByRole('checkbox', { name: 'Математика' })).toBeDisabled();
+
+    finish(json(200, { ...EMPTY_PROFILE, firstName: 'Ана', version: 1 }));
+    expect(await screen.findByText('Профилот е зачуван.')).toBeInTheDocument();
+    expect(screen.getByLabelText('Презиме')).toBeEnabled();
+  });
+
   it('does not touch the workspace settings when only the profile changed', async () => {
     const user = userEvent.setup();
     const api = fakeApi({
