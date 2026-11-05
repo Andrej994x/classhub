@@ -107,10 +107,11 @@ internal sealed partial class TeacherProfileService(
         };
         file.StorageKey = $"{workspaceId:N}/{file.Id:N}.webp";
 
-        await files.WriteAsync(file.StorageKey, image.Content, cancellationToken);
         string? oldKey;
         try
         {
+            // Inside the cleanup scope: whatever fails after the blob exists removes it again.
+            await files.WriteAsync(file.StorageKey, image.Content, cancellationToken);
             // The new file, the profile pointer and the removal of the old file row commit together.
             await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
             var profile = await LoadOrCreateAsync(now, cancellationToken);

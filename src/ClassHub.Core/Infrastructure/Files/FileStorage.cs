@@ -91,9 +91,23 @@ internal sealed class LocalDiskFileStorage(IOptions<FileStorageOptions> options,
     {
         var path = Resolve(key);
         Directory.CreateDirectory(Path.GetDirectoryName(path)!);
-        // CreateNew: a key is never overwritten (keys contain a fresh id).
-        await using var stream = new FileStream(path, FileMode.CreateNew, FileAccess.Write, FileShare.None, 81920, useAsync: true);
-        await stream.WriteAsync(content, cancellationToken);
+        // CreateNew: a key is never overwritten (keys contain a fresh id). If the creation itself fails (the file
+        // exists), nothing of ours is there to clean up.
+        var stream = new FileStream(path, FileMode.CreateNew, FileAccess.Write, FileShare.None, 81920, useAsync: true);
+        try
+        {
+            await using (stream)
+            {
+                await stream.WriteAsync(content, cancellationToken);
+                await stream.FlushAsync(cancellationToken);
+            }
+        }
+        catch
+        {
+            // A partly written file has no database row and would never be found again: remove it.
+            File.Delete(path);
+            throw;
+        }
     }
 
     public Task<Stream?> OpenReadAsync(string key, CancellationToken cancellationToken)

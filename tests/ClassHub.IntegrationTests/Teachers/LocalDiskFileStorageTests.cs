@@ -43,6 +43,18 @@ public sealed class LocalDiskFileStorageTests : IDisposable
         File.Exists(Path.Combine(_contentRoot, "uploads", "ws", "file.webp")).ShouldBeFalse();
     }
 
+    [Fact]
+    public async Task A_cancelled_write_leaves_no_partial_file()
+    {
+        var storage = Storage();
+        using var cancelled = new CancellationTokenSource();
+        await cancelled.CancelAsync();
+
+        await Should.ThrowAsync<OperationCanceledException>(() => storage.WriteAsync("ws/partial.webp", new byte[1024 * 1024], cancelled.Token));
+
+        File.Exists(Path.Combine(_contentRoot, "uploads", "ws", "partial.webp")).ShouldBeFalse();
+    }
+
     public void Dispose()
     {
         if (Directory.Exists(_contentRoot))
