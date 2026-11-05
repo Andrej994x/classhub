@@ -200,7 +200,9 @@
     "validation": {
       "tooLong": "This is too long.",
       "bioTooLong": "The biography can have at most 1000 characters.",
-      "tooManySubjects": "Choose at most 20 subjects."
+      "tooManySubjects": "Choose at most 20 subjects.",
+      "tooManyLevels": "Choose at most 10 education levels.",
+      "tooManyLanguages": "Choose at most 10 teaching languages."
     }
   }
 }

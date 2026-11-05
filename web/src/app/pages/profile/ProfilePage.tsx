@@ -37,8 +37,8 @@ const schema = z.object({
   teachingMode: z.enum(['', ...MODES]),
   countryCode: z.string(),
   subjectIds: z.array(z.string()).max(20, 'profile.validation.tooManySubjects'),
-  levelIds: z.array(z.string()).max(10),
-  languages: z.array(z.string()).max(10),
+  levelIds: z.array(z.string()).max(10, 'profile.validation.tooManyLevels'),
+  languages: z.array(z.string()).max(10, 'profile.validation.tooManyLanguages'),
   timeZone: z.string().min(1),
   currency: z.string().length(3),
 });
@@ -267,11 +267,13 @@ function ProfileFormCard({ workspaceId, profile, workspace, catalog }: { workspa
               <Choice key={level.id} value={level.id} label={name(level)} registration={form.register('levelIds')} />
             ))}
           </Choices>
+          {errors.levelIds?.message && <Alert variant="error">{t(errors.levelIds.message)}</Alert>}
           <Choices legend={t('profile.fields.languages')}>
             {catalog.languages.map((lang) => (
               <Choice key={lang.code} value={lang.code} label={name(lang)} registration={form.register('languages')} />
             ))}
           </Choices>
+          {errors.languages?.message && <Alert variant="error">{t(errors.languages.message)}</Alert>}
         </CardContent>
       </Card>
 

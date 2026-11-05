@@ -119,4 +119,20 @@ describe('profile page', () => {
     await renderRoute('/app/w/99999999-9999-4999-8999-999999999999/profile');
     expect(await screen.findByRole('heading', { level: 1, name: 'Страницата не е пронајдена' })).toBeInTheDocument();
   });
+
+  it('explains instead of silently refusing to save when too many languages are chosen', async () => {
+    const user = userEvent.setup();
+    const api = fakeApi({ me: teacher() });
+    const languages = Array.from({ length: 11 }, (_, i) => ({ code: `l${i}`, nameMk: `Јазик ${i}`, nameEn: `Language ${i}` }));
+    api.state.catalog = { ...api.state.catalog, languages };
+    await renderRoute(`/app/w/${WORKSPACE_ID}/profile`);
+
+    for (const language of languages) {
+      await user.click(await screen.findByRole('checkbox', { name: language.nameMk }));
+    }
+    await user.click(screen.getByRole('button', { name: 'Зачувај профил' }));
+
+    expect(await screen.findByText('Изберете најмногу 10 јазици на кои предавате.')).toBeInTheDocument();
+    expect(api.to(PROFILE_PATH, 'PUT')).toHaveLength(0);
+  });
 });

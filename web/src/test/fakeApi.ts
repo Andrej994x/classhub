@@ -90,7 +90,7 @@ export const problem = (status: number, code: string, errors?: Record<string, st
  * antiforgery endpoint. `extra` handlers run first and may answer any request.
  */
 export function fakeApi({ me = null as FakeMe | null, extra = [] as Handler[] } = {}) {
-  const state = { me, profile: { ...EMPTY_PROFILE }, onboarding: ONBOARDING(0) };
+  const state = { me, profile: { ...EMPTY_PROFILE }, onboarding: ONBOARDING(0), catalog: CATALOG };
   const calls: FakeCall[] = [];
 
   const fetchMock = vi.fn<(input: RequestInfo | URL, init?: RequestInit) => Promise<Response>>(async (input, init) => {
@@ -127,7 +127,7 @@ export function fakeApi({ me = null as FakeMe | null, extra = [] as Handler[] } 
     }
     if (route === `GET /api/w/${WORKSPACE_ID}/onboarding`) return state.me ? json(200, state.onboarding) : problem(401, 'UNAUTHORIZED');
     if (route === `GET /api/w/${WORKSPACE_ID}/profile`) return state.me ? json(200, state.profile) : problem(401, 'UNAUTHORIZED');
-    if (route === 'GET /api/catalog') return state.me ? json(200, CATALOG) : problem(401, 'UNAUTHORIZED');
+    if (route === 'GET /api/catalog') return state.me ? json(200, state.catalog) : problem(401, 'UNAUTHORIZED');
     if (call.method === 'GET' && call.path.startsWith('/api/w/')) return problem(404, 'NOT_FOUND');
     return problem(404, 'NOT_FOUND');
   });
