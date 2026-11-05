@@ -12,7 +12,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace ClassHub.Core.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(ClassHubDbContext))]
-    [Migration("20261105072520_AddOffers")]
+    [Migration("20261105073751_AddOffers")]
     partial class AddOffers
     {
         /// <inheritdoc />
@@ -962,11 +962,11 @@ namespace ClassHub.Core.Infrastructure.Persistence.Migrations
 
                             t.HasCheckConstraint("CK_Offers_Duration", "[DurationMinutes] BETWEEN 15 AND 600");
 
-                            t.HasCheckConstraint("CK_Offers_LessonCount", "([Kind] = 'Package' AND [LessonCount] BETWEEN 1 AND 200) OR ([Kind] <> 'Package' AND [LessonCount] IS NULL)");
+                            t.HasCheckConstraint("CK_Offers_LessonCount", "([Kind] = 'Package' AND [LessonCount] IS NOT NULL AND [LessonCount] BETWEEN 1 AND 200) OR ([Kind] <> 'Package' AND [LessonCount] IS NULL)");
 
                             t.HasCheckConstraint("CK_Offers_PriceMinor", "[PriceMinor] >= 0 AND [PriceMinor] <= 1000000000");
 
-                            t.HasCheckConstraint("CK_Offers_Seats", "([Kind] = 'GroupProgram' AND [Seats] BETWEEN 1 AND 500) OR ([Kind] <> 'GroupProgram' AND [Seats] IS NULL)");
+                            t.HasCheckConstraint("CK_Offers_Seats", "([Kind] = 'GroupProgram' AND [Seats] IS NOT NULL AND [Seats] BETWEEN 1 AND 500) OR ([Kind] <> 'GroupProgram' AND [Seats] IS NULL)");
                         });
                 });
 

@@ -17,10 +17,11 @@ internal sealed class OfferConfiguration : IEntityTypeConfiguration<Offer>
             t.HasCheckConstraint("CK_Offers_PriceMinor", $"[PriceMinor] >= 0 AND [PriceMinor] <= {Offer.MaxPriceMinor}");
             t.HasCheckConstraint("CK_Offers_Duration", $"[DurationMinutes] BETWEEN {Offer.MinDurationMinutes} AND {Offer.MaxDurationMinutes}");
             t.HasCheckConstraint("CK_Offers_Currency", "[Currency] LIKE '[A-Z][A-Z][A-Z]'");
+            // "IS NOT NULL" explicitly: a CHECK that evaluates to UNKNOWN (NULL) passes in SQL Server.
             t.HasCheckConstraint("CK_Offers_LessonCount",
-                $"([Kind] = 'Package' AND [LessonCount] BETWEEN 1 AND {Offer.MaxLessonCount}) OR ([Kind] <> 'Package' AND [LessonCount] IS NULL)");
+                $"([Kind] = 'Package' AND [LessonCount] IS NOT NULL AND [LessonCount] BETWEEN 1 AND {Offer.MaxLessonCount}) OR ([Kind] <> 'Package' AND [LessonCount] IS NULL)");
             t.HasCheckConstraint("CK_Offers_Seats",
-                $"([Kind] = 'GroupProgram' AND [Seats] BETWEEN 1 AND {Offer.MaxSeats}) OR ([Kind] <> 'GroupProgram' AND [Seats] IS NULL)");
+                $"([Kind] = 'GroupProgram' AND [Seats] IS NOT NULL AND [Seats] BETWEEN 1 AND {Offer.MaxSeats}) OR ([Kind] <> 'GroupProgram' AND [Seats] IS NULL)");
         });
         builder.HasKey(x => x.Id);
         // Principal key for composite tenant foreign keys (requests, packages, enrollments in later phases).

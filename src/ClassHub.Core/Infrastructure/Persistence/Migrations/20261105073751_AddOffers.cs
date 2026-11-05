@@ -41,9 +41,9 @@ namespace ClassHub.Core.Infrastructure.Persistence.Migrations
                     table.UniqueConstraint("AK_Offers_WorkspaceId_Id", x => new { x.WorkspaceId, x.Id });
                     table.CheckConstraint("CK_Offers_Currency", "[Currency] LIKE '[A-Z][A-Z][A-Z]'");
                     table.CheckConstraint("CK_Offers_Duration", "[DurationMinutes] BETWEEN 15 AND 600");
-                    table.CheckConstraint("CK_Offers_LessonCount", "([Kind] = 'Package' AND [LessonCount] BETWEEN 1 AND 200) OR ([Kind] <> 'Package' AND [LessonCount] IS NULL)");
+                    table.CheckConstraint("CK_Offers_LessonCount", "([Kind] = 'Package' AND [LessonCount] IS NOT NULL AND [LessonCount] BETWEEN 1 AND 200) OR ([Kind] <> 'Package' AND [LessonCount] IS NULL)");
                     table.CheckConstraint("CK_Offers_PriceMinor", "[PriceMinor] >= 0 AND [PriceMinor] <= 1000000000");
-                    table.CheckConstraint("CK_Offers_Seats", "([Kind] = 'GroupProgram' AND [Seats] BETWEEN 1 AND 500) OR ([Kind] <> 'GroupProgram' AND [Seats] IS NULL)");
+                    table.CheckConstraint("CK_Offers_Seats", "([Kind] = 'GroupProgram' AND [Seats] IS NOT NULL AND [Seats] BETWEEN 1 AND 500) OR ([Kind] <> 'GroupProgram' AND [Seats] IS NULL)");
                     table.ForeignKey(
                         name: "FK_Offers_Subjects_SubjectId",
                         column: x => x.SubjectId,

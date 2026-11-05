@@ -65,6 +65,7 @@ public sealed class OfferTests(ClassHubApiFixture fixture)
     [InlineData("[PriceMinor]", "-1")]                 // price >= 0
     [InlineData("[LessonCount]", "0")]                 // package lessons >= 1
     [InlineData("[Seats]", "3")]                       // only group programs have seats
+    [InlineData("[LessonCount]", "NULL")]              // a package without a lesson count (NULL must not pass)
     public async Task The_database_enforces_the_rules_even_without_the_api(string column, string value)
     {
         using var teacher = await fixture.CreateTeacherAsync();
@@ -75,6 +76,17 @@ public sealed class OfferTests(ClassHubApiFixture fixture)
         var sql = "UPDATE Offers SET " + column + " = " + value + " WHERE Id = {0}";
         var error = await Should.ThrowAsync<SqlException>(() => db.Database.ExecuteSqlRawAsync(sql, [package.Id], Ct));
         error.Number.ShouldBe(547); // CHECK constraint violation
+    }
+
+    [Fact]
+    public async Task The_database_refuses_a_group_program_without_seats()
+    {
+        using var teacher = await fixture.CreateTeacherAsync();
+        var group = await CreateAsync(teacher, Offer("GroupProgram", await SubjectAsync(teacher, "math"), seats: 6));
+
+        await using var db = fixture.CreateDbContext();
+        var error = await Should.ThrowAsync<SqlException>(() => db.Database.ExecuteSqlRawAsync("UPDATE Offers SET [Seats] = NULL WHERE Id = {0}", [group.Id], Ct));
+        error.Number.ShouldBe(547);
     }
 
     [Fact]

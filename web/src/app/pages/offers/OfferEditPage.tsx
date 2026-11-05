@@ -33,6 +33,8 @@ const schema = z
     seats: z.string(),
     isActive: z.boolean(),
     showOnPublicSite: z.boolean(),
+    /** The version of the offer the form was loaded from (submitted with the save; never a refreshed one). */
+    version: z.number().nullable(),
   })
   .superRefine((v, ctx) => {
     if (parseMoney(v.price, v.currency) === null) ctx.addIssue({ code: 'custom', path: ['price'], message: 'offers.validation.price' });
@@ -47,7 +49,7 @@ type OfferForm = z.infer<typeof schema>;
 
 function toForm(offer: Offer | undefined, currency: string): OfferForm {
   if (!offer) {
-    return { kind: 'SingleLesson', title: '', description: '', subjectId: '', duration: '60', price: '', currency, mode: 'Online', lessonCount: '', seats: '', isActive: true, showOnPublicSite: true };
+    return { kind: 'SingleLesson', title: '', description: '', subjectId: '', duration: '60', price: '', currency, mode: 'Online', lessonCount: '', seats: '', isActive: true, showOnPublicSite: true, version: null };
   }
   return {
     kind: offer.kind as OfferForm['kind'],
@@ -62,6 +64,7 @@ function toForm(offer: Offer | undefined, currency: string): OfferForm {
     seats: offer.seats === null || offer.seats === undefined ? '' : String(num(offer.seats)),
     isActive: offer.isActive,
     showOnPublicSite: offer.showOnPublicSite,
+    version: num(offer.version),
   };
 }
 
@@ -115,7 +118,8 @@ function OfferForm({ workspaceId, offer, currency, catalog }: { workspaceId: str
         seats: v.kind === 'GroupProgram' ? Number(v.seats) : null,
         isActive: v.isActive,
         showOnPublicSite: v.showOnPublicSite,
-        version: offer ? num(offer.version) : null,
+        // Tied to the values being submitted: a background refetch of the offer cannot make stale values pass.
+        version: v.version,
       })
       .then(() => navigate(`/app/w/${workspaceId}/offers`))
       .catch(() => undefined);

@@ -102,6 +102,24 @@ describe('offers page', () => {
     expect(api.to(`${API}/offer-1`, 'PUT')[0]?.body).toMatchObject({ title: 'Нов наслов', version: 4, priceMinor: 150_000 });
   });
 
+  it('submits the version the form was loaded with, even after a background refetch', async () => {
+    const user = userEvent.setup();
+    const api = fakeApi({ me: teacher() });
+    api.state.offers = [offer({ version: 4 })];
+    const { queryClient } = await renderRoute(`${OFFERS}/offer-1`);
+    const title = await screen.findByLabelText('Наслов');
+    await user.clear(title);
+    await user.type(title, 'Мој наслов');
+
+    // Another tab saved; this tab refetches the offer in the background while the form keeps its values.
+    api.state.offers[0] = { ...api.state.offers[0]!, title: 'Од другиот таб', version: 5 };
+    await queryClient.invalidateQueries({ queryKey: ['w', WORKSPACE_ID, 'offers', 'offer-1'] });
+    await user.click(screen.getByRole('button', { name: 'Зачувај понуда' }));
+
+    expect(await screen.findByText(/Понудата е променета на друго место/)).toBeInTheDocument();
+    expect(api.to(`${API}/offer-1`, 'PUT')[0]?.body).toMatchObject({ title: 'Мој наслов', version: 4 });
+  });
+
   it('reorders and archives (with confirmation)', async () => {
     const user = userEvent.setup();
     const api = fakeApi({ me: teacher() });
