@@ -53,12 +53,3 @@ public sealed record DiagnosticTestListItem(
 
 public sealed record TestVersionRequest(int? Version);
 
-/// <summary>
-/// Plan limit hook for published tests (Free/Pro, D-29). Until R1-P10 enforces the plans, every workspace may publish
-/// any number of tests.
-/// </summary>
-public interface IPublishedTestQuota
-{
-    /// <summary>Throws when publishing one more test would exceed the workspace's plan.</summary>
-    Task EnsureCanPublishAsync(CancellationToken cancellationToken);
-}

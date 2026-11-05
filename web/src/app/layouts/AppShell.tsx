@@ -98,6 +98,7 @@ function TeacherShell() {
               { to: `/app/w/${first.id}/site`, labelKey: 'nav.site' },
               { to: `/app/w/${first.id}/tests`, labelKey: 'nav.tests' },
               { to: `/app/w/${first.id}/profile`, labelKey: 'nav.profile' },
+              { to: `/app/w/${first.id}/plan`, labelKey: 'nav.plan' },
             ]
           : []),
       ]}
@@ -125,6 +126,7 @@ export const AdminLayout = () => (
         { to: '/admin', labelKey: 'nav.adminOverview', end: true },
         { to: '/admin/users', labelKey: 'nav.adminUsers' },
         { to: '/admin/audit', labelKey: 'nav.adminAudit' },
+        { to: '/admin/plans', labelKey: 'nav.adminPlans' },
         { to: '/admin/security', labelKey: 'nav.adminSecurity' },
       ]}
     >

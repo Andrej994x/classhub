@@ -1423,6 +1423,282 @@ namespace ClassHub.Core.Infrastructure.Persistence.Migrations
                         });
                 });
 
+            modelBuilder.Entity("ClassHub.Core.Modules.Subscriptions.Domain.Plan", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(20)");
+
+                    b.Property<bool>("IsDefault")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("NameEn")
+                        .IsRequired()
+                        .HasMaxLength(60)
+                        .HasColumnType("nvarchar(60)");
+
+                    b.Property<string>("NameMk")
+                        .IsRequired()
+                        .HasMaxLength(60)
+                        .HasColumnType("nvarchar(60)");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("UpdatedAtUtc")
+                        .HasPrecision(3)
+                        .HasColumnType("datetime2(3)");
+
+                    b.Property<int>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Code")
+                        .IsUnique();
+
+                    b.HasIndex("IsDefault")
+                        .IsUnique()
+                        .HasFilter("[IsDefault] = 1");
+
+                    b.ToTable("Plans", (string)null);
+
+                    b.HasData(
+                        new
+                        {
+                            Id = new Guid("8a5c1e2f-3b4d-4e6f-9a0b-000000000001"),
+                            Code = "free",
+                            IsDefault = true,
+                            NameEn = "Free",
+                            NameMk = "Бесплатен",
+                            SortOrder = 1,
+                            UpdatedAtUtc = new DateTime(2026, 11, 5, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Version = 0
+                        },
+                        new
+                        {
+                            Id = new Guid("8a5c1e2f-3b4d-4e6f-9a0b-000000000002"),
+                            Code = "pro",
+                            IsDefault = false,
+                            NameEn = "Pro",
+                            NameMk = "Про",
+                            SortOrder = 2,
+                            UpdatedAtUtc = new DateTime(2026, 11, 5, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Version = 0
+                        });
+                });
+
+            modelBuilder.Entity("ClassHub.Core.Modules.Subscriptions.Domain.PlanLimit", b =>
+                {
+                    b.Property<Guid>("PlanId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Key")
+                        .HasMaxLength(40)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(40)");
+
+                    b.Property<int>("Value")
+                        .HasColumnType("int");
+
+                    b.HasKey("PlanId", "Key");
+
+                    b.ToTable("PlanLimits", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_PlanLimits_Value", "[Value] BETWEEN 0 AND 1000000");
+                        });
+
+                    b.HasData(
+                        new
+                        {
+                            PlanId = new Guid("8a5c1e2f-3b4d-4e6f-9a0b-000000000001"),
+                            Key = "active-students",
+                            Value = 10
+                        },
+                        new
+                        {
+                            PlanId = new Guid("8a5c1e2f-3b4d-4e6f-9a0b-000000000001"),
+                            Key = "published-tests",
+                            Value = 3
+                        },
+                        new
+                        {
+                            PlanId = new Guid("8a5c1e2f-3b4d-4e6f-9a0b-000000000001"),
+                            Key = "activities",
+                            Value = 10
+                        },
+                        new
+                        {
+                            PlanId = new Guid("8a5c1e2f-3b4d-4e6f-9a0b-000000000001"),
+                            Key = "storage-mb",
+                            Value = 500
+                        },
+                        new
+                        {
+                            PlanId = new Guid("8a5c1e2f-3b4d-4e6f-9a0b-000000000001"),
+                            Key = "analytics-level",
+                            Value = 1
+                        },
+                        new
+                        {
+                            PlanId = new Guid("8a5c1e2f-3b4d-4e6f-9a0b-000000000002"),
+                            Key = "active-students",
+                            Value = 150
+                        },
+                        new
+                        {
+                            PlanId = new Guid("8a5c1e2f-3b4d-4e6f-9a0b-000000000002"),
+                            Key = "published-tests",
+                            Value = 50
+                        },
+                        new
+                        {
+                            PlanId = new Guid("8a5c1e2f-3b4d-4e6f-9a0b-000000000002"),
+                            Key = "activities",
+                            Value = 500
+                        },
+                        new
+                        {
+                            PlanId = new Guid("8a5c1e2f-3b4d-4e6f-9a0b-000000000002"),
+                            Key = "storage-mb",
+                            Value = 10240
+                        },
+                        new
+                        {
+                            PlanId = new Guid("8a5c1e2f-3b4d-4e6f-9a0b-000000000002"),
+                            Key = "analytics-level",
+                            Value = 2
+                        });
+                });
+
+            modelBuilder.Entity("ClassHub.Core.Modules.Subscriptions.Domain.SubscriptionEvent", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("ActorUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<long?>("AmountMinor")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("Currency")
+                        .HasMaxLength(3)
+                        .IsUnicode(false)
+                        .HasColumnType("char(3)")
+                        .IsFixedLength();
+
+                    b.Property<int>("Kind")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("Months")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Note")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<DateTime>("OccurredAtUtc")
+                        .HasPrecision(3)
+                        .HasColumnType("datetime2(3)");
+
+                    b.Property<DateOnly?>("PaidOn")
+                        .HasColumnType("date");
+
+                    b.Property<string>("PaymentMethod")
+                        .HasMaxLength(20)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(20)");
+
+                    b.Property<string>("PaymentReference")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<DateTime?>("PeriodEndUtc")
+                        .HasPrecision(3)
+                        .HasColumnType("datetime2(3)");
+
+                    b.Property<DateTime>("PeriodStartUtc")
+                        .HasPrecision(3)
+                        .HasColumnType("datetime2(3)");
+
+                    b.Property<Guid>("PlanId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("WorkspaceId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OccurredAtUtc");
+
+                    b.HasIndex("PlanId");
+
+                    b.HasIndex("WorkspaceId");
+
+                    b.HasIndex("WorkspaceId", "OccurredAtUtc");
+
+                    b.ToTable("SubscriptionEvents", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_SubscriptionEvents_Amount", "[AmountMinor] IS NULL OR [AmountMinor] BETWEEN 0 AND 100000000000");
+
+                            t.HasCheckConstraint("CK_SubscriptionEvents_Currency", "[Currency] IS NULL OR [Currency] LIKE '[A-Z][A-Z][A-Z]'");
+
+                            t.HasCheckConstraint("CK_SubscriptionEvents_Kind", "[Kind] IN (1, 2, 3)");
+
+                            t.HasCheckConstraint("CK_SubscriptionEvents_Payment", "([Kind] IN (1, 2) AND [Months] IS NOT NULL AND [Months] BETWEEN 1 AND 36 AND [AmountMinor] IS NOT NULL AND [Currency] IS NOT NULL AND [PaymentMethod] IS NOT NULL AND [PaidOn] IS NOT NULL) OR ([Kind] = 3 AND [AmountMinor] IS NULL AND [Months] IS NULL)");
+                        });
+                });
+
+            modelBuilder.Entity("ClassHub.Core.Modules.Subscriptions.Domain.WorkspaceSubscription", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("EndsAtUtc")
+                        .HasPrecision(3)
+                        .HasColumnType("datetime2(3)");
+
+                    b.Property<Guid>("PlanId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("StartsAtUtc")
+                        .HasPrecision(3)
+                        .HasColumnType("datetime2(3)");
+
+                    b.Property<DateTime>("UpdatedAtUtc")
+                        .HasPrecision(3)
+                        .HasColumnType("datetime2(3)");
+
+                    b.Property<int>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("int");
+
+                    b.Property<Guid>("WorkspaceId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("WorkspaceId")
+                        .IsUnique();
+
+                    b.HasIndex("PlanId", "EndsAtUtc");
+
+                    b.ToTable("WorkspaceSubscriptions", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_WorkspaceSubscriptions_Period", "[EndsAtUtc] IS NULL OR [EndsAtUtc] > [StartsAtUtc]");
+                        });
+                });
+
             modelBuilder.Entity("ClassHub.Core.Modules.Teachers.Domain.TeacherProfile", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1880,6 +2156,45 @@ namespace ClassHub.Core.Infrastructure.Persistence.Migrations
                         .WithMany()
                         .HasForeignKey("WorkspaceId", "SiteId")
                         .HasPrincipalKey("WorkspaceId", "Id")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("ClassHub.Core.Modules.Subscriptions.Domain.PlanLimit", b =>
+                {
+                    b.HasOne("ClassHub.Core.Modules.Subscriptions.Domain.Plan", null)
+                        .WithMany()
+                        .HasForeignKey("PlanId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("ClassHub.Core.Modules.Subscriptions.Domain.SubscriptionEvent", b =>
+                {
+                    b.HasOne("ClassHub.Core.Modules.Subscriptions.Domain.Plan", null)
+                        .WithMany()
+                        .HasForeignKey("PlanId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.HasOne("ClassHub.Core.Modules.Workspaces.Domain.Workspace", null)
+                        .WithMany()
+                        .HasForeignKey("WorkspaceId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("ClassHub.Core.Modules.Subscriptions.Domain.WorkspaceSubscription", b =>
+                {
+                    b.HasOne("ClassHub.Core.Modules.Subscriptions.Domain.Plan", null)
+                        .WithMany()
+                        .HasForeignKey("PlanId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.HasOne("ClassHub.Core.Modules.Workspaces.Domain.Workspace", null)
+                        .WithMany()
+                        .HasForeignKey("WorkspaceId")
                         .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
                 });

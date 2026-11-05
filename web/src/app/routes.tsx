@@ -2,6 +2,7 @@ import type { RouteObject } from 'react-router';
 import { AdminLayout, AuthLayout, StudentLayout, TeacherLayout } from './layouts/AppShell.tsx';
 import { AdminAuditPage } from './pages/admin/AdminAuditPage.tsx';
 import { AdminOverviewPage } from './pages/admin/AdminOverviewPage.tsx';
+import { AdminPlansPage } from './pages/admin/AdminPlansPage.tsx';
 import { AdminSecurityPage } from './pages/admin/AdminSecurityPage.tsx';
 import { AdminUserPage } from './pages/admin/AdminUserPage.tsx';
 import { AdminUsersPage } from './pages/admin/AdminUsersPage.tsx';
@@ -13,6 +14,7 @@ import { TestsPage } from './pages/tests/TestsPage.tsx';
 import { ForgotPasswordPage, LoginPage, RegisterPage, ResetPasswordPage, VerifyEmailPage } from './pages/auth/AuthPages.tsx';
 import { OfferEditPage } from './pages/offers/OfferEditPage.tsx';
 import { OffersPage } from './pages/offers/OffersPage.tsx';
+import { PlanPage } from './pages/plan/PlanPage.tsx';
 import { ProfilePage } from './pages/profile/ProfilePage.tsx';
 import { SiteEditorPage } from './pages/site/SiteEditorPage.tsx';
 import {
@@ -50,6 +52,7 @@ export const routes: RouteObject[] = [
       { index: true, element: <TeacherHomePage /> },
       { path: 'w/:workspaceId', element: <WorkspaceDashboardPage /> },
       { path: 'w/:workspaceId/profile', element: <ProfilePage /> },
+      { path: 'w/:workspaceId/plan', element: <PlanPage /> },
       { path: 'w/:workspaceId/offers', element: <OffersPage /> },
       { path: 'w/:workspaceId/offers/new', element: <OfferEditPage /> },
       { path: 'w/:workspaceId/offers/:offerId', element: <OfferEditPage /> },
@@ -71,6 +74,7 @@ export const routes: RouteObject[] = [
       { path: 'users', element: <AdminUsersPage /> },
       { path: 'users/:userId', element: <AdminUserPage /> },
       { path: 'audit', element: <AdminAuditPage /> },
+      { path: 'plans', element: <AdminPlansPage /> },
       { path: 'security', element: <AdminSecurityPage /> },
       { path: '*', element: <NotFoundContent /> },
     ],

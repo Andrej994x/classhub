@@ -153,3 +153,58 @@ export function useAuditLog(filters: AuditFilters) {
       ).data!,
   });
 }
+
+export type AdminPlan = components['schemas']['AdminPlanResponse'];
+export type AdminSubscription = components['schemas']['AdminSubscriptionResponse'];
+export type SubscriptionEvent = components['schemas']['SubscriptionEventResponse'];
+
+export const PAYMENT_METHODS = ['bank-transfer', 'cash', 'card', 'complimentary', 'other'] as const;
+export const PAYMENT_CURRENCIES = ['MKD', 'EUR', 'USD', 'CHF', 'GBP', 'RSD', 'ALL', 'BGN', 'TRY'];
+
+export function usePlans() {
+  return useQuery({
+    queryKey: ['admin', 'plans'] as const,
+    refetchOnMount: 'always',
+    queryFn: async () => (await api.client.GET('/api/admin/plans')).data!,
+  });
+}
+
+/** Platform Owner only; sends every limit with the version that was loaded. */
+export function useUpdatePlan(code: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: { limits: { key: string; value: number }[]; version: number }) =>
+      (await api.client.PUT('/api/admin/plans/{code}', { params: { path: { code } }, body: input })).data!,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin', 'plans'] }),
+  });
+}
+
+export function useWorkspaceSubscription(workspaceId: string) {
+  return useQuery({
+    queryKey: ['admin', 'subscription', workspaceId] as const,
+    refetchOnMount: 'always',
+    queryFn: async () => (await api.client.GET('/api/admin/workspaces/{workspaceId}/subscription', { params: { path: { workspaceId } } })).data!,
+  });
+}
+
+export interface ActivateProInput {
+  months: number;
+  amountMinor: number;
+  currency: string;
+  paymentMethod: string;
+  paymentReference: string | null;
+  paidOn: string;
+  note: string | null;
+}
+
+export function useActivatePro(workspaceId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: ActivateProInput) =>
+      (await api.client.POST('/api/admin/workspaces/{workspaceId}/subscription/pro', { params: { path: { workspaceId } }, body: input })).data!,
+    onSuccess: async (subscription) => {
+      queryClient.setQueryData(['admin', 'subscription', workspaceId], subscription);
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'overview'] });
+    },
+  });
+}

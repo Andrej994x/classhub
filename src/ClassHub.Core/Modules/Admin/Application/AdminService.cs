@@ -4,6 +4,7 @@ using ClassHub.Core.Infrastructure.Persistence;
 using ClassHub.Core.Modules.Admin.Contracts;
 using ClassHub.Core.Modules.Identity.Contracts;
 using ClassHub.Core.Modules.Sites.Contracts;
+using ClassHub.Core.Modules.Subscriptions.Contracts;
 using ClassHub.Core.Modules.Workspaces.Contracts;
 using ClassHub.Core.SharedKernel.Errors;
 using ClassHub.Core.SharedKernel.Security;
@@ -23,6 +24,7 @@ internal sealed class AdminService(
     IMfaStepUp stepUp,
     IWorkspaceDirectory workspaces,
     ISiteDirectory sites,
+    ISubscriptionStats subscriptions,
     IAuditLog audit,
     TimeProvider clock)
 {
@@ -41,7 +43,8 @@ internal sealed class AdminService(
         var teachers = await workspaces.CountTeachersAsync(now.AddDays(-ActiveTeacherDays), cancellationToken);
         var published = await sites.CountPublishedAsync(cancellationToken);
         var staff = await db.UserRoles.AsNoTracking().Select(r => r.UserId).Distinct().CountAsync(cancellationToken);
-        return new AdminOverviewResponse(total, suspended, teachers.Teachers, teachers.ActiveTeachers, week, month, published, staff);
+        var plans = await subscriptions.CountAsync(now.AddDays(-30), cancellationToken);
+        return new AdminOverviewResponse(total, suspended, teachers.Teachers, teachers.ActiveTeachers, week, month, published, staff, plans.ProWorkspaces, plans.RevenueInPeriod);
     }
 
     public async Task<AdminUserPage> ListUsersAsync(string? search, string? status, bool? staff, int page, CancellationToken cancellationToken)

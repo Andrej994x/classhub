@@ -33,6 +33,9 @@ internal sealed class WorkspaceDirectoryQueries(ClassHubDbContext db) : IWorkspa
         return rows.GroupBy(r => r.UserId).ToDictionary(g => g.Key, g => g.OrderBy(r => r.CreatedAtUtc).First());
     }
 
+    public Task<bool> ExistsAsync(Guid workspaceId, CancellationToken cancellationToken) =>
+        db.Set<Workspace>().AsNoTracking().AnyAsync(w => w.Id == workspaceId, cancellationToken);
+
     public async Task<TeacherCounts> CountTeachersAsync(DateTime activeSinceUtc, CancellationToken cancellationToken)
     {
         var owners = ActiveOwners()

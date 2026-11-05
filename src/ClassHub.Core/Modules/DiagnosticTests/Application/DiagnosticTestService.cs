@@ -1,6 +1,7 @@
 using ClassHub.Core.Infrastructure.Persistence;
 using ClassHub.Core.Modules.Catalog.Contracts;
 using ClassHub.Core.Modules.DiagnosticTests.Contracts;
+using ClassHub.Core.Modules.Subscriptions.Contracts;
 using ClassHub.Core.Modules.DiagnosticTests.Domain;
 using ClassHub.Core.Modules.DiagnosticTests.Persistence;
 using ClassHub.Core.Modules.Sites.Contracts;
@@ -23,7 +24,7 @@ internal sealed class DiagnosticTestService(
     TestAttemptQueries attemptLock,
     ITenantContext tenant,
     ICatalogLookup catalog,
-    IPublishedTestQuota quota,
+    IEntitlementService entitlements,
     IPublicSiteCache siteCache,
     TimeProvider clock)
 {
@@ -171,26 +172,41 @@ internal sealed class DiagnosticTestService(
         return await GetAsync(test.Id, cancellationToken);
     }
 
-    /// <summary>Publishes after the readiness checks (questions, options, a correct answer each, points) and the plan hook.</summary>
+    /// <summary>
+    /// Publishes after the readiness checks (questions, options, a correct answer each, points) and the plan limit
+    /// (D-29): the count and the publication run in one transaction under the plan-limit lock, so parallel
+    /// publications cannot exceed it. The public caches are evicted after the commit.
+    /// </summary>
     public async Task<DiagnosticTestResponse> PublishAsync(Guid testId, TestVersionRequest request, CancellationToken cancellationToken)
     {
-        var test = await LoadForChangeAsync(testId, request.Version, cancellationToken);
-        if (test.Status == TestStatus.Published)
+        DiagnosticTest test;
+        await using (var transaction = await db.Database.BeginTransactionAsync(cancellationToken))
         {
-            return await ToResponseAsync(test, cancellationToken);
+            test = await LoadForChangeAsync(testId, request.Version, cancellationToken);
+            if (test.Status == TestStatus.Published)
+            {
+                return await ToResponseAsync(test, cancellationToken);
+            }
+
+            var response = await ToResponseAsync(test, cancellationToken);
+            if (PublishProblems(response) is { Count: > 0 } problems)
+            {
+                throw new RequestValidationException(problems);
+            }
+
+            await entitlements.EnsureWithinLimitAsync(
+                PlanLimits.PublishedTests,
+                ct => db.Set<DiagnosticTest>().CountAsync(t => t.Status == TestStatus.Published, ct),
+                adding: 1,
+                cancellationToken);
+            test.Status = TestStatus.Published;
+            test.PublishedAtUtc = clock.GetUtcNow().UtcDateTime;
+            Touch(test);
+            await SaveAsync(cancellationToken, evict: false);
+            await transaction.CommitAsync(cancellationToken);
         }
 
-        var response = await ToResponseAsync(test, cancellationToken);
-        if (PublishProblems(response) is { Count: > 0 } problems)
-        {
-            throw new RequestValidationException(problems);
-        }
-
-        await quota.EnsureCanPublishAsync(cancellationToken);
-        test.Status = TestStatus.Published;
-        test.PublishedAtUtc = clock.GetUtcNow().UtcDateTime;
-        Touch(test);
-        await SaveAsync(cancellationToken);
+        await EvictPublicAsync(cancellationToken);
         return await ToResponseAsync(test, cancellationToken);
     }
 
@@ -458,10 +474,4 @@ internal sealed class DiagnosticTestService(
     private static string? Clean(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 
     private static string Truncate(string value, int max) => value.Length <= max ? value : value[..max];
-}
-
-/// <summary>Until R1-P10: no plan limit on published tests.</summary>
-internal sealed class UnlimitedPublishedTestQuota : IPublishedTestQuota
-{
-    public Task EnsureCanPublishAsync(CancellationToken cancellationToken) => Task.CompletedTask;
 }

@@ -823,6 +823,89 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/w/{workspaceId}/plan": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The workspace's plan, its limits and what is in use. Teachers cannot change it (platform staff do). */
+        get: operations["GetWorkspacePlan"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/plans": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["ListPlans"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/plans/{code}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Platform Owner only (D-39): new values for every limit of the plan. */
+        put: operations["UpdatePlanLimits"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/workspaces/{workspaceId}/subscription": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetWorkspaceSubscription"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/workspaces/{workspaceId}/subscription/pro": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Activate Pro for N months, or extend an active Pro period from its end, recording the payment (D-30). */
+        post: operations["ActivatePro"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/w/{workspaceId}/profile": {
         parameters: {
             query?: never;
@@ -896,6 +979,18 @@ export interface components {
         AcceptedResponse: {
             message: string;
         };
+        ActivateProRequest: {
+            /** Format: int32 */
+            months: null | number | string;
+            /** Format: int64 */
+            amountMinor: null | number | string;
+            currency: null | string;
+            paymentMethod: null | string;
+            paymentReference: null | string;
+            /** Format: date */
+            paidOn: null | string;
+            note: null | string;
+        };
         AddLeadNoteRequest: {
             text: null | string;
         };
@@ -940,12 +1035,36 @@ export interface components {
             publishedSites: number | string;
             /** Format: int32 */
             platformStaff: number | string;
+            /** Format: int32 */
+            proWorkspaces: number | string;
+            revenueLast30Days: components["schemas"]["MoneyTotal"][];
+        };
+        AdminPlanResponse: {
+            /** Format: uuid */
+            id: string;
+            code: string;
+            nameMk: string;
+            nameEn: string;
+            isDefault: boolean;
+            limits: components["schemas"]["PlanLimitValue"][];
+            /** Format: int32 */
+            version: number | string;
+            /** Format: date-time */
+            updatedAtUtc: string;
         };
         AdminRoleRequest: {
             code: null | string;
         };
         AdminStatusRequest: {
             reason: null | string;
+        };
+        AdminSubscriptionResponse: {
+            /** Format: uuid */
+            workspaceId: string;
+            planCode: string;
+            /** Format: date-time */
+            paidUntilUtc: null | string;
+            history: components["schemas"]["SubscriptionEventResponse"][];
         };
         AdminUserDetail: {
             user: components["schemas"]["AdminUserSummary"];
@@ -1284,6 +1403,11 @@ export interface components {
             /** Format: int32 */
             recoveryCodesLeft: number | string;
         };
+        MoneyTotal: {
+            currency: string;
+            /** Format: int64 */
+            amountMinor: number | string;
+        };
         MyWorkspaceResponse: {
             /** Format: uuid */
             id: string;
@@ -1328,6 +1452,18 @@ export interface components {
             key: string;
             completed: boolean;
             available: boolean;
+        };
+        PlanLimitUsage: {
+            key: string;
+            /** Format: int32 */
+            limit: number | string;
+            /** Format: int32 */
+            used: null | number | string;
+        };
+        PlanLimitValue: {
+            key: null | string;
+            /** Format: int32 */
+            value: null | number | string;
         };
         PublicAttemptResult: {
             /** Format: uuid */
@@ -1528,6 +1664,38 @@ export interface components {
             /** @default false */
             shareResult: boolean;
         };
+        SubscriptionEventResponse: {
+            /** Format: uuid */
+            id: string;
+            kind: string;
+            planCode: string;
+            /** Format: date-time */
+            periodStartUtc: string;
+            /** Format: date-time */
+            periodEndUtc: null | string;
+            /** Format: int32 */
+            months: null | number | string;
+            /** Format: int64 */
+            amountMinor: null | number | string;
+            currency: null | string;
+            paymentMethod: null | string;
+            paymentReference: null | string;
+            /** Format: date */
+            paidOn: null | string;
+            note: null | string;
+            /** Format: uuid */
+            actorUserId: null | string;
+            /** Format: date-time */
+            occurredAtUtc: string;
+        };
+        TeacherPlanResponse: {
+            code: string;
+            nameMk: string;
+            nameEn: string;
+            /** Format: date-time */
+            paidUntilUtc: null | string;
+            limits: components["schemas"]["PlanLimitUsage"][];
+        };
         TeacherProfileResponse: {
             firstName: null | string;
             lastName: null | string;
@@ -1580,6 +1748,11 @@ export interface components {
         UpdateMeRequest: {
             locale: null | string;
             timeZone: null | string;
+        };
+        UpdatePlanLimitsRequest: {
+            limits: null | components["schemas"]["PlanLimitValue"][];
+            /** Format: int32 */
+            version: null | number | string;
         };
         UpdateTeacherProfileRequest: {
             firstName: null | string;
@@ -3228,6 +3401,140 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SitePreviewResponse"];
+                };
+            };
+        };
+    };
+    GetWorkspacePlan: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TeacherPlanResponse"];
+                };
+            };
+        };
+    };
+    ListPlans: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminPlanResponse"][];
+                };
+            };
+        };
+    };
+    UpdatePlanLimits: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                code: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdatePlanLimitsRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminPlanResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["HttpValidationProblemDetails"];
+                };
+            };
+        };
+    };
+    GetWorkspaceSubscription: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminSubscriptionResponse"];
+                };
+            };
+        };
+    };
+    ActivatePro: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ActivateProRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminSubscriptionResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["HttpValidationProblemDetails"];
                 };
             };
         };

@@ -51,6 +51,9 @@ public static class ErrorCodes
     public const string SignInExpired = "SIGN_IN_EXPIRED";
     public const string AdminTargetForbidden = "ADMIN_TARGET_FORBIDDEN";
 
+    // Plans (R1-P10)
+    public const string PlanLimitReached = "PLAN_LIMIT_REACHED";
+
     /// <summary>Default code for an HTTP status when no specific code was set.</summary>
     public static string ForStatus(int statusCode) => statusCode switch
     {

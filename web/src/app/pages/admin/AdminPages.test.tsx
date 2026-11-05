@@ -36,10 +36,21 @@ interface AdminState {
   mfa: { enabled: boolean; sessionVerified: boolean; required: boolean; recoveryCodesLeft: number };
   user: ReturnType<typeof summary>;
   history: ReturnType<typeof auditEntry>[];
+  subscription: Record<string, unknown>;
+  plans: { id: string; code: string; nameMk: string; nameEn: string; isDefault: boolean; version: number; updatedAtUtc: string; limits: { key: string; value: number }[] }[];
 }
 
 function adminApi(me = OWNER, mfa: AdminState['mfa'] = { enabled: true, sessionVerified: true, required: true, recoveryCodesLeft: 10 }) {
-  const state: AdminState = { mfa, user: summary(), history: [] };
+  const state: AdminState = {
+    mfa,
+    user: summary(),
+    history: [],
+    subscription: { workspaceId: WORKSPACE_ID, planCode: 'free', paidUntilUtc: null, history: [] },
+    plans: [
+      { id: 'p1', code: 'free', nameMk: 'Бесплатен', nameEn: 'Free', isDefault: true, version: 0, updatedAtUtc: '2026-11-05T00:00:00Z', limits: [{ key: 'active-students', value: 10 }, { key: 'published-tests', value: 3 }, { key: 'activities', value: 10 }, { key: 'storage-mb', value: 500 }, { key: 'analytics-level', value: 1 }] },
+      { id: 'p2', code: 'pro', nameMk: 'Про', nameEn: 'Pro', isDefault: false, version: 0, updatedAtUtc: '2026-11-05T00:00:00Z', limits: [{ key: 'active-students', value: 150 }, { key: 'published-tests', value: 50 }, { key: 'activities', value: 500 }, { key: 'storage-mb', value: 10240 }, { key: 'analytics-level', value: 2 }] },
+    ],
+  };
   const detail = () => ({ user: state.user, lockedOutUntilUtc: null, history: state.history });
   const handler = (call: FakeCall) => {
     if (call.path === '/api/auth/mfa') return json(200, state.mfa);
@@ -54,7 +65,24 @@ function adminApi(me = OWNER, mfa: AdminState['mfa'] = { enabled: true, sessionV
       return json(200, { recoveryCodes: ['AAAAA-11111', 'BBBBB-22222'] });
     }
     if (call.path === '/api/admin/overview') {
-      return json(200, { users: 42, suspendedUsers: 2, teachers: 40, activeTeachers: 25, newUsersLast7Days: 5, newUsersLast30Days: 12, publishedSites: 18, platformStaff: 2 });
+      return json(200, { users: 42, suspendedUsers: 2, teachers: 40, activeTeachers: 25, newUsersLast7Days: 5, newUsersLast30Days: 12, publishedSites: 18, platformStaff: 2, proWorkspaces: 3, revenueLast30Days: [{ currency: 'MKD', amountMinor: 360000 }] });
+    }
+    if (call.path === `/api/admin/workspaces/${WORKSPACE_ID}/subscription` && call.method === 'GET') return json(200, state.subscription);
+    if (call.path === `/api/admin/workspaces/${WORKSPACE_ID}/subscription/pro`) {
+      const body = call.body as { months: number; amountMinor: number; currency: string; paymentMethod: string; paymentReference: string | null };
+      state.subscription = {
+        workspaceId: WORKSPACE_ID,
+        planCode: 'pro',
+        paidUntilUtc: '2026-12-05T10:00:00Z',
+        history: [{ id: 'e1', kind: 'Activated', planCode: 'pro', periodStartUtc: '2026-11-05T10:00:00Z', periodEndUtc: '2026-12-05T10:00:00Z', months: body.months, amountMinor: body.amountMinor, currency: body.currency, paymentMethod: body.paymentMethod, paymentReference: body.paymentReference, paidOn: '2026-11-05', note: null, actorUserId: OWNER.id, occurredAtUtc: '2026-11-05T10:00:00Z' }],
+      };
+      return json(200, state.subscription);
+    }
+    if (call.path === '/api/admin/plans' && call.method === 'GET') return json(200, state.plans);
+    if (call.path === '/api/admin/plans/free' && call.method === 'PUT') {
+      const body = call.body as { limits: { key: string; value: number }[]; version: number };
+      state.plans = state.plans.map((p) => (p.code === 'free' ? { ...p, limits: body.limits, version: p.version + 1 } : p));
+      return json(200, state.plans[0]);
     }
     if (call.path === '/api/admin/users') return json(200, { items: [state.user], total: 1, page: 1, pageSize: 20 });
     if (call.path === `/api/admin/users/${TARGET_ID}` && call.method === 'GET') return json(200, detail());
@@ -188,6 +216,50 @@ describe('admin area', () => {
     await user.type(screen.getByLabelText('Тековен код или код за враќање'), 'ccccc-33333');
     await user.click(screen.getByRole('button', { name: 'Создај нов клуч' }));
     expect(api.to('/api/auth/mfa/authenticator').at(-1)).toMatchObject({ body: { code: null, recoveryCode: 'ccccc-33333' } });
+  });
+
+  it('activates Pro with the payment record and shows it in the history', async () => {
+    const user = userEvent.setup();
+    const { api } = adminApi();
+    await renderRoute(`/admin/users/${TARGET_ID}`);
+
+    const form = await screen.findByRole('form', { name: 'Вклучи Про' });
+    await user.selectOptions(within(form).getByLabelText('Период'), '3');
+    await user.click(within(form).getByRole('button', { name: 'Вклучи Про' }));
+    expect(await within(form).findByRole('alert')).toHaveTextContent('Внесете го уплатениот износ');
+    expect(api.to(`/api/admin/workspaces/${WORKSPACE_ID}/subscription/pro`)).toHaveLength(0);
+
+    await user.type(within(form).getByLabelText('Уплатен износ'), '1200');
+    await user.type(within(form).getByLabelText('Референца на уплатата (по избор)'), 'INV-7');
+    await user.click(within(form).getByRole('button', { name: 'Вклучи Про' }));
+
+    expect(await screen.findByRole('list', { name: 'Историја' })).toHaveTextContent('Про вклучен');
+    expect(api.to(`/api/admin/workspaces/${WORKSPACE_ID}/subscription/pro`)[0]).toMatchObject({
+      body: { months: 3, amountMinor: 120000, currency: 'MKD', paymentMethod: 'bank-transfer', paymentReference: 'INV-7' },
+    });
+    expect(screen.getByRole('button', { name: 'Продолжи Про' })).toBeInTheDocument();
+  });
+
+  it('lets only the owner edit plan limits', async () => {
+    const user = userEvent.setup();
+    const { api } = adminApi();
+    await renderRoute('/admin/plans');
+
+    const field = (await screen.findAllByLabelText('Објавени тестови'))[0]!;
+    await user.clear(field);
+    await user.type(field, '5');
+    await user.click(screen.getAllByRole('button', { name: 'Зачувај лимити' })[0]!);
+
+    await expect.poll(() => api.to('/api/admin/plans/free', 'PUT').length).toBe(1);
+    expect(api.to('/api/admin/plans/free', 'PUT')[0]!.body).toMatchObject({ version: 0, limits: expect.arrayContaining([{ key: 'published-tests', value: 5 }]) });
+  });
+
+  it('shows the limits read-only to a Platform Admin', async () => {
+    adminApi(teacher({ id: '66666666-6666-4666-8666-666666666666', platformRoles: ['PlatformAdmin'] }));
+    await renderRoute('/admin/plans');
+
+    expect((await screen.findAllByLabelText('Објавени тестови'))[0]).toHaveAttribute('readonly');
+    expect(screen.queryByRole('button', { name: 'Зачувај лимити' })).not.toBeInTheDocument();
   });
 
   it('filters the audit log through the URL and shows details only where the API sent them', async () => {

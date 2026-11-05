@@ -12,6 +12,7 @@ import { Label } from '../../../components/ui/label.tsx';
 import { formatDateTime } from '../../../lib/format.ts';
 import { NotFoundContent } from '../Pages.tsx';
 import { AuditEntries } from './AdminAuditPage.tsx';
+import { SubscriptionCard } from './SubscriptionCard.tsx';
 
 const browserTimeZone = new Intl.DateTimeFormat().resolvedOptions().timeZone;
 export const REASON_MAX = 500;
@@ -82,6 +83,7 @@ export function AdminUserPage() {
         </CardContent>
       </Card>
 
+      {account.workspace && <SubscriptionCard workspaceId={account.workspace.id} />}
       {mayChangeStatus && <StatusCard key={account.status} detail={detail} />}
       {isOwner && !self && !targetIsOwner && <RoleCard key={account.platformRoles.join()} detail={detail} />}
 
