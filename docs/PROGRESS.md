@@ -7,10 +7,10 @@ This is the live status of the autonomous implementation loop ([ROADMAP.md](ROAD
 | Field | Value |
 |---|---|
 | Release | R1 — Teacher presence (R0 complete) |
-| Current phase | R1-P1 — Teacher profile & onboarding |
-| Branch | `feature/r1-p1-teacher-profile` (from `main` @ `c2b5219`) |
-| Workflow step | 5 — signed Codex review, then PR |
-| Next action | R1-P1 PR; then R1-P2 (offers & programs) |
+| Current phase | R1-P2 — Offers & programs |
+| Branch | `feature/r1-p2-offers` (from `main` @ `3bb6b95`) |
+| Workflow step | 2 — implementation |
+| Next action | Offers module (single lesson / package / group program, DB check constraints, active, show on site, order, archive, version), IOfferLookup for leads, onboarding "first offer", offers UI |
 | Open blockers | None. User actions (optional): direct-push probe (R0-P8); remove the now redundant required `pr-gate` check (see Decisions) |
 
 ## Phase status
@@ -30,8 +30,8 @@ Status values: `not started`, `in progress`, `in review` (PR open), `merged`, `b
 | R0-P8 | Foundation hardening & closeout | merged | `chore/r0-p8-foundation-hardening` | [#11](https://github.com/Andrej994x/classhub/pull/11) | `7973981` | Whole-repo security review: 2 × P1 + 2 × P2 fixed; branch rounds: 1 × P1 (gate field binding), 1 × P2 (key recovery), CodeQL high (keygen race) fixed; final round clean | 10/10 green | Transition PR: kept the old `pull_request` trigger so a gate ran on it |
 
 | R0 closeout | Trusted gate only, Release 0 complete | merged | `chore/r0-close-trusted-gate` | [#12](https://github.com/Andrej994x/classhub/pull/12) | `c2b5219` | 1 round clean | green | First PR checked only by the trusted gate: `Evidence signature valid for 602807f` |
-| R1-P1 | Teacher profile & onboarding | in progress | `feature/r1-p1-teacher-profile` | | | | | |
-| R1-P2 | Offers & programs | not started | | | | | | |
+| R1-P1 | Teacher profile & onboarding | merged | `feature/r1-p1-teacher-profile` | [#13](https://github.com/Andrej994x/classhub/pull/13) | `3bb6b95` | 11 rounds: 9 × P2 fixed (limits feedback, atomic settings, partial blobs, stale-form versioning, form lock, first-profile race, settings re-send ×2, malformed multipart); final clean | green after 1 CI fix (OS-independent storage keys) | Migration applied to local `ClassHubDb` |
+| R1-P2 | Offers & programs | in progress | `feature/r1-p2-offers` | | | | | |
 | R1-P3 | Public site model & editor | not started | | | | | | |
 | R1-P4 | Public site rendering, SEO & islands | not started | | | | | | |
 | R1-P5 | Leads management | not started | | | | | | |
@@ -75,6 +75,10 @@ Definition of Done (ROADMAP E) demonstrated:
 - **Gate passed:** `dotnet ef database update` created `ClassHubDb` on `.\SQLEXPRESS` via Windows authentication. The running API connects as `EFCore/10.0.14` over **Shared memory**, `NTLM`. Collation `Macedonian_FYROM_100_CI_AS_SC`, RCSI on, migrations `InitialTechnical` + `EnableReadCommittedSnapshot` applied. No SQL Server configuration was changed.
 - Local tests: 49/49 green (unit 5, architecture 1, integration 43 on Testcontainers SQL Server 2022).
 - CI `migrations` job sequence verified locally against a throwaway container.
+
+### R1-P1 — Teacher profile & onboarding (merged, PR #13, `3bb6b95`)
+
+- Catalog (seeded subjects/categories/levels mk/en, languages, countries), teacher profile with optimistic concurrency, photo upload (magic bytes, limits, SkiaSharp re-encode without metadata, atomic swap), local file storage, derived onboarding checklist, profile UI; 297 backend / 70 Vitest / 14 Playwright tests.
 
 ### R0-P8 — Foundation hardening & closeout (merged, PR #11, `7973981`)
 
