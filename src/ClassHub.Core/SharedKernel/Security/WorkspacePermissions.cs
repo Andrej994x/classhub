@@ -12,6 +12,8 @@ public static class WorkspacePermissions
     public const string WorkspaceManage = "workspace.manage";
     public const string ProfileRead = "profile.read";
     public const string ProfileManage = "profile.manage";
+    public const string OffersRead = "offers.read";
+    public const string OffersManage = "offers.manage";
 
     public static IReadOnlySet<string> All { get; } = new HashSet<string>(StringComparer.Ordinal)
     {
@@ -19,6 +21,8 @@ public static class WorkspacePermissions
         WorkspaceManage,
         ProfileRead,
         ProfileManage,
+        OffersRead,
+        OffersManage,
     };
 }
 

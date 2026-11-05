@@ -2,6 +2,7 @@ using System.Security.Cryptography;
 using ClassHub.Core.Infrastructure.Files;
 using ClassHub.Core.Infrastructure.Persistence;
 using ClassHub.Core.Modules.Catalog.Contracts;
+using ClassHub.Core.Modules.Offers.Contracts;
 using ClassHub.Core.Modules.Teachers.Contracts;
 using ClassHub.Core.Modules.Teachers.Domain;
 using ClassHub.Core.Modules.Workspaces.Contracts;
@@ -20,6 +21,7 @@ internal sealed partial class TeacherProfileService(
     ITenantContext tenant,
     ICatalogLookup catalog,
     IWorkspaceSettings workspaceSettings,
+    IOfferLookup offers,
     IFileStorage files,
     TimeProvider clock,
     ILogger<TeacherProfileService> logger)
@@ -211,12 +213,13 @@ internal sealed partial class TeacherProfileService(
         var profileComplete = !string.IsNullOrWhiteSpace(profile.FirstName) && !string.IsNullOrWhiteSpace(profile.LastName)
             && !string.IsNullOrWhiteSpace(profile.Bio) && profile.TeachingMode is not null && profile.CountryCode is not null
             && profile.Languages.Count > 0 && profile.HasPhoto;
-        // Offers (R1-P2) and the public site (R1-P3/P4) do not exist yet: their steps are shown, not yet available.
+        var hasOffer = await offers.CountAsync(cancellationToken) > 0;
+        // The public site (R1-P3/P4) does not exist yet: its steps are shown, not yet available.
         OnboardingStep[] steps =
         [
             new(OnboardingSteps.Profile, profileComplete, true),
             new(OnboardingSteps.Subjects, profile.SubjectIds.Count > 0, true),
-            new(OnboardingSteps.FirstOffer, false, false),
+            new(OnboardingSteps.FirstOffer, hasOffer, true),
             new(OnboardingSteps.PublicPage, false, false),
             new(OnboardingSteps.Publish, false, false),
         ];

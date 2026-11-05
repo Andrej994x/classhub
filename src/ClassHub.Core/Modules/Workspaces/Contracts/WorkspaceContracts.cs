@@ -26,4 +26,7 @@ public static class WorkspaceForeignKeyTargets
 public interface IWorkspaceSettings
 {
     Task ApplyAsync(string? timeZone, string? currency, CancellationToken cancellationToken);
+
+    /// <summary>The current workspace's default currency (ISO 4217).</summary>
+    Task<string> GetCurrencyAsync(CancellationToken cancellationToken);
 }
