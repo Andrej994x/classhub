@@ -34,8 +34,12 @@ export function useMfaStatus(enabled = true) {
   });
 }
 
+/** A new key. Replacing an enabled authenticator needs proof: a current code, or a recovery code (used up). */
 export function useSetupAuthenticator() {
-  return useMutation({ mutationFn: async () => (await api.client.POST('/api/auth/mfa/authenticator')).data! });
+  return useMutation({
+    mutationFn: async (proof?: { code?: string; recoveryCode?: string }) =>
+      (await api.client.POST('/api/auth/mfa/authenticator', { body: { code: proof?.code ?? null, recoveryCode: proof?.recoveryCode ?? null } })).data!,
+  });
 }
 
 /** Confirms the key; the response holds the recovery codes, shown once. The status is refreshed by the caller. */

@@ -76,7 +76,7 @@ function Enrollment({ onEnabled }: { onEnabled: (codes: string[]) => void }) {
       <CardContent className="flex flex-col gap-4">
         {setup.error && <Alert variant="error">{errorMessage(setup.error, t)}</Alert>}
         {!setup.data ? (
-          <Button type="button" className="self-start" disabled={setup.isPending} onClick={() => setup.mutate()}>
+          <Button type="button" className="self-start" disabled={setup.isPending} onClick={() => setup.mutate(undefined)}>
             {setup.isPending ? t('common.loading') : t('admin.mfa.start')}
           </Button>
         ) : (
@@ -104,7 +104,7 @@ function Enrollment({ onEnabled }: { onEnabled: (codes: string[]) => void }) {
   );
 }
 
-function KeyDisplay({ setup }: { setup: AuthenticatorSetup }) {
+export function KeyDisplay({ setup }: { setup: AuthenticatorSetup }) {
   const { t } = useTranslation();
   return (
     <div className="flex flex-col gap-4 sm:flex-row sm:items-start">

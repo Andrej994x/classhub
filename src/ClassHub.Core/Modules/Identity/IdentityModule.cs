@@ -167,10 +167,11 @@ public sealed class IdentityModule : IModule
         var mfa = auth.MapGroup("/mfa").RequireAuthorization(ClassHubPolicies.Authenticated);
         mfa.MapGet("", async (HttpContext http, MfaService service) => TypedResults.Ok(await service.GetStatusAsync(http.User)))
             .WithName("GetMfaStatus");
-        mfa.MapPost("/authenticator", async (HttpContext http, MfaService service) => TypedResults.Ok(await service.SetupAsync(http)))
+        mfa.MapPost("/authenticator", async (AuthenticatorSetupRequest? request, HttpContext http, MfaService service) =>
+                TypedResults.Ok(await service.SetupAsync(http, request)))
             .RequireRateLimiting(RateLimitPolicies.Auth)
             .WithName("SetupAuthenticator")
-            .WithSummary("Create a new authenticator key (shown once).");
+            .WithSummary("Create a new authenticator key (shown once). Replacing an enabled one needs a current code or a recovery code.");
         mfa.MapPost("/authenticator/enable", async (MfaCodeRequest request, HttpContext http, MfaService service) =>
                 TypedResults.Ok(await service.EnableAsync(http, request)))
             .WithValidation<MfaCodeRequest>()

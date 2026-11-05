@@ -39,14 +39,21 @@ internal sealed partial class MfaService(
 
     /// <summary>
     /// Creates a new authenticator key. While the authenticator is on, only a session signed in with it may replace
-    /// the key (the recovery codes stay valid until the new key is confirmed).
+    /// the key, and only with proof of the current factor: a current code, or a recovery code (used up) when the phone
+    /// is lost. A stolen session alone cannot take over the second factor. The remaining recovery codes stay valid
+    /// until the new key is confirmed.
     /// </summary>
-    public async Task<AuthenticatorSetupResponse> SetupAsync(HttpContext http)
+    public async Task<AuthenticatorSetupResponse> SetupAsync(HttpContext http, AuthenticatorSetupRequest? request)
     {
         var user = await CurrentUserAsync(http.User);
-        if (user.TwoFactorEnabled && !IsMultiFactorSession(http.User))
+        if (user.TwoFactorEnabled)
         {
-            throw MfaRequired();
+            if (!IsMultiFactorSession(http.User))
+            {
+                throw MfaRequired();
+            }
+
+            await VerifyCurrentFactorAsync(user, request);
         }
 
         // Identity rotates the security stamp: other sessions end, this one is renewed (keeping its amr claim).
@@ -122,6 +129,25 @@ internal sealed partial class MfaService(
         }
 
         await VerifyStepUpAsync(user, code);
+    }
+
+    private async Task VerifyCurrentFactorAsync(AppUser user, AuthenticatorSetupRequest? request)
+    {
+        if (request?.RecoveryCode is { Length: > 0 and <= 40 } recovery)
+        {
+            if (!(await users.RedeemTwoFactorRecoveryCodeAsync(user, NormalizeRecoveryCode(recovery))).Succeeded)
+            {
+                await users.AccessFailedAsync(user);
+                LogStepUpFailed(logger, user.Id);
+                throw CodeInvalid();
+            }
+
+            audit.Record("account.mfa.recovery-code-used", "User", user.Id.ToString());
+            await db.SaveChangesAsync();
+            return;
+        }
+
+        await VerifyStepUpAsync(user, request?.Code);
     }
 
     /// <summary>A wrong step-up code counts as a failed sign-in attempt (Identity lockout), on top of the rate limit.</summary>

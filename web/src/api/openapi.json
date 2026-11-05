@@ -1386,8 +1386,24 @@
         "tags": [
           "Auth"
         ],
-        "summary": "Create a new authenticator key (shown once).",
+        "summary": "Create a new authenticator key (shown once). Replacing an enabled one needs a current code or a recovery code.",
         "operationId": "SetupAuthenticator",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "$ref": "#/components/schemas/AuthenticatorSetupRequest"
+                  }
+                ]
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "OK",
@@ -3126,6 +3142,27 @@
               "type": "string",
               "format": "uuid"
             }
+          }
+        }
+      },
+      "AuthenticatorSetupRequest": {
+        "required": [
+          "code",
+          "recoveryCode"
+        ],
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "recoveryCode": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },

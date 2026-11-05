@@ -43,7 +43,11 @@ function adminApi(me = OWNER, mfa: AdminState['mfa'] = { enabled: true, sessionV
   const detail = () => ({ user: state.user, lockedOutUntilUtc: null, history: state.history });
   const handler = (call: FakeCall) => {
     if (call.path === '/api/auth/mfa') return json(200, state.mfa);
-    if (call.path === '/api/auth/mfa/authenticator') return json(200, { sharedKey: 'abcd efgh ijkl mnop', authenticatorUri: 'otpauth://totp/ClassHub%3Aowner%40example.com?secret=ABCDEFGHIJKLMNOP&issuer=ClassHub&digits=6' });
+    if (call.path === '/api/auth/mfa/authenticator') {
+      const proof = call.body as { code: string | null; recoveryCode: string | null } | null;
+      if (state.mfa.enabled && proof?.code !== '222333' && proof?.recoveryCode !== 'CCCCC-33333') return problem(400, 'MFA_CODE_INVALID');
+      return json(200, { sharedKey: 'abcd efgh ijkl mnop', authenticatorUri: 'otpauth://totp/ClassHub%3Aowner%40example.com?secret=ABCDEFGHIJKLMNOP&issuer=ClassHub&digits=6' });
+    }
     if (call.path === '/api/auth/mfa/authenticator/enable') {
       if ((call.body as { code: string }).code !== '123456') return problem(400, 'MFA_CODE_INVALID');
       state.mfa = { ...state.mfa, enabled: true, sessionVerified: true, recoveryCodesLeft: 10 };
@@ -168,6 +172,22 @@ describe('admin area', () => {
     expect(screen.queryByRole('button', { name: 'Додели' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Одземи' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Суспендирај' })).not.toBeInTheDocument();
+  });
+
+  it('replaces the authenticator only with proof of the current factor', async () => {
+    const user = userEvent.setup();
+    const { api } = adminApi();
+    await renderRoute('/admin/security');
+
+    const proof = await screen.findByLabelText('Тековен код или код за враќање');
+    await user.type(proof, '999 999');
+    await user.click(screen.getByRole('button', { name: 'Создај нов клуч' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('Кодот не е важечки');
+    expect(api.to('/api/auth/mfa/authenticator').at(-1)).toMatchObject({ body: { code: '999 999', recoveryCode: null } });
+
+    await user.type(screen.getByLabelText('Тековен код или код за враќање'), 'ccccc-33333');
+    await user.click(screen.getByRole('button', { name: 'Создај нов клуч' }));
+    expect(api.to('/api/auth/mfa/authenticator').at(-1)).toMatchObject({ body: { code: null, recoveryCode: 'ccccc-33333' } });
   });
 
   it('filters the audit log through the URL and shows details only where the API sent them', async () => {

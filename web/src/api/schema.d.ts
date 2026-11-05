@@ -515,7 +515,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Create a new authenticator key (shown once). */
+        /** Create a new authenticator key (shown once). Replacing an enabled one needs a current code or a recovery code. */
         post: operations["SetupAuthenticator"];
         delete?: never;
         options?: never;
@@ -992,6 +992,10 @@ export interface components {
             /** Format: uuid */
             questionId: string;
             optionIds: null | string[];
+        };
+        AuthenticatorSetupRequest: {
+            code: null | string;
+            recoveryCode: null | string;
         };
         AuthenticatorSetupResponse: {
             sharedKey: string;
@@ -2574,7 +2578,11 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody?: {
+            content: {
+                "application/json": null | components["schemas"]["AuthenticatorSetupRequest"];
+            };
+        };
         responses: {
             /** @description OK */
             200: {

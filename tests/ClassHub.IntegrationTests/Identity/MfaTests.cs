@@ -146,6 +146,52 @@ public sealed class MfaTests(ClassHubApiFixture fixture)
     }
 
     [Fact]
+    public async Task Replacing_an_enrolled_authenticator_needs_the_current_factor()
+    {
+        using var teacher = await fixture.CreateTeacherAsync();
+        var first = await PlatformStaffKit.EnrollAuthenticatorAsync(teacher.Client);
+
+        // A session alone (for example a stolen one) cannot take over the second factor.
+        using (var bare = await teacher.Client.PostAsync("/api/auth/mfa/authenticator"))
+        {
+            bare.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
+            (await bare.ErrorCodeAsync()).ShouldBe(ErrorCodes.MfaCodeInvalid);
+        }
+
+        (await teacher.Client.PostAsync("/api/auth/mfa/authenticator", new { code = Totp.WrongCode(first) })).StatusCode.ShouldBe(HttpStatusCode.BadRequest);
+        (await teacher.Client.PostAsync("/api/auth/mfa/authenticator", new { recoveryCode = "AAAAA-BBBBB" })).StatusCode.ShouldBe(HttpStatusCode.BadRequest);
+        (await teacher.Client.GetJsonAsync<MfaStatusResponse>("/api/auth/mfa")).RecoveryCodesLeft.ShouldBe(10);
+
+        // With the current code: a new key, confirmed with the new app entry.
+        var second = await ReplaceAsync(teacher.Client, new { code = Totp.Code(first) });
+        var codes = await EnableAsync(teacher.Client, second);
+
+        // Phone lost: a recovery code proves the factor once (and is used up).
+        var third = await ReplaceAsync(teacher.Client, new { recoveryCode = codes[0] });
+        (await teacher.Client.GetJsonAsync<MfaStatusResponse>("/api/auth/mfa")).RecoveryCodesLeft.ShouldBe(9);
+        await EnableAsync(teacher.Client, third);
+
+        await LogoutAsync(teacher.Client);
+        await StartAsync(teacher);
+        (await teacher.Client.PostAsync("/api/auth/login/two-factor", new { code = Totp.Code(second) })).StatusCode.ShouldBe(HttpStatusCode.Unauthorized);
+        (await teacher.Client.PostAsync("/api/auth/login/two-factor", new { code = Totp.Code(third) })).StatusCode.ShouldBe(HttpStatusCode.OK);
+    }
+
+    private static async Task<string> ReplaceAsync(ApiClient client, object proof)
+    {
+        using var response = await client.PostAsync("/api/auth/mfa/authenticator", proof);
+        response.StatusCode.ShouldBe(HttpStatusCode.OK, await response.Content.ReadAsStringAsync(Ct));
+        return (await response.Content.ReadFromJsonAsync<AuthenticatorSetupResponse>(Ct))!.SharedKey;
+    }
+
+    private static async Task<IReadOnlyList<string>> EnableAsync(ApiClient client, string key)
+    {
+        using var response = await client.PostAsync("/api/auth/mfa/authenticator/enable", new { code = Totp.Code(key) });
+        response.StatusCode.ShouldBe(HttpStatusCode.OK, await response.Content.ReadAsStringAsync(Ct));
+        return (await response.Content.ReadFromJsonAsync<RecoveryCodesResponse>(Ct))!.RecoveryCodes;
+    }
+
+    [Fact]
     public async Task Wrong_authenticator_codes_lock_the_account()
     {
         using var teacher = await fixture.CreateTeacherAsync();

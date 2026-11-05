@@ -208,7 +208,12 @@
       "recoveryLeft_other": "{{count}} recovery codes left.",
       "fewLeft": "Few recovery codes are left. Create new ones.",
       "codeHint": "The current code from your app. The old recovery codes stop working.",
-      "regenerate": "Create new recovery codes"
+      "regenerate": "Create new recovery codes",
+      "replaceTitle": "Replace the authenticator",
+      "replaceLead": "New or lost phone? Confirm with a current code from the old app or with a recovery code, then set up the new app. The old key stops working at once.",
+      "proof": "Current code or a recovery code",
+      "proofHint": "A recovery code is used up.",
+      "replace": "Create a new key"
     }
   },
   "notFound": {

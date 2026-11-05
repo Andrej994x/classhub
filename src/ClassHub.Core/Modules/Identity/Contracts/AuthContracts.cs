@@ -40,6 +40,12 @@ public sealed record TwoFactorLoginRequest(string? Code, string? RecoveryCode, b
 /// </summary>
 public sealed record MfaStatusResponse(bool Enabled, bool SessionVerified, bool Required, int RecoveryCodesLeft);
 
+/// <summary>
+/// Proof of the current second factor, required only to replace an authenticator that is already on: a current code,
+/// or (phone lost) one of the recovery codes, which is used up.
+/// </summary>
+public sealed record AuthenticatorSetupRequest(string? Code, string? RecoveryCode);
+
 /// <summary>A new authenticator key: shown once as text and as an <c>otpauth://</c> link (QR code).</summary>
 public sealed record AuthenticatorSetupResponse(string SharedKey, string AuthenticatorUri);
 
