@@ -128,6 +128,9 @@ namespace ClassHub.Core.Infrastructure.Persistence.Migrations
                 name: "AttemptId",
                 table: "Leads");
 
+            // Keep the visitors' requests: without diagnostic leads they become messages (contact data unchanged).
+            migrationBuilder.Sql("UPDATE [Leads] SET [Type] = 1 WHERE [Type] = 3;");
+
             migrationBuilder.AddCheckConstraint(
                 name: "CK_Leads_Type",
                 table: "Leads",
