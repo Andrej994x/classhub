@@ -7,6 +7,7 @@ import { Sheet } from '../../components/ui/sheet.tsx';
 import { cn } from '../../lib/utils.ts';
 import { RequireAuth } from '../../auth/RequireAuth.tsx';
 import { useMyWorkspaces } from '../../auth/session.ts';
+import { AdminGate } from '../pages/admin/AdminGate.tsx';
 import { LanguageSwitcher } from '../components/LanguageSwitcher.tsx';
 import { AccountMenu, UnconfirmedEmailBanner } from '../components/SessionControls.tsx';
 
@@ -42,7 +43,7 @@ function NavLinks({ items, onNavigate }: { items: NavItem[]; onNavigate?: () => 
  * Responsive application shell: sidebar navigation on desktop (≥ 768 px), a drawer behind a menu
  * button on phones. Used by the teacher, student and admin areas.
  */
-export function AppShell({ areaKey, nav, actions }: { areaKey: string; nav: NavItem[]; actions?: ReactNode }) {
+export function AppShell({ areaKey, nav, actions, children }: { areaKey: string; nav: NavItem[]; actions?: ReactNode; children?: ReactNode }) {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
 
@@ -69,7 +70,7 @@ export function AppShell({ areaKey, nav, actions }: { areaKey: string; nav: NavI
         </nav>
         <main className="min-w-0 flex-1 p-4 md:p-8">
           <UnconfirmedEmailBanner />
-          <Outlet />
+          {children ?? <Outlet />}
         </main>
       </div>
 
@@ -118,7 +119,20 @@ export const StudentLayout = () => (
 
 export const AdminLayout = () => (
   <RequireAuth>
-    <AppShell areaKey="layout.adminArea" nav={[{ to: '/admin', labelKey: 'nav.adminHome', end: true }]} />
+    <AppShell
+      areaKey="layout.adminArea"
+      nav={[
+        { to: '/admin', labelKey: 'nav.adminOverview', end: true },
+        { to: '/admin/users', labelKey: 'nav.adminUsers' },
+        { to: '/admin/audit', labelKey: 'nav.adminAudit' },
+        { to: '/admin/security', labelKey: 'nav.adminSecurity' },
+      ]}
+    >
+      {/* UX only: the API requires a platform role and an authenticator session on every admin endpoint. */}
+      <AdminGate>
+        <Outlet />
+      </AdminGate>
+    </AppShell>
   </RequireAuth>
 );
 

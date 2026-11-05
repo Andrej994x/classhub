@@ -62,16 +62,40 @@ export function useMyWorkspaces(enabled = true) {
   });
 }
 
-export function useSignIn() {
+/** The password step: signed in (`me`), or the account uses the authenticator and needs the second step. */
+export type SignInResult = { me: Me; requiresTwoFactor?: never } | { me?: never; requiresTwoFactor: true };
+
+function useSignedIn() {
   const queryClient = useQueryClient();
+  return (me: Me) => {
+    queryClient.clear(); // nothing cached for another identity survives a sign-in
+    queryClient.setQueryData(meQueryKey, me);
+    adoptAccountLanguage(me);
+  };
+}
+
+export function useSignIn() {
+  const signedIn = useSignedIn();
   return useMutation({
-    mutationFn: async (input: { email: string; password: string; rememberMe: boolean }) =>
-      (await api.client.POST('/api/auth/login', { body: input })).data!,
-    onSuccess: (me) => {
-      queryClient.clear(); // nothing cached for another identity survives a sign-in
-      queryClient.setQueryData(meQueryKey, me);
-      adoptAccountLanguage(me);
+    mutationFn: async (input: { email: string; password: string; rememberMe: boolean }): Promise<SignInResult> => {
+      const { data, response } = await api.client.POST('/api/auth/login', { body: input });
+      // 202: the password was right; only a short-lived two-factor cookie was set, no session yet.
+      if (response.status === 202) return { requiresTwoFactor: true };
+      return { me: data as Me };
     },
+    onSuccess: (result) => {
+      if (result.me) signedIn(result.me);
+    },
+  });
+}
+
+/** The second step: a code from the authenticator app or a recovery code. */
+export function useSignInTwoFactor() {
+  const signedIn = useSignedIn();
+  return useMutation({
+    mutationFn: async (input: { code?: string; recoveryCode?: string; rememberMe: boolean }) =>
+      (await api.client.POST('/api/auth/login/two-factor', { body: { code: input.code ?? null, recoveryCode: input.recoveryCode ?? null, rememberMe: input.rememberMe } })).data!,
+    onSuccess: signedIn,
   });
 }
 

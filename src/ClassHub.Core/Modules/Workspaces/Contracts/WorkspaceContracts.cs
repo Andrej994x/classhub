@@ -43,6 +43,21 @@ public interface IWorkspacePublicVisibility
     Task<IReadOnlySet<Guid>> VisibleAsync(IReadOnlyCollection<Guid> workspaceIds, CancellationToken cancellationToken);
 }
 
+/// <summary>A teacher's workspace as platform administration sees it (R1-P9): metadata only.</summary>
+public sealed record OwnedWorkspace(Guid UserId, Guid WorkspaceId, string Name, DateTime CreatedAtUtc);
+
+/// <summary>Teachers: users who own a workspace. Active: not suspended and signed in since the given time.</summary>
+public sealed record TeacherCounts(int Teachers, int ActiveTeachers);
+
+/// <summary>Workspace metadata across all tenants, for the platform admin endpoints only (R1-P9).</summary>
+public interface IWorkspaceDirectory
+{
+    /// <summary>The workspace each of the users owns (users without one are absent).</summary>
+    Task<IReadOnlyDictionary<Guid, OwnedWorkspace>> OwnedByAsync(IReadOnlyCollection<Guid> userIds, CancellationToken cancellationToken);
+
+    Task<TeacherCounts> CountTeachersAsync(DateTime activeSinceUtc, CancellationToken cancellationToken);
+}
+
 /// <summary>The workspace owner's address for notifications, and whether it is confirmed (D-10b).</summary>
 public sealed record WorkspaceOwnerContact(Guid UserId, string Email, string Locale, bool EmailConfirmed);
 

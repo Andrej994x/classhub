@@ -96,11 +96,23 @@ public sealed class PlatformOwnerCommandTests(ClassHubApiFixture fixture)
     public void The_command_is_not_reachable_over_http()
     {
         using var factory = new PlatformApiFactory(includeProbeModule: false);
-        var routes = factory.Services.GetRequiredService<Microsoft.AspNetCore.Routing.EndpointDataSource>().Endpoints
+        var endpoints = factory.Services.GetRequiredService<Microsoft.AspNetCore.Routing.EndpointDataSource>().Endpoints
             .OfType<Microsoft.AspNetCore.Routing.RouteEndpoint>()
-            .Select(e => e.RoutePattern.RawText ?? string.Empty);
+            .ToList();
+        var routes = endpoints.Select(e => e.RoutePattern.RawText ?? string.Empty).ToList();
 
-        routes.ShouldNotContain(r => r.Contains("platform-owner", StringComparison.OrdinalIgnoreCase) || r.Contains("grant", StringComparison.OrdinalIgnoreCase));
+        routes.ShouldNotContain(r => r.Contains("platform-owner", StringComparison.OrdinalIgnoreCase) || r.Contains("owner", StringComparison.OrdinalIgnoreCase));
+
+        // The only role routes over HTTP are the reviewed Platform Admin ones (R1-P9): owner-only, and they never
+        // manage the Platform Owner role (PlatformAdminTests).
+        string[] adminRoleRoutes = ["/api/admin/users/{userId:guid}/admin-role/grant", "/api/admin/users/{userId:guid}/admin-role/revoke"];
+        routes.Where(r => r.Contains("grant", StringComparison.OrdinalIgnoreCase) || r.Contains("role", StringComparison.OrdinalIgnoreCase))
+            .ShouldBe(adminRoleRoutes, ignoreOrder: true);
+        foreach (var endpoint in endpoints.Where(e => adminRoleRoutes.Contains(e.RoutePattern.RawText)))
+        {
+            endpoint.Metadata.GetOrderedMetadata<Microsoft.AspNetCore.Authorization.IAuthorizeData>()
+                .Select(a => a.Policy).ShouldContain(ClassHub.Core.SharedKernel.Security.ClassHubPolicies.PlatformOwner);
+        }
     }
 
     private async Task<int> RunAsync(string email, bool force)

@@ -132,6 +132,17 @@ public static partial class SiteSlugs
     }
 }
 
+/// <summary>A workspace's site as platform administration sees it (R1-P9): the address and the state, not the content.</summary>
+public sealed record SiteDirectoryEntry(Guid WorkspaceId, string Slug, bool Published);
+
+/// <summary>Site metadata across all tenants, for the platform admin endpoints only (R1-P9).</summary>
+public interface ISiteDirectory
+{
+    Task<IReadOnlyDictionary<Guid, SiteDirectoryEntry>> ForWorkspacesAsync(IReadOnlyCollection<Guid> workspaceIds, CancellationToken cancellationToken);
+
+    Task<int> CountPublishedAsync(CancellationToken cancellationToken);
+}
+
 /// <summary>Site state of the current workspace for other modules (onboarding).</summary>
 public interface ISiteStatus
 {

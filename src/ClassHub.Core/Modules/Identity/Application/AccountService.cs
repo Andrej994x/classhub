@@ -1,10 +1,12 @@
 using System.Security.Claims;
+using ClassHub.Core.Infrastructure.Audit;
 using ClassHub.Core.Infrastructure.Email;
 using ClassHub.Core.Infrastructure.Persistence;
 using ClassHub.Core.Infrastructure.Web;
 using ClassHub.Core.Modules.Identity.Contracts;
 using ClassHub.Core.Modules.Workspaces.Contracts;
 using ClassHub.Core.SharedKernel.Errors;
+using ClassHub.Core.SharedKernel.Security;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
@@ -24,6 +26,7 @@ internal sealed partial class AccountService(
     IPasswordHasher<AppUser> passwordHasher,
     IEmailOutbox outbox,
     IWorkspaceProvisioning workspaces,
+    IAuditLog audit,
     ClassHubDbContext db,
     IOptions<AppLinkOptions> links,
     TimeProvider clock,
@@ -136,7 +139,11 @@ internal sealed partial class AccountService(
         }
     }
 
-    public async Task<MeResponse> LoginAsync(HttpContext http, LoginRequest request)
+    /// <summary>
+    /// Checks the password. Without the authenticator the session starts (<c>amr=pwd</c>); with it the answer is
+    /// null and only a short-lived two-factor cookie is set, finished by <see cref="LoginTwoFactorAsync"/>.
+    /// </summary>
+    public async Task<MeResponse?> LoginAsync(HttpContext http, LoginRequest request)
     {
         var user = await users.FindByEmailAsync(NormalizeEmail(request.Email!));
         if (user is null)
@@ -159,8 +166,56 @@ internal sealed partial class AccountService(
             throw new ForbiddenOperationException("This account is suspended.", ErrorCodes.AccountSuspended);
         }
 
-        await signIn.SignInAsync(user, new AuthenticationProperties { IsPersistent = request.RememberMe }, "pwd");
+        if (user.TwoFactorEnabled)
+        {
+            // The same claim SignInManager writes for its own two-factor flow, read back by TwoFactor*SignInAsync.
+            var pending = new ClaimsIdentity(IdentityConstants.TwoFactorUserIdScheme);
+            pending.AddClaim(new Claim(ClaimTypes.Name, user.Id.ToString()));
+            await http.SignInAsync(IdentityConstants.TwoFactorUserIdScheme, new ClaimsPrincipal(pending));
+            LogTwoFactorRequired(logger, user.Id);
+            return null;
+        }
 
+        await signIn.SignInAsync(user, new AuthenticationProperties { IsPersistent = request.RememberMe }, AuthenticationMethods.Password);
+        return await CompleteSignInAsync(http, user);
+    }
+
+    /// <summary>
+    /// The second step: a code from the authenticator app or a recovery code. A wrong authenticator code counts
+    /// towards the Identity lockout; both answer like a wrong password.
+    /// </summary>
+    public async Task<MeResponse> LoginTwoFactorAsync(HttpContext http, TwoFactorLoginRequest request)
+    {
+        var user = await signIn.GetTwoFactorAuthenticationUserAsync()
+            ?? throw new AuthenticationFailedException("The sign-in has expired. Sign in again.", ErrorCodes.SignInExpired);
+
+        if (user.Status != UserStatus.Active)
+        {
+            await http.SignOutAsync(IdentityConstants.TwoFactorUserIdScheme);
+            throw new ForbiddenOperationException("This account is suspended.", ErrorCodes.AccountSuspended);
+        }
+
+        var recovery = request.RecoveryCode is not null;
+        var result = recovery
+            ? await signIn.TwoFactorRecoveryCodeSignInAsync(MfaService.NormalizeRecoveryCode(request.RecoveryCode))
+            : await signIn.TwoFactorAuthenticatorSignInAsync(MfaService.NormalizeCode(request.Code), request.RememberMe, rememberClient: false);
+        if (!result.Succeeded)
+        {
+            LogLoginFailed(logger, user.Id, result.IsLockedOut);
+            throw new AuthenticationFailedException("The code is not valid.", ErrorCodes.MfaCodeInvalid);
+        }
+
+        if (recovery)
+        {
+            audit.Record("account.mfa.recovery-code-used", "User", user.Id.ToString(), actorUserId: user.Id);
+            await db.SaveChangesAsync(http.RequestAborted);
+        }
+
+        return await CompleteSignInAsync(http, user);
+    }
+
+    private async Task<MeResponse> CompleteSignInAsync(HttpContext http, AppUser user)
+    {
         user.LastLoginAtUtc = clock.GetUtcNow().UtcDateTime;
         await users.UpdateAsync(user);
 
@@ -314,6 +369,9 @@ internal sealed partial class AccountService(
 
     [LoggerMessage(Level = LogLevel.Information, Message = "Sign-in failed for user {UserId} (locked out: {LockedOut})")]
     private static partial void LogLoginFailed(ILogger logger, Guid userId, bool lockedOut);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "User {UserId} passed the password step; authenticator code required")]
+    private static partial void LogTwoFactorRequired(ILogger logger, Guid userId);
 
     [LoggerMessage(Level = LogLevel.Information, Message = "User {UserId} reset the password")]
     private static partial void LogPasswordReset(ILogger logger, Guid userId);

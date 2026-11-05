@@ -45,6 +45,12 @@ public static class ErrorCodes
     public const string TestHasAttempts = "TEST_HAS_ATTEMPTS";
     public const string TestChanged = "TEST_CHANGED";
 
+    // Platform administration (R1-P9)
+    public const string MfaRequired = "MFA_REQUIRED";
+    public const string MfaCodeInvalid = "MFA_CODE_INVALID";
+    public const string SignInExpired = "SIGN_IN_EXPIRED";
+    public const string AdminTargetForbidden = "ADMIN_TARGET_FORBIDDEN";
+
     /// <summary>Default code for an HTTP status when no specific code was set.</summary>
     public static string ForStatus(int statusCode) => statusCode switch
     {

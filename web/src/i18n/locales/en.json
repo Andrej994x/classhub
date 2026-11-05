@@ -26,7 +26,11 @@
     "offers": "Offers",
     "site": "Website",
     "leads": "Requests",
-    "tests": "Tests"
+    "tests": "Tests",
+    "adminOverview": "Overview",
+    "adminUsers": "Users",
+    "adminAudit": "Audit log",
+    "adminSecurity": "Security"
   },
   "layout": {
     "teacherArea": "Teacher workspace",
@@ -83,7 +87,134 @@
   },
   "admin": {
     "title": "Administration",
-    "empty": "Administration tools are added in later phases."
+    "noAccess": "This area is for platform staff only.",
+    "yes": "Yes",
+    "no": "No",
+    "pagination": "Pages",
+    "statuses": {
+      "Active": "Active",
+      "Suspended": "Suspended"
+    },
+    "roles": {
+      "PlatformOwner": "Platform Owner",
+      "PlatformAdmin": "Platform Admin"
+    },
+    "mfa": {
+      "title": "Set up the authenticator",
+      "lead": "Platform administration needs a second step at sign-in: a code from an authenticator app on your phone (for example Google Authenticator, Microsoft Authenticator or 1Password).",
+      "start": "Create a key",
+      "qr": "QR code for your authenticator app",
+      "scan": "Scan the QR code with your authenticator app.",
+      "orType": "Or type this key into the app:",
+      "key": "Authenticator key",
+      "openApp": "Open in the authenticator app",
+      "code": "Code from the app",
+      "codeHint": "The 6-digit code the app shows for ClassHub.",
+      "confirm": "Confirm and turn on",
+      "codesTitle": "Your recovery codes",
+      "codesLead": "Save these codes somewhere safe. If you lose your phone, each code signs you in once. They are not shown again.",
+      "codesDone": "I have saved the codes",
+      "againTitle": "Sign in with your authenticator",
+      "againLead": "This session started with the password only. Sign in again and enter the code from your app.",
+      "again": "Sign out and sign in again"
+    },
+    "overview": {
+      "title": "Platform overview",
+      "lead": "Totals across ClassHub. Only numbers: no private teacher or student data.",
+      "users": "Users",
+      "suspended_one": "{{count}} suspended",
+      "suspended_other": "{{count}} suspended",
+      "teachers": "Teachers",
+      "activeTeachers": "Active teachers",
+      "activeHint": "Signed in during the last 30 days",
+      "newUsers": "New in 7 days",
+      "newUsersHint_one": "{{count}} in 30 days",
+      "newUsersHint_other": "{{count}} in 30 days",
+      "publishedSites": "Published sites",
+      "staff": "Platform staff"
+    },
+    "users": {
+      "title": "Users",
+      "lead": "Find an account by email or id. You see account data only, never a teacher's content.",
+      "filters": "Filter users",
+      "search": "Email or id",
+      "status": "Status",
+      "all": "All",
+      "staffOnly": "Platform staff only",
+      "none": "No accounts match.",
+      "count_one": "{{count}} account",
+      "count_other": "{{count}} accounts",
+      "registered": "Registered {{date}}"
+    },
+    "user": {
+      "back": "Back to users",
+      "account": "Account",
+      "metadataOnly": "Account data only. Platform staff cannot open a teacher's workspace.",
+      "registered": "Registered",
+      "lastLogin": "Last sign-in",
+      "never": "Never",
+      "emailConfirmed": "Email confirmed",
+      "mfa": "Authenticator",
+      "roles": "Platform roles",
+      "noRoles": "None",
+      "lockedOut": "Locked out until",
+      "workspace": "Workspace",
+      "noWorkspace": "None",
+      "site": "Public site",
+      "noSite": "Not created",
+      "published": "published",
+      "draft": "not published",
+      "suspendTitle": "Suspend the account",
+      "suspendLead": "The account is signed out everywhere, cannot sign in, and its public site is hidden at once.",
+      "reactivateTitle": "Reactivate the account",
+      "reactivateLead": "The account can sign in again and its public site is shown again.",
+      "reason": "Reason",
+      "reasonHint": "Required (3 to 500 characters). It is saved in the audit log.",
+      "suspend": "Suspend",
+      "reactivate": "Reactivate",
+      "grantTitle": "Make Platform Admin",
+      "grantLead": "Admins manage users and see the audit log. The account is signed out and needs the authenticator to use the admin area.",
+      "revokeTitle": "Remove Platform Admin",
+      "revokeLead": "The account is signed out and loses access to the admin area.",
+      "stepUpCode": "Your authenticator code",
+      "stepUpHint": "Confirm this change with the current code from your app.",
+      "grant": "Make admin",
+      "revoke": "Remove admin",
+      "history": "History",
+      "fullAudit": "Open in the audit log"
+    },
+    "audit": {
+      "title": "Audit log",
+      "lead": "Important changes: who made them, when and to which record. Changes inside a workspace show what happened, not the data.",
+      "filters": "Filter the audit log",
+      "action": "Action starts with",
+      "from": "From (UTC)",
+      "to": "To (UTC)",
+      "forUser": "Only entries by or about user {{id}}",
+      "clearUser": "Show all users",
+      "entries": "Audit entries",
+      "none": "No entries.",
+      "count_one": "{{count}} entry",
+      "count_other": "{{count}} entries",
+      "by": "By",
+      "system": "the system",
+      "details": "Details"
+    },
+    "security": {
+      "title": "Security",
+      "lead": "Your authenticator and recovery codes.",
+      "recoveryTitle": "Recovery codes",
+      "recoveryLeft_one": "{{count}} recovery code left.",
+      "recoveryLeft_other": "{{count}} recovery codes left.",
+      "fewLeft": "Few recovery codes are left. Create new ones.",
+      "codeHint": "The current code from your app. The old recovery codes stop working.",
+      "regenerate": "Create new recovery codes",
+      "replaceTitle": "Replace the authenticator",
+      "replaceLead": "New or lost phone? Confirm with a current code from the old app or with a recovery code, then set up the new app. The old key stops working at once.",
+      "proof": "Current code or a recovery code",
+      "proofHint": "A recovery code is used up.",
+      "replace": "Create a new key"
+    }
   },
   "notFound": {
     "title": "Page not found",
@@ -121,7 +252,11 @@
       "LEADS_UNAVAILABLE": "Requests cannot be received at the moment.",
       "TEST_SLUG_TAKEN": "Another of your tests already uses this address. Choose another one.",
       "TEST_HAS_ATTEMPTS": "This test already has attempts: questions, options, correct answers, points and subject cannot change. Duplicate it to edit a new version.",
-      "TEST_CHANGED": "The teacher changed this test meanwhile. Reload the page and take it again."
+      "TEST_CHANGED": "The teacher changed this test meanwhile. Reload the page and take it again.",
+      "MFA_REQUIRED": "Sign in with your authenticator app to continue.",
+      "MFA_CODE_INVALID": "The code is not valid. Enter the current code from your authenticator app.",
+      "SIGN_IN_EXPIRED": "The sign-in has expired. Go back and sign in again.",
+      "ADMIN_TARGET_FORBIDDEN": "You cannot make this change to this account."
     }
   },
   "auth": {
@@ -180,7 +315,19 @@
       "resend": "Send the link again",
       "resent": "A new confirmation link is on its way."
     },
-    "logoutFailed": "Signing out failed: {{reason}} You are still signed in."
+    "logoutFailed": "Signing out failed: {{reason}} You are still signed in.",
+    "twoFactor": {
+      "title": "Two-step sign-in",
+      "lead": "Enter the 6-digit code from your authenticator app.",
+      "recoveryLead": "Enter one of your recovery codes. Each code works only once.",
+      "code": "Authenticator code",
+      "recoveryCode": "Recovery code",
+      "required": "Enter the code.",
+      "submit": "Continue",
+      "useRecovery": "Use a recovery code instead",
+      "useCode": "Use the authenticator app instead",
+      "back": "Back to sign in"
+    }
   },
   "devMailbox": {
     "title": "Dev mailbox",

@@ -1,5 +1,6 @@
 using ClassHub.Core.Infrastructure.Persistence;
 using ClassHub.Core.Infrastructure.Web;
+using ClassHub.Core.Modules.Identity;
 using Microsoft.AspNetCore.DataProtection;
 using ClassHub.Core.SharedKernel.Security;
 using Microsoft.AspNetCore.Authentication.Cookies;
@@ -36,6 +37,9 @@ internal static class SecuritySetup
             ? CookieSecurePolicy.SameAsRequest
             : CookieSecurePolicy.Always;
 
+        var identity = configuration.GetSection(IdentitySettings.SectionName).Get<IdentitySettings>() ?? new IdentitySettings();
+        var staffSession = TimeSpan.FromMinutes(Math.Max(5, identity.PlatformStaffSessionMinutes));
+
         void ConfigureCompanionCookie(CookieAuthenticationOptions options, string name, TimeSpan lifetime)
         {
             options.Cookie.Name = name;
@@ -70,6 +74,13 @@ internal static class SecuritySetup
                     // Re-checks the cookie against the user's security stamp (password reset, suspension,
                     // sign-out everywhere) every SecurityStampValidatorOptions.ValidationInterval.
                     OnValidatePrincipal = SecurityStampValidator.ValidatePrincipalAsync,
+                    // Platform Owner/Admin: session cookie only, shorter lifetime (R1-P9). Role changes rotate the
+                    // security stamp, so a session never gains a platform role without a new sign-in.
+                    OnSigningIn = context =>
+                    {
+                        PlatformAuthorization.LimitStaffSession(context, staffSession);
+                        return Task.CompletedTask;
+                    },
                     OnRedirectToLogin = context =>
                     {
                         context.Response.StatusCode = StatusCodes.Status401Unauthorized;
@@ -85,7 +96,9 @@ internal static class SecuritySetup
 
         services.AddAuthorizationBuilder()
             .SetFallbackPolicy(new AuthorizationPolicyBuilder().RequireAuthenticatedUser().Build())
-            .AddPolicy(ClassHubPolicies.Authenticated, policy => policy.RequireAuthenticatedUser());
+            .AddPolicy(ClassHubPolicies.Authenticated, policy => policy.RequireAuthenticatedUser())
+            .AddPlatformPolicies();
+        services.AddSingleton<IAuthorizationHandler, PlatformStaffHandler>();
 
         // Keys protect auth cookies, antiforgery and Identity tokens; stored in the database so they
         // survive restarts (D-52). On Windows (development) they are additionally encrypted with DPAPI.

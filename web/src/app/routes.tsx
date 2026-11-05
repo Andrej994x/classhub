@@ -1,5 +1,10 @@
 import type { RouteObject } from 'react-router';
 import { AdminLayout, AuthLayout, StudentLayout, TeacherLayout } from './layouts/AppShell.tsx';
+import { AdminAuditPage } from './pages/admin/AdminAuditPage.tsx';
+import { AdminOverviewPage } from './pages/admin/AdminOverviewPage.tsx';
+import { AdminSecurityPage } from './pages/admin/AdminSecurityPage.tsx';
+import { AdminUserPage } from './pages/admin/AdminUserPage.tsx';
+import { AdminUsersPage } from './pages/admin/AdminUsersPage.tsx';
 import { DevMailboxPage } from './pages/DevMailboxPage.tsx';
 import { LeadDetailPage } from './pages/leads/LeadDetailPage.tsx';
 import { LeadsPage } from './pages/leads/LeadsPage.tsx';
@@ -11,7 +16,6 @@ import { OffersPage } from './pages/offers/OffersPage.tsx';
 import { ProfilePage } from './pages/profile/ProfilePage.tsx';
 import { SiteEditorPage } from './pages/site/SiteEditorPage.tsx';
 import {
-  AdminHomePage,
   HomePage,
   NotFoundContent,
   NotFoundPage,
@@ -59,6 +63,17 @@ export const routes: RouteObject[] = [
     ],
   },
   { path: '/student', element: <StudentLayout />, children: [{ index: true, element: <StudentHomePage /> }] },
-  { path: '/admin', element: <AdminLayout />, children: [{ index: true, element: <AdminHomePage /> }] },
+  {
+    path: '/admin',
+    element: <AdminLayout />,
+    children: [
+      { index: true, element: <AdminOverviewPage /> },
+      { path: 'users', element: <AdminUsersPage /> },
+      { path: 'users/:userId', element: <AdminUserPage /> },
+      { path: 'audit', element: <AdminAuditPage /> },
+      { path: 'security', element: <AdminSecurityPage /> },
+      { path: '*', element: <NotFoundContent /> },
+    ],
+  },
   { path: '*', element: <NotFoundPage /> },
 ];

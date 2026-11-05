@@ -58,6 +58,8 @@ Rules:
 | `AddOffers` | R1-P2 | `Offers` with CHECK constraints (price ≥ 0, duration, package lessons, group seats, currency), alternate key `(WorkspaceId, Id)`, subject and workspace FKs |
 | `AddCatalogProfilesAndFiles` | R1-P1 | `SubjectCategories`, `Subjects`, `EducationLevels` (seeded, unique codes), `StoredFiles`, `TeacherProfiles` (unique per workspace, country check), profile subject/level/language lists with composite tenant FKs |
 
+Since R1-P9 (no migration), the `AspNetUserTokens` values of Identity's own tokens `AuthenticatorKey` and `RecoveryCodes` are Data Protection payloads, not plain text (`ProtectedUserStore`).
+
 ## Database settings
 
 | Setting | Value | Where |

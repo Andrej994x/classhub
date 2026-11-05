@@ -200,7 +200,7 @@ public sealed partial class PublicSiteTests(ClassHubApiFixture fixture)
         using var visitor = Visitor();
         (await visitor.GetAsync($"/{slug}", Ct)).StatusCode.ShouldBe(HttpStatusCode.OK); // now cached
 
-        await fixture.WithServiceAsync<IUserAccountStatus, bool>(async s => { await s.SuspendAsync(teacher.Me.Id, Ct); return true; });
+        await fixture.WithServiceAsync<IUserAccountStatus, bool>(async s => { await s.SuspendAsync(teacher.Me.Id, "Test suspension", Ct); return true; });
         using (var hidden = await visitor.GetAsync($"/{slug}", Ct))
         {
             await AssertNotFoundPageAsync(hidden);
@@ -209,7 +209,7 @@ public sealed partial class PublicSiteTests(ClassHubApiFixture fixture)
         (await visitor.GetStringAsync("/sitemap.xml", Ct)).ShouldNotContain($"/{slug}<");
         (await visitor.GetAsync($"/{slug}/photo", Ct)).StatusCode.ShouldBe(HttpStatusCode.NotFound);
 
-        await fixture.WithServiceAsync<IUserAccountStatus, bool>(async s => { await s.ReactivateAsync(teacher.Me.Id, Ct); return true; });
+        await fixture.WithServiceAsync<IUserAccountStatus, bool>(async s => { await s.ReactivateAsync(teacher.Me.Id, "Test reactivation", Ct); return true; });
         (await visitor.GetAsync($"/{slug}", Ct)).StatusCode.ShouldBe(HttpStatusCode.OK);
     }
 

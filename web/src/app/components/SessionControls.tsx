@@ -1,23 +1,37 @@
 import { useMutation } from '@tanstack/react-query';
-import { LogOut } from 'lucide-react';
+import { LogOut, School, ShieldCheck } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { useNavigate } from 'react-router';
+import { Link, useLocation, useNavigate } from 'react-router';
 import { api } from '../../api/client.ts';
 import { errorMessage } from '../../api/errors.ts';
+import { isPlatformStaff } from '../../admin/api.ts';
 import { useMe, useSignOut } from '../../auth/session.ts';
 import { Alert } from '../../components/ui/alert.tsx';
 import { Button } from '../../components/ui/button.tsx';
 
-/** Signed-in account and sign-out button for the area header. */
+/** Signed-in account, the switch between the teacher and admin areas (platform staff), and sign-out. */
 export function AccountMenu() {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const location = useLocation();
   const me = useMe();
   const signOut = useSignOut();
   if (!me.data) return null;
 
   return (
     <div className="flex items-center gap-2">
+      {isPlatformStaff(me.data.platformRoles) &&
+        (location.pathname.startsWith('/admin') ? (
+          <Link to="/app" className="inline-flex items-center gap-1 text-sm font-medium text-primary underline-offset-4 hover:underline">
+            <School className="h-4 w-4" aria-hidden />
+            <span className="sr-only sm:not-sr-only">{t('layout.teacherArea')}</span>
+          </Link>
+        ) : (
+          <Link to="/admin" className="inline-flex items-center gap-1 text-sm font-medium text-primary underline-offset-4 hover:underline">
+            <ShieldCheck className="h-4 w-4" aria-hidden />
+            <span className="sr-only sm:not-sr-only">{t('nav.adminHome')}</span>
+          </Link>
+        ))}
       <span className="hidden max-w-48 truncate text-sm text-muted-foreground lg:inline" data-testid="account-email">
         {me.data.email}
       </span>

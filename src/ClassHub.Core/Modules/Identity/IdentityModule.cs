@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using ClassHub.Core.Infrastructure.Email;
 using ClassHub.Core.Infrastructure.Persistence;
 using ClassHub.Core.Infrastructure.Web;
@@ -27,6 +28,12 @@ public sealed class IdentitySettings
 
     /// <summary>How often a session cookie is re-checked against the user's security stamp (D-51).</summary>
     public int SecurityStampValidationIntervalSeconds { get; set; } = 60;
+
+    /// <summary>
+    /// Lifetime of a session of a Platform Owner or Admin (R1-P9): never a persistent cookie, and it ends after this
+    /// long without activity, instead of the teachers' 30 days.
+    /// </summary>
+    public int PlatformStaffSessionMinutes { get; set; } = 480;
 }
 
 /// <summary>Accounts and authentication (<c>/api/auth</c>): ASP.NET Core Identity with cookie sessions.</summary>
@@ -66,9 +73,34 @@ public sealed class IdentityModule : IModule
 
         services.Configure<DataProtectionTokenProviderOptions>(o => o.TokenLifespan = TimeSpan.FromHours(2));
         services.Configure<SecurityStampValidatorOptions>(o =>
-            o.ValidationInterval = TimeSpan.FromSeconds(Math.Max(0, settings.SecurityStampValidationIntervalSeconds)));
+        {
+            o.ValidationInterval = TimeSpan.FromSeconds(Math.Max(0, settings.SecurityStampValidationIntervalSeconds));
+            // The validator rebuilds the principal from the database and would drop how the session signed in;
+            // keep amr, or an authenticator session would lose platform access at the first validation.
+            o.OnRefreshingPrincipal = context =>
+            {
+                var identity = context.NewPrincipal?.Identities.FirstOrDefault();
+                if (identity is not null && context.CurrentPrincipal is not null)
+                {
+                    foreach (var method in context.CurrentPrincipal.FindAll(AuthenticationMethods.ClaimType))
+                    {
+                        if (!identity.HasClaim(AuthenticationMethods.ClaimType, method.Value))
+                        {
+                            identity.AddClaim(new Claim(AuthenticationMethods.ClaimType, method.Value));
+                        }
+                    }
+                }
+
+                return Task.CompletedTask;
+            };
+        });
+
+        // Authenticator keys and recovery codes are encrypted with Data Protection (Identity stores them as plain text).
+        services.Replace(ServiceDescriptor.Scoped<IUserStore<AppUser>, ProtectedUserStore>());
 
         services.AddScoped<AccountService>();
+        services.AddScoped<MfaService>();
+        services.AddScoped<IMfaStepUp>(sp => sp.GetRequiredService<MfaService>());
         services.AddScoped<IUserAccountStatus, UserAccountStatusService>();
     }
 
@@ -114,12 +146,44 @@ public sealed class IdentityModule : IModule
             .RequireRateLimiting(RateLimitPolicies.Auth)
             .WithName("ResendConfirmation");
 
-        auth.MapPost("/login", async (LoginRequest request, HttpContext http, AccountService accounts) =>
-                TypedResults.Ok(await accounts.LoginAsync(http, request)))
+        auth.MapPost("/login", async Task<Results<Ok<MeResponse>, Accepted<TwoFactorRequiredResponse>>> (LoginRequest request, HttpContext http, AccountService accounts) =>
+                await accounts.LoginAsync(http, request) is { } me
+                    ? TypedResults.Ok(me)
+                    : TypedResults.Accepted((string?)null, new TwoFactorRequiredResponse(true)))
             .WithValidation<LoginRequest>()
             .AllowAnonymous()
             .RequireRateLimiting(RateLimitPolicies.Auth)
-            .WithName("Login");
+            .WithName("Login")
+            .WithSummary("Sign in. 200: signed in. 202: the account uses the authenticator; finish with /login/two-factor.");
+
+        auth.MapPost("/login/two-factor", async (TwoFactorLoginRequest request, HttpContext http, AccountService accounts) =>
+                TypedResults.Ok(await accounts.LoginTwoFactorAsync(http, request)))
+            .WithValidation<TwoFactorLoginRequest>()
+            .AllowAnonymous()
+            .RequireRateLimiting(RateLimitPolicies.Auth)
+            .WithName("LoginTwoFactor")
+            .WithSummary("Second sign-in step: an authenticator code or a recovery code.");
+
+        var mfa = auth.MapGroup("/mfa").RequireAuthorization(ClassHubPolicies.Authenticated);
+        mfa.MapGet("", async (HttpContext http, MfaService service) => TypedResults.Ok(await service.GetStatusAsync(http.User)))
+            .WithName("GetMfaStatus");
+        mfa.MapPost("/authenticator", async (AuthenticatorSetupRequest? request, HttpContext http, MfaService service) =>
+                TypedResults.Ok(await service.SetupAsync(http, request)))
+            .RequireRateLimiting(RateLimitPolicies.Auth)
+            .WithName("SetupAuthenticator")
+            .WithSummary("Create a new authenticator key (shown once). Replacing an enabled one needs a current code or a recovery code.");
+        mfa.MapPost("/authenticator/enable", async (MfaCodeRequest request, HttpContext http, MfaService service) =>
+                TypedResults.Ok(await service.EnableAsync(http, request)))
+            .WithValidation<MfaCodeRequest>()
+            .RequireRateLimiting(RateLimitPolicies.Auth)
+            .WithName("EnableAuthenticator")
+            .WithSummary("Confirm the key with a code from the app; returns the recovery codes (shown once).");
+        mfa.MapPost("/recovery-codes", async (MfaCodeRequest request, HttpContext http, MfaService service) =>
+                TypedResults.Ok(await service.RegenerateRecoveryCodesAsync(http.User, request, http.RequestAborted)))
+            .WithValidation<MfaCodeRequest>()
+            .RequireRateLimiting(RateLimitPolicies.Auth)
+            .WithName("RegenerateRecoveryCodes")
+            .WithSummary("Replace the recovery codes (needs a fresh authenticator code).");
 
         auth.MapPost("/logout", async (HttpContext http, AccountService accounts) =>
             {

@@ -1,6 +1,6 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useId, useRef, useState, type FormEvent, type ReactNode } from 'react';
 import { useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import { Link, Navigate, useNavigate, useSearchParams } from 'react-router';
@@ -18,7 +18,7 @@ import {
   type RegisterForm,
   type ResetForm,
 } from '../../../auth/schemas.ts';
-import { meQueryKey, safeReturnTo, useMe, useSignIn } from '../../../auth/session.ts';
+import { meQueryKey, safeReturnTo, useMe, useSignIn, useSignInTwoFactor } from '../../../auth/session.ts';
 import { Alert } from '../../../components/ui/alert.tsx';
 import { Button, buttonVariants } from '../../../components/ui/button.tsx';
 import { Card, CardContent, CardDescription, CardHeader } from '../../../components/ui/card.tsx';
@@ -64,6 +64,7 @@ export function LoginPage() {
   const returnTo = safeReturnTo(params.get('returnTo'));
   const me = useMe();
   const signIn = useSignIn();
+  const [twoFactor, setTwoFactor] = useState<{ rememberMe: boolean } | null>(null);
   const form = useForm<LoginForm>({ resolver: zodResolver(loginSchema), defaultValues: { email: '', password: '', rememberMe: false } });
   const { errors, isSubmitting } = form.formState;
 
@@ -71,12 +72,30 @@ export function LoginPage() {
 
   const onSubmit = form.handleSubmit(async (values) => {
     try {
-      await signIn.mutateAsync(values);
+      const result = await signIn.mutateAsync(values);
+      if (result.requiresTwoFactor) {
+        setTwoFactor({ rememberMe: values.rememberMe });
+        return;
+      }
       void navigate(returnTo, { replace: true });
     } catch {
       form.resetField('password');
     }
   });
+
+  if (twoFactor) {
+    return (
+      <TwoFactorStep
+        rememberMe={twoFactor.rememberMe}
+        onSignedIn={() => void navigate(returnTo, { replace: true })}
+        onBack={() => {
+          setTwoFactor(null);
+          signIn.reset();
+          form.resetField('password');
+        }}
+      />
+    );
+  }
 
   return (
     <AuthCard title={t('auth.login.title')} description={t('auth.login.lead')}>
@@ -115,6 +134,83 @@ export function LoginPage() {
             {t('nav.register')}
           </Link>
         </span>
+      </div>
+    </AuthCard>
+  );
+}
+
+/** The second sign-in step for accounts with the authenticator: a 6-digit code, or one of the recovery codes. */
+function TwoFactorStep({ rememberMe, onSignedIn, onBack }: { rememberMe: boolean; onSignedIn: () => void; onBack: () => void }) {
+  const { t } = useTranslation();
+  const signIn = useSignInTwoFactor();
+  const [recovery, setRecovery] = useState(false);
+  const [code, setCode] = useState('');
+  const [missing, setMissing] = useState(false);
+  const fieldId = useId();
+  const focusField = () => document.getElementById(fieldId)?.focus();
+  // The code field takes the focus when the step opens (and after switching the kind of code, below).
+  useEffect(() => {
+    document.getElementById(fieldId)?.focus();
+  }, [fieldId]);
+
+  const onSubmit = async (event: FormEvent) => {
+    event.preventDefault();
+    const value = code.trim();
+    if (!value) {
+      setMissing(true);
+      focusField();
+      return;
+    }
+    try {
+      await signIn.mutateAsync(recovery ? { recoveryCode: value, rememberMe } : { code: value, rememberMe });
+      onSignedIn();
+    } catch {
+      setCode('');
+      focusField();
+    }
+  };
+
+  // The two-factor cookie lasts five minutes: after that, only the password step can start over.
+  const expired = signIn.error instanceof ApiError && signIn.error.code === 'SIGN_IN_EXPIRED';
+
+  return (
+    <AuthCard title={t('auth.twoFactor.title')} description={recovery ? t('auth.twoFactor.recoveryLead') : t('auth.twoFactor.lead')}>
+      {signIn.error && <Alert variant="error">{errorMessage(signIn.error, t)}</Alert>}
+      <form noValidate onSubmit={(e) => void onSubmit(e)} className="flex flex-col gap-4">
+        <FormField
+          id={fieldId}
+          key={recovery ? 'recovery' : 'code'}
+          label={recovery ? t('auth.twoFactor.recoveryCode') : t('auth.twoFactor.code')}
+          autoComplete={recovery ? 'off' : 'one-time-code'}
+          inputMode={recovery ? 'text' : 'numeric'}
+          maxLength={recovery ? 40 : 20}
+          value={code}
+          error={missing && !code.trim() ? t('auth.twoFactor.required') : undefined}
+          onChange={(e) => setCode(e.target.value)}
+        />
+        <Button type="submit" disabled={signIn.isPending || expired}>
+          {signIn.isPending ? t('common.loading') : t('auth.twoFactor.submit')}
+        </Button>
+      </form>
+      <div className="flex flex-col items-start gap-2 text-sm">
+        {!expired && (
+          <button
+            type="button"
+            className={linkClass}
+            onClick={() => {
+              setRecovery(!recovery);
+              setCode('');
+              setMissing(false);
+              signIn.reset();
+              requestAnimationFrame(focusField);
+            }}
+          >
+            {recovery ? t('auth.twoFactor.useCode') : t('auth.twoFactor.useRecovery')}
+          </button>
+        )}
+        <button type="button" className={linkClass} onClick={onBack}>
+          {t('auth.twoFactor.back')}
+        </button>
       </div>
     </AuthCard>
   );

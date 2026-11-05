@@ -24,3 +24,33 @@ public sealed record UpdateMeRequest(string? Locale, string? TimeZone);
 
 /// <summary>Generic acknowledgement that never reveals whether an account exists.</summary>
 public sealed record AcceptedResponse(string Message);
+
+/// <summary>
+/// <c>POST /api/auth/login</c> answered 202: the password was right and the account uses the authenticator. The
+/// sign-in finishes with <c>POST /api/auth/login/two-factor</c> within five minutes.
+/// </summary>
+public sealed record TwoFactorRequiredResponse(bool RequiresTwoFactor);
+
+/// <summary>The second sign-in step: a 6-digit authenticator code or one of the recovery codes.</summary>
+public sealed record TwoFactorLoginRequest(string? Code, string? RecoveryCode, bool RememberMe);
+
+/// <summary>
+/// The account's two-factor state. <c>Required</c>: the account has a platform role, whose endpoints need a
+/// session signed in with the authenticator (<c>SessionVerified</c>).
+/// </summary>
+public sealed record MfaStatusResponse(bool Enabled, bool SessionVerified, bool Required, int RecoveryCodesLeft);
+
+/// <summary>
+/// Proof of the current second factor, required only to replace an authenticator that is already on: a current code,
+/// or (phone lost) one of the recovery codes, which is used up.
+/// </summary>
+public sealed record AuthenticatorSetupRequest(string? Code, string? RecoveryCode);
+
+/// <summary>A new authenticator key: shown once as text and as an <c>otpauth://</c> link (QR code).</summary>
+public sealed record AuthenticatorSetupResponse(string SharedKey, string AuthenticatorUri);
+
+/// <summary>An authenticator code (enrollment, step-up for critical operations).</summary>
+public sealed record MfaCodeRequest(string? Code);
+
+/// <summary>New single-use recovery codes; shown only once.</summary>
+public sealed record RecoveryCodesResponse(IReadOnlyList<string> RecoveryCodes);
