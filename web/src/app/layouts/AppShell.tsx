@@ -21,7 +21,7 @@ function NavLinks({ items, onNavigate }: { items: NavItem[]; onNavigate?: () => 
   return (
     <ul className="flex flex-col gap-1">
       {items.map((item) => (
-        <li key={item.to}>
+        <li key={item.labelKey}>
           <NavLink
             to={item.to}
             end={item.end}
@@ -90,7 +90,7 @@ function TeacherShell() {
       areaKey="layout.teacherArea"
       nav={[
         { to: first ? `/app/w/${first.id}` : '/app', labelKey: 'nav.dashboard', end: true },
-        { to: '/app/settings', labelKey: 'nav.settings' },
+        ...(first ? [{ to: `/app/w/${first.id}/profile`, labelKey: 'nav.profile' }] : []),
       ]}
     />
   );

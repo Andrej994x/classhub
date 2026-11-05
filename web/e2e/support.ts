@@ -1,6 +1,7 @@
 /// <reference lib="dom" />
 import { expect, type APIRequestContext, type Page } from '@playwright/test';
 import { randomBytes } from 'node:crypto';
+import { crc32, deflateSync } from 'node:zlib';
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -62,4 +63,34 @@ export async function teacherViaApi(request: APIRequestContext, email: string) {
   expect((await request.post('/api/auth/login', { data: { email, password: PASSWORD, rememberMe: false }, headers: { 'X-XSRF-TOKEN': await token() } })).ok()).toBe(true);
   const workspaces = (await (await request.get('/api/me/workspaces')).json()) as { id: string }[];
   return { workspaceId: workspaces[0]!.id };
+}
+
+function pngChunk(type: string, data: Buffer) {
+  const length = Buffer.alloc(4);
+  length.writeUInt32BE(data.length);
+  const body = Buffer.concat([Buffer.from(type, 'ascii'), data]);
+  const crc = Buffer.alloc(4);
+  crc.writeUInt32BE(crc32(body));
+  return Buffer.concat([length, body, crc]);
+}
+
+/** A real, solid-colour PNG (RGB, 8-bit) built in memory: no binary fixtures in the repository. */
+export function pngImage(width: number, height: number, rgb: [number, number, number] = [70, 130, 180]): Buffer {
+  const header = Buffer.alloc(13);
+  header.writeUInt32BE(width, 0);
+  header.writeUInt32BE(height, 4);
+  header.set([8, 2, 0, 0, 0], 8); // 8-bit, RGB, deflate, no filter, no interlace
+  const row = Buffer.concat([Buffer.from([0]), Buffer.from(Array.from({ length: width }, () => rgb).flat())]);
+  const pixels = Buffer.concat(Array.from({ length: height }, () => row));
+  return Buffer.concat([
+    Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+    pngChunk('IHDR', header),
+    pngChunk('IDAT', deflateSync(pixels)),
+    pngChunk('IEND', Buffer.alloc(0)),
+  ]);
+}
+
+/** Registers and signs in through the API within the page's browser context (the page then has the session). */
+export async function signedInTeacher(page: Page, email: string) {
+  return teacherViaApi(page.request, email);
 }

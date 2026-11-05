@@ -30,6 +30,8 @@ public sealed class TeacherProfileTests(ClassHubApiFixture fixture)
         catalog.Subjects.ShouldAllBe(s => catalog.Categories.Any(c => c.Id == s.CategoryId));
         catalog.Levels.Select(l => l.Code).ShouldContain("secondary");
         catalog.Languages.Select(l => l.Code).ShouldContain("mk");
+        catalog.Countries.ShouldContain("MK");
+        catalog.Countries.Count.ShouldBe(249);
     }
 
     [Fact]

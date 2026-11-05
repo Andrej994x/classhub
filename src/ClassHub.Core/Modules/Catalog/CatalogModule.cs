@@ -1,6 +1,7 @@
 using ClassHub.Core.Infrastructure.Persistence;
 using ClassHub.Core.Modules.Catalog.Contracts;
 using ClassHub.Core.Modules.Catalog.Domain;
+using ClassHub.Core.SharedKernel.Globalization;
 using ClassHub.Core.SharedKernel.Security;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -27,7 +28,7 @@ public sealed class CatalogModule : IModule
                     .Select(s => new CatalogSubject(s.Id, s.Code, s.CategoryId, s.NameMk, s.NameEn)).ToListAsync(ct);
                 var levels = await db.Set<EducationLevel>().AsNoTracking().OrderBy(l => l.SortOrder)
                     .Select(l => new CatalogItem(l.Id, l.Code, l.NameMk, l.NameEn)).ToListAsync(ct);
-                return TypedResults.Ok(new CatalogResponse(categories, subjects, levels, TeachingLanguages.All));
+                return TypedResults.Ok(new CatalogResponse(categories, subjects, levels, TeachingLanguages.All, [.. Countries.All.Order(StringComparer.Ordinal)]));
             })
             .RequireAuthorization(ClassHubPolicies.Authenticated)
             .WithTags("Catalog")

@@ -80,6 +80,14 @@ ASP.NET Core Identity with cookie sessions. See [ARCHITECTURE.md](ARCHITECTURE.m
 - Policies: `Authenticated`; workspace policies `ws:<permission>` (for example `ws:workspace.read`). Permissions are code constants (`WorkspacePermissions`), mapped from workspace roles (`WorkspaceRolePermissions`; today `Owner` has all workspace permissions). Unknown permission names fail when the policy is resolved.
 - Platform roles (`PlatformOwner`, `PlatformAdmin`) are Identity roles. **They grant no workspace access**: a platform admin without membership gets 404 on workspace routes (tested). The first Platform Owner is created only with the local CLI `dotnet run --project src/ClassHub.Api -- grant-platform-owner <email> [--force-add]` (audited, never exposed over HTTP). The owner check, the grant, the session revocation and the audit entry run in one transaction under an application lock (`sp_getapplock`), so concurrent bootstraps cannot both add an owner without `--force-add`.
 
+## File uploads (R1-P1)
+
+- Accepted by **magic bytes** only (JPEG, PNG, WebP), never by name or client content type; at most 5 MB, at least 128 × 128 px; image dimensions are read from the header and limited (6000 × 6000, 36 MP) **before** pixels are decoded (decompression bombs).
+- Every image is decoded and **re-encoded** (SkiaSharp → WebP, ≤ 1024 px): EXIF (including GPS), comments and any appended payload are dropped; the EXIF orientation is applied first.
+- Files live outside wwwroot (`Files:RootPath`) under generated keys (`{workspaceId}/{fileId}.webp`), with path-traversal checks and no overwrites; metadata rows are tenant-owned with composite tenant FKs.
+- Photos are served only through an authorized endpoint (`ws:profile.read`), never publicly cacheable, with `nosniff`; the public variant comes with the published site (R1-P4).
+- Uploads use the same antiforgery header as every unsafe request (no automatic form antiforgery binding).
+
 ## E2E environment safety (R0-P7)
 
 - The `E2E` environment is the only one that migrates at startup, and only after `E2EDatabase.AssertDisposable` accepted the connection string: database `ClassHubE2E_*`, loopback TCP endpoint with an explicit port, no Windows authentication (tested with the local connection string, named instances, LocalDB and remote hosts).

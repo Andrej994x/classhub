@@ -9,8 +9,8 @@ This is the live status of the autonomous implementation loop ([ROADMAP.md](ROAD
 | Release | R1 — Teacher presence (R0 complete) |
 | Current phase | R1-P1 — Teacher profile & onboarding |
 | Branch | `feature/r1-p1-teacher-profile` (from `main` @ `c2b5219`) |
-| Workflow step | 2 — implementation |
-| Next action | Catalog module (seeded subjects/categories/levels, languages), teacher profile + photo (IFileStorage, SkiaSharp re-encode), derived onboarding checklist, profile UI, E2E on mobile |
+| Workflow step | 5 — signed Codex review, then PR |
+| Next action | R1-P1 PR; then R1-P2 (offers & programs) |
 | Open blockers | None. User actions (optional): direct-push probe (R0-P8); remove the now redundant required `pr-gate` check (see Decisions) |
 
 ## Phase status

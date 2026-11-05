@@ -720,7 +720,8 @@
           "categories",
           "subjects",
           "levels",
-          "languages"
+          "languages",
+          "countries"
         ],
         "type": "object",
         "properties": {
@@ -746,6 +747,12 @@
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/CatalogLanguage"
+            }
+          },
+          "countries": {
+            "type": "array",
+            "items": {
+              "type": "string"
             }
           }
         }

@@ -277,6 +277,7 @@ export interface components {
             subjects: components["schemas"]["CatalogSubject"][];
             levels: components["schemas"]["CatalogItem"][];
             languages: components["schemas"]["CatalogLanguage"][];
+            countries: string[];
         };
         CatalogSubject: {
             /** Format: uuid */

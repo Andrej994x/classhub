@@ -21,7 +21,9 @@ public sealed record CatalogResponse(
     IReadOnlyList<CatalogItem> Categories,
     IReadOnlyList<CatalogSubject> Subjects,
     IReadOnlyList<CatalogItem> Levels,
-    IReadOnlyList<CatalogLanguage> Languages);
+    IReadOnlyList<CatalogLanguage> Languages,
+    /// <summary>ISO 3166-1 alpha-2 codes; the SPA shows localized names (Intl.DisplayNames).</summary>
+    IReadOnlyList<string> Countries);
 
 /// <summary>Used by other modules (through Contracts) to validate catalog references.</summary>
 public interface ICatalogLookup
