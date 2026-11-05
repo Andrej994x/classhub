@@ -35,6 +35,18 @@ const PHONE = /^[0-9+()\-./ ]{5,40}$/;
 const FIELDS = ['name', 'email', 'phone', 'message', 'offerId', 'subjectId', 'consent', 'ageConfirmed'] as const;
 type Field = (typeof FIELDS)[number];
 
+/** Localized text for a field the server rejected (the API's own messages are English). */
+const SERVER_FIELD_TEXT: Record<Field, ContactFormKey> = {
+  name: 'required',
+  email: 'invalidEmail',
+  phone: 'invalidPhone',
+  message: 'required',
+  offerId: 'offerUnavailable',
+  subjectId: 'subjectUnavailable',
+  consent: 'consentRequired',
+  ageConfirmed: 'ageRequired',
+};
+
 async function fetchForm(slug: string): Promise<FormData> {
   const response = await fetch(`/api/public/sites/${encodeURIComponent(slug)}/lead-form`, { credentials: 'omit', cache: 'no-store' });
   if (!response.ok) throw new Error(String(response.status));
@@ -136,13 +148,29 @@ export function ContactForm({ slug = '', language = 'mk' }: ContactFormProps) {
       } else if (response.status === 429) {
         setNotice(t('tooMany'));
       } else if (problem.errors) {
+        const keys = Object.keys(problem.errors).map((key) => key.toLowerCase());
+        if (keys.includes('consentversion')) {
+          // The notice changed while the page was open: load the current text and ask for consent again.
+          await load();
+          setValues((current) => ({ ...current, consent: false, ageConfirmed: false }));
+          setErrors({ consent: t('consentRequired') });
+          setNotice(t('consentChanged'));
+          return;
+        }
+
+        // Server messages are English; show the localized text for the field instead.
         const serverErrors: Partial<Record<Field, string>> = {};
-        for (const [key, messages] of Object.entries(problem.errors)) {
-          const field = FIELDS.find((f) => f.toLowerCase() === key.toLowerCase());
-          if (field) serverErrors[field] = messages[0];
+        for (const key of keys) {
+          const field = FIELDS.find((f) => f.toLowerCase() === key);
+          if (field) serverErrors[field] = t(SERVER_FIELD_TEXT[field]);
+        }
+        if (serverErrors.offerId || serverErrors.subjectId) {
+          await load(); // the offer or subject is no longer available: refresh the choices
+          setValues((current) => ({ ...current, offerId: serverErrors.offerId ? '' : current.offerId, subjectId: serverErrors.subjectId ? '' : current.subjectId }));
         }
         setErrors(serverErrors);
-        setNotice(t('checkFields'));
+        // The offer/subject choice may have disappeared with the refresh: say it in the form-level notice.
+        setNotice(serverErrors.offerId ? t('offerUnavailable') : serverErrors.subjectId ? t('subjectUnavailable') : t('checkFields'));
       } else {
         setNotice(t('failed'));
       }

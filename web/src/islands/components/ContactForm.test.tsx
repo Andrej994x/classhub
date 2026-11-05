@@ -118,6 +118,57 @@ describe('contact-form island', () => {
     expect(await screen.findByText(/The teacher received many requests/)).toBeInTheDocument();
   });
 
+  it('shows localized field errors from the server and refreshes the offers', async () => {
+    const user = userEvent.setup();
+    let forms = 0;
+    server((url) => {
+      if (url.endsWith('/lead-form')) {
+        forms++;
+        return json(200, forms === 1 ? FORM : { ...FORM, offers: [] });
+      }
+      return json(400, { code: 'VALIDATION_FAILED', errors: { offerId: ['This offer cannot be requested.'] } });
+    });
+    render(<ContactForm slug="ana-math" language="mk" />);
+
+    await user.click(await screen.findByRole('radio', { name: 'Да побарам час' }));
+    await fillIn(user);
+    await user.selectOptions(screen.getByLabelText('Понуда (по желба)'), 'offer-1');
+    await user.click(screen.getByRole('button', { name: 'Испрати' }));
+
+    expect(await screen.findByText('Оваа понуда веќе не е достапна. Изберете друга.')).toBeInTheDocument();
+    expect(screen.queryByText('This offer cannot be requested.')).not.toBeInTheDocument();
+    expect(forms).toBe(2);
+    expect(screen.queryByLabelText('Понуда (по желба)')).not.toBeInTheDocument(); // no offers left to choose
+  });
+
+  it('loads the new consent text and asks again when it changed meanwhile', async () => {
+    const user = userEvent.setup();
+    let forms = 0;
+    const calls = server((url) => {
+      if (url.endsWith('/lead-form')) {
+        forms++;
+        return json(200, forms === 1 ? FORM : { ...FORM, consentVersion: '2026-12-01.1', consentText: 'Нов текст за согласност.', formToken: 'token-2' });
+      }
+      return calls.filter((c) => c.init?.method === 'POST').length === 1
+        ? json(400, { code: 'VALIDATION_FAILED', errors: { consentVersion: ['The consent text has changed.'] } })
+        : json(202, { received: true });
+    });
+    render(<ContactForm slug="ana-math" language="mk" />);
+
+    await fillIn(user);
+    await user.click(screen.getByRole('button', { name: 'Испрати' }));
+    expect(await screen.findByText('Текстот за согласност е ажуриран. Прочитајте го и потврдете повторно.')).toBeInTheDocument();
+    const consent = screen.getByRole('checkbox', { name: 'Нов текст за согласност.' });
+    expect(consent).not.toBeChecked();
+
+    await user.click(consent);
+    await user.click(screen.getByRole('checkbox', { name: FORM.minorNotice }));
+    await user.click(screen.getByRole('button', { name: 'Испрати' }));
+    expect(await screen.findByText(/Ви благодариме!/)).toBeInTheDocument();
+    const second = JSON.parse(String(calls.filter((c) => c.init?.method === 'POST')[1]!.init?.body)) as { consentVersion: string; formToken: string };
+    expect(second).toMatchObject({ consentVersion: '2026-12-01.1', formToken: 'token-2' });
+  });
+
   it('has the same texts in both languages', () => {
     expect(Object.keys(CONTACT_FORM_TEXT.en).toSorted()).toEqual(Object.keys(CONTACT_FORM_TEXT.mk).toSorted());
   });

@@ -29,6 +29,9 @@ export const CONTACT_FORM_TEXT = {
     tooMany: 'Наставникот доби многу барања. Обидете се повторно подоцна.',
     failed: 'Барањето не беше испратено. Обидете се повторно.',
     checkFields: 'Проверете ги означените полиња.',
+    consentChanged: 'Текстот за согласност е ажуриран. Прочитајте го и потврдете повторно.',
+    offerUnavailable: 'Оваа понуда веќе не е достапна. Изберете друга.',
+    subjectUnavailable: 'Овој предмет веќе не е достапен. Изберете друг.',
   },
   en: {
     title: 'Send a request',
@@ -59,6 +62,9 @@ export const CONTACT_FORM_TEXT = {
     tooMany: 'The teacher received many requests. Please try again later.',
     failed: 'The request was not sent. Please try again.',
     checkFields: 'Check the marked fields.',
+    consentChanged: 'The consent text was updated. Please read it and confirm again.',
+    offerUnavailable: 'This offer is no longer available. Choose another one.',
+    subjectUnavailable: 'This subject is no longer available. Choose another one.',
   },
 } as const;
 
