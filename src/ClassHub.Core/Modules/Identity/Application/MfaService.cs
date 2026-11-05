@@ -78,7 +78,18 @@ internal sealed partial class MfaService(
             throw MfaRequired();
         }
 
-        if (await users.GetAuthenticatorKeyAsync(user) is null || !await IsValidCodeAsync(user, request.Code))
+        if (await users.GetAuthenticatorKeyAsync(user) is null)
+        {
+            throw CodeInvalid();
+        }
+
+        if (user.TwoFactorEnabled)
+        {
+            // Confirming a replaced key on an enrolled account issues new recovery codes: a step-up like any other
+            // (lockout enforced, failures counted).
+            await VerifyStepUpAsync(user, request.Code);
+        }
+        else if (!await IsValidCodeAsync(user, request.Code))
         {
             throw CodeInvalid();
         }
@@ -133,6 +144,7 @@ internal sealed partial class MfaService(
 
     private async Task VerifyCurrentFactorAsync(AppUser user, AuthenticatorSetupRequest? request)
     {
+        await ThrowIfLockedOutAsync(user);
         if (request?.RecoveryCode is { Length: > 0 and <= 40 } recovery)
         {
             if (!(await users.RedeemTwoFactorRecoveryCodeAsync(user, NormalizeRecoveryCode(recovery))).Succeeded)
@@ -142,6 +154,7 @@ internal sealed partial class MfaService(
                 throw CodeInvalid();
             }
 
+            await users.ResetAccessFailedCountAsync(user);
             audit.Record("account.mfa.recovery-code-used", "User", user.Id.ToString());
             await db.SaveChangesAsync();
             return;
@@ -150,12 +163,28 @@ internal sealed partial class MfaService(
         await VerifyStepUpAsync(user, request?.Code);
     }
 
-    /// <summary>A wrong step-up code counts as a failed sign-in attempt (Identity lockout), on top of the rate limit.</summary>
+    /// <summary>
+    /// A wrong step-up code counts as a failed sign-in attempt (Identity lockout), on top of the rate limit. A locked-out
+    /// account is refused before any code is checked, so a stolen session cannot keep guessing through the lockout.
+    /// </summary>
     private async Task VerifyStepUpAsync(AppUser user, string? code)
     {
+        await ThrowIfLockedOutAsync(user);
         if (!await IsValidCodeAsync(user, code))
         {
             await users.AccessFailedAsync(user);
+            LogStepUpFailed(logger, user.Id);
+            throw CodeInvalid();
+        }
+
+        await users.ResetAccessFailedCountAsync(user);
+    }
+
+    /// <summary>Locked out: the same answer as a wrong code (it reveals nothing beyond what the caller already sent).</summary>
+    private async Task ThrowIfLockedOutAsync(AppUser user)
+    {
+        if (await users.IsLockedOutAsync(user))
+        {
             LogStepUpFailed(logger, user.Id);
             throw CodeInvalid();
         }

@@ -177,6 +177,49 @@ public sealed class MfaTests(ClassHubApiFixture fixture)
         (await teacher.Client.PostAsync("/api/auth/login/two-factor", new { code = Totp.Code(third) })).StatusCode.ShouldBe(HttpStatusCode.OK);
     }
 
+    [Fact]
+    public async Task Step_up_is_refused_while_the_account_is_locked_out()
+    {
+        using var teacher = await fixture.CreateTeacherAsync();
+        var key = await PlatformStaffKit.EnrollAuthenticatorAsync(teacher.Client);
+        var codes = await RegenerateAsync(teacher.Client, key);
+
+        for (var i = 0; i < 5; i++)
+        {
+            (await teacher.Client.PostAsync("/api/auth/mfa/recovery-codes", new { code = Totp.WrongCode(key) })).StatusCode.ShouldBe(HttpStatusCode.BadRequest);
+        }
+
+        // Locked out: even the right code or a valid recovery code is refused, on every step-up path.
+        using (var regenerate = await teacher.Client.PostAsync("/api/auth/mfa/recovery-codes", new { code = Totp.Code(key) }))
+        {
+            regenerate.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
+            (await regenerate.ErrorCodeAsync()).ShouldBe(ErrorCodes.MfaCodeInvalid);
+        }
+
+        (await teacher.Client.PostAsync("/api/auth/mfa/authenticator", new { code = Totp.Code(key) })).StatusCode.ShouldBe(HttpStatusCode.BadRequest);
+        (await teacher.Client.PostAsync("/api/auth/mfa/authenticator", new { recoveryCode = codes[0] })).StatusCode.ShouldBe(HttpStatusCode.BadRequest);
+        (await teacher.Client.PostAsync("/api/auth/mfa/authenticator/enable", new { code = Totp.Code(key) })).StatusCode.ShouldBe(HttpStatusCode.BadRequest);
+        // The refused recovery code was not used up.
+        (await teacher.Client.GetJsonAsync<MfaStatusResponse>("/api/auth/mfa")).RecoveryCodesLeft.ShouldBe(10);
+    }
+
+    [Fact]
+    public async Task A_right_step_up_code_resets_the_failure_count()
+    {
+        using var teacher = await fixture.CreateTeacherAsync();
+        var key = await PlatformStaffKit.EnrollAuthenticatorAsync(teacher.Client);
+
+        for (var round = 0; round < 2; round++)
+        {
+            for (var i = 0; i < 4; i++)
+            {
+                (await teacher.Client.PostAsync("/api/auth/mfa/recovery-codes", new { code = Totp.WrongCode(key) })).StatusCode.ShouldBe(HttpStatusCode.BadRequest);
+            }
+
+            (await teacher.Client.PostAsync("/api/auth/mfa/recovery-codes", new { code = Totp.Code(key) })).StatusCode.ShouldBe(HttpStatusCode.OK);
+        }
+    }
+
     private static async Task<string> ReplaceAsync(ApiClient client, object proof)
     {
         using var response = await client.PostAsync("/api/auth/mfa/authenticator", proof);
