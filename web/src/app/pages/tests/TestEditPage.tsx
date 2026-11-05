@@ -115,6 +115,9 @@ function TestEditor({ workspaceId, test }: { workspaceId: string; test: Diagnost
   const questions = useFieldArray({ control: form.control, name: 'questions' });
   const { errors, isSubmitting, isDirty } = form.formState;
   const locked = (num(test?.attemptCount) ?? 0) > 0; // D-38
+  // Status changes send the version the form was loaded from, never a newer one from a background refetch: otherwise
+  // unsaved edits would be rebased onto another session's changes and a later save could overwrite them.
+  const formVersion = useWatch({ control: form.control, name: 'version' });
   const language = i18n.resolvedLanguage === 'en' ? 'en' : 'mk';
   const problems = useProblemText();
 
@@ -154,7 +157,7 @@ function TestEditor({ workspaceId, test }: { workspaceId: string; test: Diagnost
         <p className="text-sm text-muted-foreground">{t('tests.editorLead')}</p>
       </div>
 
-      {test && <StatusCard workspaceId={workspaceId} test={test} dirty={isDirty} onChanged={(changed) => form.reset(toForm(changed), { keepDirtyValues: true })} />}
+      {test && <StatusCard workspaceId={workspaceId} test={test} version={formVersion ?? 0} dirty={isDirty} onChanged={(changed) => form.reset(toForm(changed), { keepDirtyValues: true })} />}
       {locked && <Alert variant="info">{t('tests.locked', { count: num(test?.attemptCount) ?? 0 })}</Alert>}
 
       <form noValidate onSubmit={onSubmit} className="flex flex-col gap-6">
@@ -247,7 +250,7 @@ function TestEditor({ workspaceId, test }: { workspaceId: string; test: Diagnost
   );
 }
 
-function StatusCard({ workspaceId, test, dirty, onChanged }: { workspaceId: string; test: DiagnosticTest; dirty: boolean; onChanged: (test: DiagnosticTest) => void }) {
+function StatusCard({ workspaceId, test, version, dirty, onChanged }: { workspaceId: string; test: DiagnosticTest; version: number; dirty: boolean; onChanged: (test: DiagnosticTest) => void }) {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const status = useTestStatus(workspaceId, test.id);
@@ -255,7 +258,6 @@ function StatusCard({ workspaceId, test, dirty, onChanged }: { workspaceId: stri
   const archive = useArchiveTest(workspaceId, test.id);
   const [confirmArchive, setConfirmArchive] = useState(false);
   const problems = useProblemText();
-  const version = num(test.version) ?? 0;
   const busy = status.isPending || duplicate.isPending || archive.isPending;
   const error = status.error ?? duplicate.error ?? archive.error;
   const errorText =

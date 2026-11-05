@@ -93,6 +93,23 @@ describe('diagnostic tests', () => {
     expect(api.to(`${API}/test-1/publish`, 'POST').at(-1)?.body).toEqual({ version: 3 });
   });
 
+  it('sends the version the form was loaded from, even after a background refresh brought a newer one', async () => {
+    const user = userEvent.setup();
+    const api = fakeApi({ me: teacher() });
+    api.state.tests = [TEST({ status: 'Published', version: 1 })];
+    const { queryClient } = await renderRoute(`${LIST}/test-1`);
+
+    await user.type(await screen.findByLabelText('Прашање 1'), ' (нова верзија)'); // unsaved edit
+    // Another session saves meanwhile; a background refetch (e.g. after reconnecting) brings version 2.
+    api.state.tests[0] = { ...api.state.tests[0]!, title: 'Променето на друго место', version: 2 };
+    await queryClient.refetchQueries({ queryKey: ['w', WORKSPACE_ID, 'tests', 'test-1'] });
+    expect(api.to(`${API}/test-1`, 'GET').length).toBeGreaterThan(1);
+
+    await user.click(within(screen.getByTestId('test-status')).getByRole('button', { name: 'Деактивирај' }));
+    expect(api.to(`${API}/test-1/deactivate`, 'POST')[0]?.body).toEqual({ version: 1 });
+    expect(await screen.findByText(/Тестот е променет на друго место/)).toBeInTheDocument();
+  });
+
   it('locks the structure once a test has attempts and offers a new version', async () => {
     const user = userEvent.setup();
     const api = fakeApi({ me: teacher() });
