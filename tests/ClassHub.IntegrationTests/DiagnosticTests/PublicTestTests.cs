@@ -120,7 +120,7 @@ public sealed class PublicTestTests(ClassHubApiFixture fixture)
                      ("option twice", [new { questionId = q2.Id, optionIds = new[] { q2.Options[0].Id, q2.Options[0].Id } }]),
                  })
         {
-            using var response = await visitor.PostAsJsonAsync($"{site.Path}/attempts", new { answers }, Ct);
+            using var response = await visitor.PostAsJsonAsync($"{site.Path}/attempts", new { version = site.Test.Version, answers }, Ct);
             response.StatusCode.ShouldBe(HttpStatusCode.BadRequest, name);
         }
 
@@ -136,13 +136,42 @@ public sealed class PublicTestTests(ClassHubApiFixture fixture)
         var statuses = await Task.WhenAll(Enumerable.Range(0, 8).Select(async _ =>
         {
             using var client = limited.CreateClient();
-            using var response = await client.PostAsJsonAsync($"{site.Path}/attempts", new { answers = Array.Empty<object>() }, Ct);
+            using var response = await client.PostAsJsonAsync($"{site.Path}/attempts", new { version = site.Test.Version, answers = Array.Empty<object>() }, Ct);
             return response.StatusCode;
         }));
 
         statuses.Count(s => s == HttpStatusCode.OK).ShouldBe(3);
         statuses.Count(s => s == HttpStatusCode.TooManyRequests).ShouldBe(5);
         (await site.Teacher.Client.GetJsonAsync<DiagnosticTestResponse>($"{TestsPath(site.Teacher)}/{site.Test.Id}")).AttemptCount.ShouldBe(3);
+    }
+
+    [Fact]
+    public async Task Answers_to_a_version_the_teacher_changed_since_are_refused()
+    {
+        using var site = await PublishedTestAsync();
+        using var visitor = Visitor();
+        var shown = (await visitor.GetFromJsonAsync<PublicTestResponse>(site.Path, Ct))!;
+        shown.Version.ShouldBe(site.Test.Version);
+
+        // The teacher fixes a text (allowed, but a new version) after the visitor loaded the test.
+        var test = await site.Teacher.Client.GetJsonAsync<DiagnosticTestResponse>($"{TestsPath(site.Teacher)}/{site.Test.Id}");
+        (await site.Teacher.Client.PutAsync($"{TestsPath(site.Teacher)}/{test.Id}", new
+        {
+            title = test.Title,
+            subjectId = test.SubjectId,
+            difficulty = test.Difficulty,
+            questions = test.Questions.Select(q => new { id = q.Id, text = q.Text + "?", points = q.Points, options = q.Options.Select(o => new { id = (Guid?)o.Id, text = o.Text, isCorrect = !o.IsCorrect }).ToArray() }).ToArray(),
+            version = test.Version,
+        })).Dispose();
+
+        foreach (var version in new int?[] { shown.Version, null })
+        {
+            using var stale = await visitor.PostAsJsonAsync($"{site.Path}/attempts", new { version, answers = Array.Empty<object>() }, Ct);
+            stale.StatusCode.ShouldBe(HttpStatusCode.Conflict);
+            (await stale.ErrorCodeAsync()).ShouldBe(ErrorCodes.TestChanged);
+        }
+
+        (await site.Teacher.Client.GetJsonAsync<DiagnosticTestResponse>($"{TestsPath(site.Teacher)}/{site.Test.Id}")).AttemptCount.ShouldBe(0);
     }
 
     [Fact]
@@ -158,7 +187,7 @@ public sealed class PublicTestTests(ClassHubApiFixture fixture)
             var submissions = Enumerable.Range(0, 10).Select(async _ =>
             {
                 using var visitor = fixture.Factory.CreateClient();
-                using var response = await visitor.PostAsJsonAsync($"{site.Path}/attempts", new { answers }, Ct);
+                using var response = await visitor.PostAsJsonAsync($"{site.Path}/attempts", new { version = test.Version, answers }, Ct);
                 return response.StatusCode;
             }).ToList();
             var edit = Task.Run(async () =>
@@ -339,7 +368,7 @@ public sealed class PublicTestTests(ClassHubApiFixture fixture)
     private static async Task<PublicAttemptResult> SubmitAsync(HttpClient visitor, Published site, params (Guid Question, Guid[] Options)[] answers)
     {
         using var response = await visitor.PostAsJsonAsync($"{site.Path}/attempts",
-            new { answers = answers.Select(a => new { questionId = a.Question, optionIds = a.Options }).ToArray() }, Ct);
+            new { version = site.Test.Version, answers = answers.Select(a => new { questionId = a.Question, optionIds = a.Options }).ToArray() }, Ct);
         response.StatusCode.ShouldBe(HttpStatusCode.OK, await response.Content.ReadAsStringAsync(Ct));
         return (await response.Content.ReadFromJsonAsync<PublicAttemptResult>(Ct))!;
     }

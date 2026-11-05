@@ -5,6 +5,8 @@ namespace ClassHub.Core.Modules.DiagnosticTests.Contracts;
 /// the island to offer checkboxes instead of radio buttons.
 /// </summary>
 public sealed record PublicTestResponse(
+    /// <summary>Send back with the attempt: answers to an older version are refused (409 TEST_CHANGED).</summary>
+    int Version,
     string Title,
     string Slug,
     string? Description,
@@ -17,8 +19,8 @@ public sealed record PublicTestQuestion(Guid Id, string Text, int Points, bool S
 
 public sealed record PublicTestOption(Guid Id, string Text);
 
-/// <summary>The visitor's choices: for each answered question the chosen option ids.</summary>
-public sealed record SubmitAttemptRequest(IReadOnlyList<AttemptAnswer>? Answers);
+/// <summary>The visitor's choices for the test version they were shown: for each answered question the chosen option ids.</summary>
+public sealed record SubmitAttemptRequest(int? Version, IReadOnlyList<AttemptAnswer>? Answers);
 
 public sealed record AttemptAnswer(Guid QuestionId, IReadOnlyList<Guid>? OptionIds);
 

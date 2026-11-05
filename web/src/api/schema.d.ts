@@ -946,6 +946,8 @@ export interface components {
             options: components["schemas"]["PublicTestOption"][];
         };
         PublicTestResponse: {
+            /** Format: int32 */
+            version: number | string;
             title: string;
             slug: string;
             description: null | string;
@@ -1089,6 +1091,8 @@ export interface components {
             reason: null | string;
         };
         SubmitAttemptRequest: {
+            /** Format: int32 */
+            version: null | number | string;
             answers: null | components["schemas"]["AttemptAnswer"][];
         };
         SubmitLeadRequest: {

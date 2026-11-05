@@ -4,6 +4,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { DIAGNOSTIC_TEST_TEXT, DiagnosticTest } from './DiagnosticTest.tsx';
 
 const TEST = {
+  version: 3,
   title: 'Дропки',
   totalPoints: 5,
   questions: [
@@ -60,7 +61,7 @@ describe('diagnostic-test island', () => {
     const attempt = calls.find((c) => c.url.endsWith('/attempts'))!;
     expect(attempt.url).toBe('/api/public/sites/ana-math/tests/dropki/attempts');
     expect(attempt.init?.credentials).toBe('omit');
-    expect(JSON.parse(String(attempt.init?.body))).toEqual({ answers: [{ questionId: 'q1', optionIds: ['a'] }, { questionId: 'q2', optionIds: ['c'] }] });
+    expect(JSON.parse(String(attempt.init?.body))).toEqual({ version: 3, answers: [{ questionId: 'q1', optionIds: ['a'] }, { questionId: 'q2', optionIds: ['c'] }] });
 
     // The request form is about this attempt; sharing the score is opt-in.
     const form = await screen.findByRole('form', { name: 'Побарајте час според резултатот' });
@@ -85,6 +86,14 @@ describe('diagnostic-test island', () => {
     expect(await screen.findByText('You answered 0 of 2 questions. Unanswered ones earn 0 points.')).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Finish the test' }));
     expect(await screen.findByRole('alert')).toHaveTextContent('This test was taken very often');
+  });
+
+  it('explains that the teacher changed the test meanwhile', async () => {
+    const user = userEvent.setup();
+    server((url) => (url.endsWith('/attempts') ? json(409, { code: 'TEST_CHANGED' }) : json(200, TEST)));
+    render(<DiagnosticTest siteSlug="ana-math" testSlug="dropki" language="mk" />);
+    await user.click(await screen.findByRole('button', { name: 'Заврши го тестот' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('Наставникот штотуку го промени тестот');
   });
 
   it('explains an unavailable test', async () => {

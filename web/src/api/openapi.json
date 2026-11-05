@@ -3263,6 +3263,7 @@
       },
       "PublicTestResponse": {
         "required": [
+          "version",
           "title",
           "slug",
           "description",
@@ -3273,6 +3274,14 @@
         ],
         "type": "object",
         "properties": {
+          "version": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
           "title": {
             "type": "string"
           },
@@ -3957,10 +3966,20 @@
       },
       "SubmitAttemptRequest": {
         "required": [
+          "version",
           "answers"
         ],
         "type": "object",
         "properties": {
+          "version": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
           "answers": {
             "type": [
               "null",

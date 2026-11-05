@@ -52,6 +52,7 @@ internal sealed class PublicTestService(
     {
         var subject = (await catalog.SubjectsAsync([resolved.Test.SubjectId], cancellationToken)).FirstOrDefault();
         return new PublicTestResponse(
+            resolved.Test.Version,
             resolved.Test.Title,
             resolved.Test.Slug,
             resolved.Test.Description,
@@ -72,6 +73,12 @@ internal sealed class PublicTestService(
     public async Task<PublicAttemptResult> SubmitAsync(string siteSlug, string testSlug, SubmitAttemptRequest request, CancellationToken cancellationToken)
     {
         var resolved = await ResolveAsync(siteSlug, testSlug, cancellationToken) ?? throw new NotFoundException();
+        // Only the version the visitor answered may be scored: otherwise old choices would meet new correct answers.
+        if (request.Version != resolved.Test.Version)
+        {
+            throw new ConflictException("The test was changed meanwhile. Reload the page and take it again.", ErrorCodes.TestChanged);
+        }
+
         var answers = Validate(resolved, request.Answers ?? []);
         var score = TestScoring.Score(
             [.. resolved.Questions.Select(q => new ScoringQuestion(q.Id, q.Points, resolved.Options[q.Id].Where(o => o.IsCorrect).Select(o => o.Id).ToHashSet()))],

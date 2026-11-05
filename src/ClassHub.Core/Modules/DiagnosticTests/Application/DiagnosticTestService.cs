@@ -165,8 +165,9 @@ internal sealed class DiagnosticTestService(
         }
 
         Touch(test);
-        await SaveAsync(cancellationToken);
+        await SaveAsync(cancellationToken, evict: false);
         await transaction.CommitAsync(cancellationToken);
+        await EvictPublicAsync(cancellationToken);
         return await GetAsync(test.Id, cancellationToken);
     }
 
@@ -378,19 +379,31 @@ internal sealed class DiagnosticTestService(
         }
     }
 
-    private async Task SaveAsync(CancellationToken cancellationToken)
+    /// <summary>
+    /// Saves; then evicts the public caches unless <paramref name="evict"/> is false (inside a transaction the caller
+    /// evicts after the commit, so no reader can re-cache the state before it).
+    /// </summary>
+    private async Task SaveAsync(CancellationToken cancellationToken, bool evict = true)
     {
         try
         {
             await db.SaveChangesAsync(cancellationToken);
-            // The public site lists published tests and the test pages are cached: every change may show there.
-            await siteCache.EvictCurrentWorkspaceAsync(cancellationToken);
-            await siteCache.EvictSitemapAsync(cancellationToken);
+            if (evict)
+            {
+                await EvictPublicAsync(cancellationToken);
+            }
         }
         catch (DbUpdateException ex) when (SqlServerErrors.IsUniqueViolation(ex))
         {
             throw new ConflictException("Another test of yours already uses this address. Choose another one.", ErrorCodes.TestSlugTaken);
         }
+    }
+
+    /// <summary>The public site lists published tests and the test pages are cached: every change may show there.</summary>
+    private async Task EvictPublicAsync(CancellationToken cancellationToken)
+    {
+        await siteCache.EvictCurrentWorkspaceAsync(cancellationToken);
+        await siteCache.EvictSitemapAsync(cancellationToken);
     }
 
     private void Touch(DiagnosticTest test)

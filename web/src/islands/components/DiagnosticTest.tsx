@@ -8,6 +8,7 @@ export interface DiagnosticTestProps {
 }
 
 interface PublicTest {
+  version: number;
   title: string;
   totalPoints: number;
   questions: { id: string; text: string; points: number; selectSeveral: boolean; options: { id: string; text: string }[] }[];
@@ -116,6 +117,7 @@ export function DiagnosticTest({ siteSlug = '', testSlug = '', language = 'mk' }
         credentials: 'omit',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({
+          version: test.version,
           answers: Object.entries(answers)
             .filter(([, optionIds]) => optionIds.length > 0)
             .map(([questionId, optionIds]) => ({ questionId, optionIds })),
