@@ -41,6 +41,13 @@ npm run e2e                                # builds the SPA and the API, then ru
 
 Flows (each in **mk and en**, on **desktop and mobile**): register → dev mailbox → confirm → sign in → the dashboard shows the workspace → sign out; forgot password → reset link → the old password fails, the new one works; a second teacher opening the first teacher's workspace URL sees "not found". Texts come from the app's locale files, so wording changes do not break tests. CI job `e2e` uploads the HTML report and traces on failure.
 
+## Diagnostic test builder tests (R1-P6)
+
+- Unit: `DiagnosticTestRulesTests` (scoring: all correct, several correct options all-or-nothing, duplicates, unanswered/unknown, zero-point questions; publish readiness; request validation incl. null questions; slugs).
+- Architecture: `PublicProjectionTests` (no correct answers or domain entities in any public projection).
+- Integration: `DiagnosticTestTests` (create with generated and suffixed addresses, unique per workspace, ids kept on edit, stale version, foreign question/option ids refused, publish readiness errors, publish/deactivate/republish, **D-38** destructive edits refused and text fixes allowed after attempts, duplicate as editable draft, archive keeps the address, isolation kit on every endpoint, composite FK and points CHECK in the database).
+- Vitest: `TestsPages.test.tsx` (list, create with questions/options/points, browser validation, ids kept, publish problems shown, publish after saving with the new version, structure locked with attempts and duplicate, archive with confirmation).
+
 ## Lead tests (R1-P5)
 
 - Unit: `LeadRulesTests` (every status transition, form tokens: site-bound, tampered, expired, future, request validation, minimal localized email, consent texts).

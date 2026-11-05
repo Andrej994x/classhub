@@ -121,6 +121,49 @@ export const NEW_SITE = (): FakeSite => ({
   viewsLast30Days: 0,
 });
 
+export interface FakeTest {
+  id: string;
+  title: string;
+  slug: string;
+  subjectId: string;
+  description: string | null;
+  difficulty: string;
+  status: 'Draft' | 'Published' | 'Inactive';
+  publishedAtUtc: string | null;
+  attemptCount: number;
+  archived: boolean;
+  questions: { id: string; text: string; points: number; options: { id: string; text: string; isCorrect: boolean }[] }[];
+  totalPoints: number;
+  updatedAtUtc: string;
+  version: number;
+}
+
+export const TEST = (overrides: Partial<FakeTest> = {}): FakeTest => ({
+  id: 'test-1',
+  title: 'Математика: дропки',
+  slug: 'matematika-dropki',
+  subjectId: SUBJECT_MATH,
+  description: null,
+  difficulty: 'Intermediate',
+  status: 'Draft',
+  publishedAtUtc: null,
+  attemptCount: 0,
+  archived: false,
+  questions: [
+    { id: 'q-1', text: 'Колку е 1/2 + 1/4?', points: 2, options: [{ id: 'o-1', text: '3/4', isCorrect: true }, { id: 'o-2', text: '2/6', isCorrect: false }] },
+  ],
+  totalPoints: 2,
+  updatedAtUtc: '2026-11-05T10:00:00Z',
+  version: 0,
+  ...overrides,
+});
+
+type SavedTest = { title: string; slug: string | null; subjectId: string; description: string | null; difficulty: string; version: number | null; questions: { id: string | null; text: string; points: number; options: { id: string | null; text: string; isCorrect: boolean }[] }[] };
+
+let fakeIds = 0;
+const withIds = (body: SavedTest) =>
+  body.questions.map((q) => ({ ...q, id: q.id ?? `q-new-${++fakeIds}`, options: q.options.map((o) => ({ ...o, id: o.id ?? `o-new-${++fakeIds}` })) }));
+
 export interface FakeLead {
   id: string;
   type: 'Message' | 'LessonRequest';
@@ -205,7 +248,7 @@ export const problem = (status: number, code: string, errors?: Record<string, st
  * antiforgery endpoint. `extra` handlers run first and may answer any request.
  */
 export function fakeApi({ me = null as FakeMe | null, extra = [] as Handler[] } = {}) {
-  const state = { me, profile: { ...EMPTY_PROFILE }, onboarding: ONBOARDING(0), catalog: CATALOG, offers: [] as FakeOffer[], site: NEW_SITE(), slugTaken: [] as string[], leads: [] as FakeLead[] };
+  const state = { me, profile: { ...EMPTY_PROFILE }, onboarding: ONBOARDING(0), catalog: CATALOG, offers: [] as FakeOffer[], site: NEW_SITE(), slugTaken: [] as string[], leads: [] as FakeLead[], tests: [] as FakeTest[] };
   const calls: FakeCall[] = [];
 
   const fetchMock = vi.fn<(input: RequestInfo | URL, init?: RequestInit) => Promise<Response>>(async (input, init) => {
@@ -298,6 +341,51 @@ export function fakeApi({ me = null as FakeMe | null, extra = [] as Handler[] } 
         if (body.version !== state.offers[index]!.version) return problem(409, 'CONCURRENCY_CONFLICT');
         state.offers[index] = { ...state.offers[index]!, ...body, version: body.version + 1 };
         return json(200, state.offers[index]);
+      }
+    }
+    const testsPath = `/api/w/${WORKSPACE_ID}/tests`;
+    if (state.me && call.path === testsPath && call.method === 'GET') {
+      return json(200, state.tests.filter((t) => !t.archived).map((t) => ({ ...t, questionCount: t.questions.length })));
+    }
+    if (state.me && call.path === testsPath && call.method === 'POST') {
+      const body = call.body as SavedTest;
+      const questions = withIds(body);
+      const created = TEST({ ...body, id: `test-${state.tests.length + 1}`, slug: body.slug || 'novo', questions, totalPoints: questions.reduce((sum, q) => sum + q.points, 0), version: 0 });
+      state.tests.push(created);
+      return json(201, created);
+    }
+    const testMatch = state.me ? call.path.match(new RegExp(`^${testsPath}/([^/]+)(?:/(publish|deactivate|duplicate))?$`)) : null;
+    if (testMatch && testMatch[1] !== 'new') {
+      const test = state.tests.find((t) => t.id === testMatch[1] && !t.archived);
+      if (!test) return problem(404, 'NOT_FOUND');
+      const action = testMatch[2];
+      if (!action && call.method === 'GET') return json(200, test);
+      if (!action && call.method === 'DELETE') {
+        test.archived = true;
+        return new Response(null, { status: 204 });
+      }
+      if (action === 'duplicate') {
+        const copy = { ...structuredClone(test), id: `test-${state.tests.length + 1}`, title: `${test.title} (2)`, slug: `${test.slug}-2`, status: 'Draft' as const, attemptCount: 0, version: 0 };
+        state.tests.push(copy);
+        return json(201, copy);
+      }
+      const body = call.body as SavedTest;
+      if (body.version !== test.version) return problem(409, 'CONCURRENCY_CONFLICT');
+      if (!action && call.method === 'PUT') {
+        const questions = withIds(body);
+        Object.assign(test, { ...body, slug: body.slug || test.slug, questions, totalPoints: questions.reduce((sum, q) => sum + q.points, 0), version: test.version + 1 });
+        return json(200, test);
+      }
+      if (action === 'publish') {
+        if (test.questions.length === 0) return problem(400, 'VALIDATION_FAILED', { questions: ['Add at least one question.'] });
+        const bad = test.questions.findIndex((q) => q.options.length < 2 || !q.options.some((o) => o.isCorrect));
+        if (bad >= 0) return problem(400, 'VALIDATION_FAILED', { [`questions[${bad}].options`]: ['Mark at least one correct option.'] });
+        Object.assign(test, { status: 'Published', publishedAtUtc: '2026-11-05T11:00:00Z', version: test.version + 1 });
+        return json(200, test);
+      }
+      if (action === 'deactivate') {
+        Object.assign(test, { status: 'Inactive', version: test.version + 1 });
+        return json(200, test);
       }
     }
     const leadsPath = `/api/w/${WORKSPACE_ID}/leads`;

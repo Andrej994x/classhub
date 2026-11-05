@@ -7,6 +7,7 @@ using ClassHub.Core.Modules.Sites.Persistence;
 using ClassHub.Core.Modules.Teachers.Contracts;
 using ClassHub.Core.Modules.Workspaces.Contracts;
 using ClassHub.Core.SharedKernel.Errors;
+using ClassHub.Core.SharedKernel.Globalization;
 using ClassHub.Core.SharedKernel.Tenancy;
 using Microsoft.EntityFrameworkCore;
 
@@ -220,25 +221,9 @@ internal sealed class SiteService(
     /// <summary>"Ана Петровска" → "ana-petrovska" (Cyrillic transliterated), falling back to "teacher-xxxx".</summary>
     internal static string SuggestSlug(TeacherSummary summary)
     {
-        var name = $"{summary.FirstName} {summary.LastName}".Trim().ToLowerInvariant();
-        var slug = string.Concat(name.Select(Transliterate));
-        slug = string.Join('-', slug.Split(['-', ' '], StringSplitOptions.RemoveEmptyEntries));
-        if (slug.Length > SiteSlugs.MaxLength)
-        {
-            slug = slug[..SiteSlugs.MaxLength].TrimEnd('-');
-        }
-
+        var slug = Slugs.FromText($"{summary.FirstName} {summary.LastName}", SiteSlugs.MaxLength);
         return SiteSlugs.Problem(slug) is null ? slug : $"teacher-{Guid.NewGuid().ToString("N")[..6]}";
     }
-
-    private static string Transliterate(char c) => c switch
-    {
-        >= 'a' and <= 'z' or >= '0' and <= '9' => c.ToString(),
-        'а' => "a", 'б' => "b", 'в' => "v", 'г' => "g", 'д' => "d", 'ѓ' => "gj", 'е' => "e", 'ж' => "zh", 'з' => "z", 'ѕ' => "dz",
-        'и' => "i", 'ј' => "j", 'к' => "k", 'л' => "l", 'љ' => "lj", 'м' => "m", 'н' => "n", 'њ' => "nj", 'о' => "o", 'п' => "p",
-        'р' => "r", 'с' => "s", 'т' => "t", 'ќ' => "kj", 'у' => "u", 'ф' => "f", 'х' => "h", 'ц' => "c", 'ч' => "ch", 'џ' => "dj", 'ш' => "sh",
-        _ => "-",
-    };
 
     private static string? Clean(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 

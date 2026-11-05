@@ -74,6 +74,8 @@ function SiteEditor({ workspaceId, site }: { workspaceId: string; site: Site }) 
   const { errors, isSubmitting, isDirty } = form.formState;
   const sections = useFieldArray({ control: form.control, name: 'sections' });
   const exists = site.exists;
+  // Publish/unpublish send the version the form was loaded from (not a newer one from a background refetch).
+  const formVersion = useWatch({ control: form.control, name: 'version' });
 
   const [invalidSubmit, setInvalidSubmit] = useState(false);
   const onSubmit = form.handleSubmit(async (v) => {
@@ -115,7 +117,7 @@ function SiteEditor({ workspaceId, site }: { workspaceId: string; site: Site }) 
         <p className="text-sm text-muted-foreground">{t('site.lead')}</p>
       </div>
       {/* Publishing never touches the draft: unsaved edits stay (keepDirtyValues), only the version follows the server. */}
-      <PublishCard workspaceId={workspaceId} site={site} dirty={isDirty} onChanged={(saved) => form.reset(toForm(saved), { keepDirtyValues: true })} />
+      <PublishCard workspaceId={workspaceId} site={site} version={formVersion} dirty={isDirty} onChanged={(saved) => form.reset(toForm(saved), { keepDirtyValues: true })} />
       <form noValidate onSubmit={onSubmit} className="flex flex-col gap-6">
         <fieldset disabled={isSubmitting} aria-busy={isSubmitting} className="contents">
           <SettingsCard workspaceId={workspaceId} savedSlug={exists ? site.slug : null} published={site.isPublished} form={form} />
@@ -179,11 +181,10 @@ function SiteEditor({ workspaceId, site }: { workspaceId: string; site: Site }) 
  * Publishing: the saved draft becomes the public page at /{slug}. Only a saved, unchanged form can be published, so
  * what the teacher sees in the preview is what visitors get.
  */
-function PublishCard({ workspaceId, site, dirty, onChanged }: { workspaceId: string; site: Site; dirty: boolean; onChanged: (saved: Site) => void }) {
+function PublishCard({ workspaceId, site, version, dirty, onChanged }: { workspaceId: string; site: Site; version: number | null; dirty: boolean; onChanged: (saved: Site) => void }) {
   const { t, i18n } = useTranslation();
   const publish = usePublishSite(workspaceId);
   const [confirmUnpublish, setConfirmUnpublish] = useState(false);
-  const version = site.version === null || site.version === undefined ? null : Number(site.version);
   const publicPath = `/${site.slug}`;
 
   const run = (doPublish: boolean) => {

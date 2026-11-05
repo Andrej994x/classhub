@@ -731,6 +731,162 @@ namespace ClassHub.Core.Infrastructure.Persistence.Migrations
                         });
                 });
 
+            modelBuilder.Entity("ClassHub.Core.Modules.DiagnosticTests.Domain.DiagnosticTest", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("ArchivedAtUtc")
+                        .HasPrecision(3)
+                        .HasColumnType("datetime2(3)");
+
+                    b.Property<int>("AttemptCount")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasPrecision(3)
+                        .HasColumnType("datetime2(3)");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<int>("Difficulty")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("PublishedAtUtc")
+                        .HasPrecision(3)
+                        .HasColumnType("datetime2(3)");
+
+                    b.Property<string>("Slug")
+                        .IsRequired()
+                        .HasMaxLength(60)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(60)")
+                        .UseCollation("Latin1_General_100_BIN2");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.Property<Guid>("SubjectId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)");
+
+                    b.Property<DateTime>("UpdatedAtUtc")
+                        .HasPrecision(3)
+                        .HasColumnType("datetime2(3)");
+
+                    b.Property<int>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("int");
+
+                    b.Property<Guid>("WorkspaceId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SubjectId");
+
+                    b.HasIndex("WorkspaceId");
+
+                    b.HasIndex("WorkspaceId", "Slug")
+                        .IsUnique();
+
+                    b.ToTable("DiagnosticTests", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_DiagnosticTests_AttemptCount", "[AttemptCount] >= 0");
+
+                            t.HasCheckConstraint("CK_DiagnosticTests_Difficulty", "[Difficulty] BETWEEN 1 AND 3");
+
+                            t.HasCheckConstraint("CK_DiagnosticTests_Published", "[Status] = 1 OR [PublishedAtUtc] IS NOT NULL");
+
+                            t.HasCheckConstraint("CK_DiagnosticTests_Slug", "LEN([Slug]) BETWEEN 3 AND 60 AND [Slug] NOT LIKE '%[^a-z0-9-]%'");
+
+                            t.HasCheckConstraint("CK_DiagnosticTests_Status", "[Status] BETWEEN 1 AND 3");
+                        });
+                });
+
+            modelBuilder.Entity("ClassHub.Core.Modules.DiagnosticTests.Domain.TestOption", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<bool>("IsCorrect")
+                        .HasColumnType("bit");
+
+                    b.Property<int>("Position")
+                        .HasColumnType("int");
+
+                    b.Property<Guid>("QuestionId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Text")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)");
+
+                    b.Property<Guid>("WorkspaceId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("WorkspaceId");
+
+                    b.HasIndex("QuestionId", "Position");
+
+                    b.HasIndex("WorkspaceId", "QuestionId");
+
+                    b.ToTable("TestOptions", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_TestOptions_Text", "LEN([Text]) > 0");
+                        });
+                });
+
+            modelBuilder.Entity("ClassHub.Core.Modules.DiagnosticTests.Domain.TestQuestion", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("Points")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Position")
+                        .HasColumnType("int");
+
+                    b.Property<Guid>("TestId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Text")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<Guid>("WorkspaceId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("WorkspaceId");
+
+                    b.HasIndex("TestId", "Position");
+
+                    b.HasIndex("WorkspaceId", "TestId");
+
+                    b.ToTable("TestQuestions", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_TestQuestions_Points", "[Points] BETWEEN 0 AND 100");
+
+                            t.HasCheckConstraint("CK_TestQuestions_Text", "LEN([Text]) > 0");
+                        });
+                });
+
             modelBuilder.Entity("ClassHub.Core.Modules.Identity.Contracts.AppRole", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1532,6 +1688,41 @@ namespace ClassHub.Core.Infrastructure.Persistence.Migrations
                     b.HasOne("ClassHub.Core.Modules.Catalog.Domain.SubjectCategory", null)
                         .WithMany()
                         .HasForeignKey("CategoryId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("ClassHub.Core.Modules.DiagnosticTests.Domain.DiagnosticTest", b =>
+                {
+                    b.HasOne("ClassHub.Core.Modules.Catalog.Domain.Subject", null)
+                        .WithMany()
+                        .HasForeignKey("SubjectId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.HasOne("ClassHub.Core.Modules.Workspaces.Domain.Workspace", null)
+                        .WithMany()
+                        .HasForeignKey("WorkspaceId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("ClassHub.Core.Modules.DiagnosticTests.Domain.TestOption", b =>
+                {
+                    b.HasOne("ClassHub.Core.Modules.DiagnosticTests.Domain.TestQuestion", null)
+                        .WithMany()
+                        .HasForeignKey("WorkspaceId", "QuestionId")
+                        .HasPrincipalKey("WorkspaceId", "Id")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("ClassHub.Core.Modules.DiagnosticTests.Domain.TestQuestion", b =>
+                {
+                    b.HasOne("ClassHub.Core.Modules.DiagnosticTests.Domain.DiagnosticTest", null)
+                        .WithMany()
+                        .HasForeignKey("WorkspaceId", "TestId")
+                        .HasPrincipalKey("WorkspaceId", "Id")
                         .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
                 });
