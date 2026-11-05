@@ -79,6 +79,24 @@ describe('site editor', () => {
     expect(api.to(API, 'PUT')).toHaveLength(0);
   });
 
+  it('limits item fields while typing and never fails silently on invalid input', async () => {
+    const user = userEvent.setup();
+    const api = fakeApi({ me: teacher() });
+    await renderRoute(PAGE);
+
+    await user.click(await screen.findByRole('button', { name: 'Додај искуство' }));
+    expect(screen.getByLabelText('Улога или место')).toHaveAttribute('maxLength', '200');
+    expect(screen.getByLabelText('Период')).toHaveAttribute('maxLength', '80');
+
+    const slug = screen.getByLabelText('Веб-адреса');
+    await user.clear(slug);
+    await user.type(slug, 'x');
+    await user.click(screen.getByRole('button', { name: 'Зачувај скица' }));
+
+    expect(await screen.findByText('Некои полиња треба да се поправат; погледнете ги означените пораки подолу.')).toBeInTheDocument();
+    expect(api.to(API, 'PUT')).toHaveLength(0);
+  });
+
   it('explains a save that conflicts with a newer one', async () => {
     const user = userEvent.setup();
     const api = fakeApi({ me: teacher() });

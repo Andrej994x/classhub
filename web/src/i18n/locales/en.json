@@ -363,7 +363,8 @@
       "tooLong": "This is too long.",
       "tooManyItems": "At most 30 entries.",
       "slugLength": "Use 3 to 40 characters.",
-      "slugFormat": "Use lowercase letters, digits and single hyphens; no hyphen at the start or end."
+      "slugFormat": "Use lowercase letters, digits and single hyphens; no hyphen at the start or end.",
+      "checkFields": "Some fields need attention; see the highlighted messages below."
     }
   }
 }

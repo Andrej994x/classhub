@@ -72,7 +72,9 @@ function SiteEditor({ workspaceId, site }: { workspaceId: string; site: Site }) 
   const sections = useFieldArray({ control: form.control, name: 'sections' });
   const exists = site.exists;
 
+  const [invalidSubmit, setInvalidSubmit] = useState(false);
   const onSubmit = form.handleSubmit(async (v) => {
+    setInvalidSubmit(false);
     await save
       .mutateAsync({
         slug: v.slug.trim(),
@@ -94,7 +96,7 @@ function SiteEditor({ workspaceId, site }: { workspaceId: string; site: Site }) 
       // The saved draft (with its new version) becomes the form's baseline.
       .then((saved) => form.reset(toForm(saved)))
       .catch(() => undefined);
-  });
+  }, () => setInvalidSubmit(true)); // never a silent no-op: say why nothing was saved
 
   const saveError =
     save.error instanceof ApiError && save.error.code === 'CONCURRENCY_CONFLICT'
@@ -133,6 +135,7 @@ function SiteEditor({ workspaceId, site }: { workspaceId: string; site: Site }) 
             </ol>
           </div>
 
+          {invalidSubmit && Object.keys(errors).length > 0 && <Alert variant="error">{t('site.validation.checkFields')}</Alert>}
           {saveError && <Alert variant="error">{saveError}</Alert>}
           {save.isSuccess && !isDirty && <Alert variant="success">{t('site.saved')}</Alert>}
           <div className="sticky bottom-0 -mx-4 flex flex-wrap gap-2 border-t border-border bg-background/95 px-4 py-3 backdrop-blur md:static md:mx-0 md:border-0 md:bg-transparent md:p-0">
@@ -289,11 +292,12 @@ function SectionCard({ index, type, control, register, first, last, onMove, erro
         </div>
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
-        <FormField label={t(type === 'hero' ? 'site.fields.headline' : 'site.fields.sectionTitle', { name })} error={message(errors?.title?.message)} {...register(`sections.${index}.title`)} />
+        <FormField label={t(type === 'hero' ? 'site.fields.headline' : 'site.fields.sectionTitle', { name })} maxLength={120} error={message(errors?.title?.message)} {...register(`sections.${index}.title`)} />
         {showsText && (
           <div className="flex flex-col gap-2">
             <Label htmlFor={`section-${index}-text`}>{t(type === 'hero' ? 'site.fields.message' : 'site.fields.text', { name })}</Label>
-            <textarea id={`section-${index}-text`} rows={type === 'about' ? 6 : 3} maxLength={3000} className="w-full rounded-md border border-input bg-background px-3 py-2 text-base sm:text-sm" {...register(`sections.${index}.text`)} />
+            <textarea id={`section-${index}-text`} rows={type === 'about' ? 6 : 3} maxLength={3000} aria-invalid={errors?.text ? true : undefined} className="w-full rounded-md border border-input bg-background px-3 py-2 text-base sm:text-sm" {...register(`sections.${index}.text`)} />
+            {errors?.text?.message && <p className="text-sm text-destructive">{t(errors.text.message)}</p>}
             {(type === 'subjects' || type === 'offers') && <p className="text-xs text-muted-foreground">{t(`site.fields.${type}Hint`)}</p>}
           </div>
         )}
@@ -308,11 +312,14 @@ function SectionCard({ index, type, control, register, first, last, onMove, erro
             {items.fields.map((item, itemIndex) => (
               <fieldset key={item.id} className="flex flex-col gap-3 rounded-md border border-border p-3">
                 <legend className="px-1 text-sm font-medium">{t(`site.items.${type}.label`, { number: itemIndex + 1 })}</legend>
-                <FormField label={t(`site.items.${type}.title`)} {...register(`sections.${index}.items.${itemIndex}.title`)} />
-                {type === 'experience' && <FormField label={t('site.items.experience.subtitle')} {...register(`sections.${index}.items.${itemIndex}.subtitle`)} />}
+                <FormField label={t(`site.items.${type}.title`)} maxLength={200} error={message(errors?.items?.[itemIndex]?.title?.message)} {...register(`sections.${index}.items.${itemIndex}.title`)} />
+                {type === 'experience' && (
+                  <FormField label={t('site.items.experience.subtitle')} maxLength={80} error={message(errors?.items?.[itemIndex]?.subtitle?.message)} {...register(`sections.${index}.items.${itemIndex}.subtitle`)} />
+                )}
                 <div className="flex flex-col gap-2">
                   <Label htmlFor={`section-${index}-item-${itemIndex}`}>{t(`site.items.${type}.text`)}</Label>
-                  <textarea id={`section-${index}-item-${itemIndex}`} rows={3} maxLength={1500} className="w-full rounded-md border border-input bg-background px-3 py-2 text-base sm:text-sm" {...register(`sections.${index}.items.${itemIndex}.text`)} />
+                  <textarea id={`section-${index}-item-${itemIndex}`} rows={3} maxLength={1500} aria-invalid={errors?.items?.[itemIndex]?.text ? true : undefined} className="w-full rounded-md border border-input bg-background px-3 py-2 text-base sm:text-sm" {...register(`sections.${index}.items.${itemIndex}.text`)} />
+                  {errors?.items?.[itemIndex]?.text?.message && <p className="text-sm text-destructive">{t(errors.items[itemIndex].text.message)}</p>}
                 </div>
                 <Button type="button" variant="ghost" size="sm" className="self-start" onClick={() => items.remove(itemIndex)}>
                   <Trash2 className="h-4 w-4" aria-hidden />
