@@ -150,6 +150,22 @@ public sealed class SiteTests(ClassHubApiFixture fixture)
         }
     }
 
+    [Theory]
+    [InlineData("{\"slug\":\"t-nullsections1\",\"template\":\"classic\",\"palette\":\"ocean\",\"language\":\"mk\",\"draft\":{\"sections\":null}}")]
+    [InlineData("{\"slug\":\"t-nullsections2\",\"template\":\"classic\",\"palette\":\"ocean\",\"language\":\"mk\",\"draft\":{}}")]
+    [InlineData("{\"slug\":\"t-nullsections3\",\"template\":\"classic\",\"palette\":\"ocean\",\"language\":\"mk\"}")]
+    [InlineData("{\"slug\":\"t-nullsections4\",\"template\":\"classic\",\"palette\":\"ocean\",\"language\":\"mk\",\"draft\":{\"sections\":[null]}}")]
+    [InlineData("{\"slug\":\"t-nullsections5\",\"template\":\"classic\",\"palette\":\"ocean\",\"language\":\"mk\",\"draft\":{\"sections\":[{\"type\":\"faq\",\"visible\":true,\"items\":[null]}]}}")]
+    public async Task Missing_or_null_sections_are_a_validation_error_not_a_crash(string json)
+    {
+        using var teacher = await fixture.CreateTeacherAsync();
+        using var content = new StringContent(json, System.Text.Encoding.UTF8, "application/json");
+
+        using var response = await teacher.Client.SendContentAsync(HttpMethod.Put, SitePath(teacher), content);
+
+        response.StatusCode.ShouldBe(HttpStatusCode.BadRequest, await response.Content.ReadAsStringAsync(Ct));
+    }
+
     [Fact]
     public async Task The_preview_renders_the_draft_as_encoded_text_and_is_never_indexed()
     {
@@ -176,6 +192,8 @@ public sealed class SiteTests(ClassHubApiFixture fixture)
         page.Content.Headers.ContentType!.MediaType.ShouldBe("text/html");
         page.Headers.GetValues("X-Robots-Tag").Single().ShouldContain("noindex");
         page.Headers.CacheControl!.NoStore.ShouldBeTrue();
+        // The URL carries the token: no Referer may ever include it (e.g. on the profile photo request).
+        page.Headers.GetValues("Referrer-Policy").ShouldBe(["no-referrer"]);
         var html = await page.Content.ReadAsStringAsync(Ct);
         html.ShouldContain("<meta name=\"robots\" content=\"noindex, nofollow, noarchive\" />");
         html.ShouldContain("<html lang=\"en\">");
