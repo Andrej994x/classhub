@@ -90,10 +90,13 @@ internal sealed class UpdatePlanLimitsRequestValidator : AbstractValidator<Updat
     public UpdatePlanLimitsRequestValidator()
     {
         RuleFor(x => x.Version).NotNull();
-        RuleFor(x => x.Limits).NotNull()
+        // Stops at the first failure: a missing list or a null item is a 400, never a null dereference.
+        RuleFor(x => x.Limits).Cascade(CascadeMode.Stop)
+            .NotNull()
+            .Must(l => l!.All(v => v is not null)).WithMessage("A limit is missing.")
             .Must(l => l!.Count == PlanLimits.All.Count && PlanLimits.All.All(k => l.Count(v => v.Key == k) == 1))
             .WithMessage("Send every limit exactly once.");
-        RuleForEach(x => x.Limits).ChildRules(limit =>
-            limit.RuleFor(v => v.Value).NotNull().InclusiveBetween(0, PlanLimit.MaxValue));
+        RuleForEach(x => x.Limits).Must(v => v is not null && v.Value is >= 0 and <= PlanLimit.MaxValue)
+            .WithMessage($"Each limit is a number from 0 to {PlanLimit.MaxValue}.");
     }
 }

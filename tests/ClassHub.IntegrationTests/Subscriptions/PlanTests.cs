@@ -245,6 +245,22 @@ public sealed class PlanTests(ClassHubApiFixture fixture)
         }
     }
 
+    [Theory]
+    [InlineData("""{"version":0}""")]
+    [InlineData("""{"version":0,"limits":null}""")]
+    [InlineData("""{"version":0,"limits":[null]}""")]
+    [InlineData("""{"version":0,"limits":[{"key":"published-tests","value":-1}]}""")]
+    public async Task Malformed_plan_limit_requests_are_validation_errors(string body)
+    {
+        using var owner = await fixture.CreatePlatformStaffAsync(PlatformRoles.Owner);
+        using var content = new StringContent(body, System.Text.Encoding.UTF8, "application/json");
+
+        using var response = await owner.Client.SendContentAsync(HttpMethod.Put, "/api/admin/plans/free", content);
+
+        response.StatusCode.ShouldBe(HttpStatusCode.BadRequest, await response.Content.ReadAsStringAsync(Ct));
+        (await response.ReadJsonAsync()).GetProperty("errors").EnumerateObject().ShouldNotBeEmpty();
+    }
+
     private static string Today() => DateOnly.FromDateTime(DateTime.UtcNow).ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture);
 
     private static async Task<AdminSubscriptionResponse> ActivateAsync(StaffSession admin, Guid workspaceId, int months, long amountMinor = 60_000)
