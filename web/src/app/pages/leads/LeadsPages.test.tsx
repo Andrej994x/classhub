@@ -47,6 +47,19 @@ describe('lead inbox', () => {
     expect(await screen.findByText('Марија Илиевска')).toBeInTheDocument();
   });
 
+  it('keeps a filter chosen while a search is still pending', async () => {
+    const user = userEvent.setup();
+    const api = fakeApi({ me: teacher() });
+    api.state.leads = [LEAD()];
+    const { router } = await renderRoute(INBOX);
+    await screen.findByRole('list', { name: 'Барања' });
+
+    await user.type(screen.getByLabelText('Пребарај (име, е-пошта, порака)'), 'марија');
+    await user.selectOptions(screen.getByLabelText('Статус'), 'New'); // before the search debounce fires
+    await expect.poll(() => new URLSearchParams(router.state.location.search).get('q')).toBe('марија');
+    expect(new URLSearchParams(router.state.location.search).get('status')).toBe('New');
+  });
+
   it('explains an empty inbox', async () => {
     fakeApi({ me: teacher() });
     await renderRoute(INBOX);

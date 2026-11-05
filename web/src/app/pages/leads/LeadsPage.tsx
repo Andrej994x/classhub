@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useParams, useSearchParams } from 'react-router';
 import { ApiError, errorMessage } from '../../../api/errors.ts';
@@ -30,20 +30,31 @@ export function LeadsPage() {
   const leads = useLeads(workspaceId, filters);
   const language = i18n.resolvedLanguage ?? 'mk';
 
+  // Always from the latest parameters (functional update): a debounced search must not undo a filter chosen meanwhile.
   const update = (changes: Partial<Record<'status' | 'type' | 'q' | 'archived' | 'page', string | null>>) => {
-    const next = new URLSearchParams(params);
-    for (const [key, value] of Object.entries(changes)) {
-      if (value) next.set(key, value);
-      else next.delete(key);
-    }
-    if (!('page' in changes)) next.delete('page');
-    setParams(next, { replace: true });
+    setParams(
+      (current) => {
+        const next = new URLSearchParams(current);
+        for (const [key, value] of Object.entries(changes)) {
+          if (value) next.set(key, value);
+          else next.delete(key);
+        }
+        if (!('page' in changes)) next.delete('page');
+        return next;
+      },
+      { replace: true },
+    );
   };
 
-  // Search while typing, debounced.
+  // Search while typing, debounced. The timer calls the newest `update` (through a ref): the setter captured when
+  // typing started would still hold the old parameters and undo a filter chosen in the meantime.
+  const latestUpdate = useRef(update);
+  useEffect(() => {
+    latestUpdate.current = update;
+  });
   useEffect(() => {
     if (search === filters.q) return undefined;
-    const timer = setTimeout(() => update({ q: search.trim() || null }), 350);
+    const timer = setTimeout(() => latestUpdate.current({ q: search.trim() || null }), 350);
     return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [search]);
