@@ -57,6 +57,9 @@ public interface IOfferLookup
     /// in the teacher's order. Only the public fields.
     /// </summary>
     Task<IReadOnlyList<PublicOffer>> ListPublicAsync(CancellationToken cancellationToken);
+
+    /// <summary>Active offers of the current workspace, and how many of them show on the public site.</summary>
+    Task<(int Active, int Public)> CountActiveAsync(CancellationToken cancellationToken);
 }
 
 /// <summary>

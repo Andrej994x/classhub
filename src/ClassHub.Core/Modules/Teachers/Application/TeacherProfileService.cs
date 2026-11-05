@@ -27,7 +27,7 @@ internal sealed partial class TeacherProfileService(
     IPublicSiteCache siteCache,
     IFileStorage files,
     TimeProvider clock,
-    ILogger<TeacherProfileService> logger) : ITeacherSummary, ITeacherPhoto, ITeacherPublicProfile
+    ILogger<TeacherProfileService> logger) : ITeacherSummary, ITeacherPhoto, ITeacherPublicProfile, IOnboardingProgress
 {
     public async Task<PublicTeacherProfile> GetPublicProfileAsync(CancellationToken cancellationToken)
     {

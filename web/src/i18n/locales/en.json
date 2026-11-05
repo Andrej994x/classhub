@@ -36,7 +36,46 @@
   "dashboard": {
     "title": "Home",
     "empty": "Your workspace is ready. Soon you will see your next lessons and new requests here.",
-    "noWorkspace": "No workspace is linked to this account."
+    "noWorkspace": "No workspace is linked to this account.",
+    "numbers": "Your numbers",
+    "period": "Period",
+    "days_one": "{{count}} day",
+    "days_other": "{{count}} days",
+    "tiles": {
+      "newLeads": "New requests",
+      "newLeadsHint": "Waiting for your reply",
+      "leadsInPeriod": "Requests in the period",
+      "visits": "Page visits",
+      "siteNotPublished": "Your page is not published",
+      "attempts": "Test attempts",
+      "attemptsHint": "{{shared}} shared · {{published}} published tests",
+      "activeOffers": "Active offers",
+      "publicOffers_one": "{{count}} on your public page",
+      "publicOffers_other": "{{count}} on your public page"
+    },
+    "funnel": {
+      "title": "From visit to student",
+      "lead": "In the chosen period. \"Converted\" is the status you set on a request.",
+      "visits": "Page visits",
+      "leads": "Requests",
+      "contacted": "Contacted",
+      "converted": "Converted",
+      "ofPrevious": "{{percent}}% of the step before"
+    },
+    "status": {
+      "title": "Requests by status",
+      "lead": "All current requests (without the archive)."
+    },
+    "visits": {
+      "title": "Page visits",
+      "lead": "Visits of your public page per day (UTC). Search engines and your own visits are not counted.",
+      "summary": "{{total}} page visits in {{count}} days",
+      "count_one": "{{count}} visit",
+      "count_other": "{{count}} visits",
+      "table": "Show as a table",
+      "day": "Day",
+      "none": "No visits in this period yet."
+    }
   },
   "student": {
     "title": "My lessons",

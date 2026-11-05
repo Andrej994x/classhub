@@ -139,6 +139,13 @@ public interface ISiteStatus
     Task<(bool Exists, bool IsPublished)> GetStatusAsync(CancellationToken cancellationToken);
 }
 
+/// <summary>Page views of the current workspace's site per UTC day (D-32), for the dashboard.</summary>
+public interface ISitePageViewStats
+{
+    /// <summary>Views per day from <paramref name="from"/> to <paramref name="to"/> (inclusive); days without views are absent.</summary>
+    Task<IReadOnlyDictionary<DateOnly, int>> DailyAsync(DateOnly from, DateOnly to, CancellationToken cancellationToken);
+}
+
 /// <summary>Renders the draft for the preview page (Razor) from a signed preview token.</summary>
 public interface ISitePreview
 {

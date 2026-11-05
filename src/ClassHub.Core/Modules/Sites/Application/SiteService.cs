@@ -242,8 +242,15 @@ internal sealed class SiteService(
 /// Site state for other modules (onboarding). Deliberately its own small class with no module dependencies: the
 /// teacher profile asks for it, and the site service itself depends on the teacher summary.
 /// </summary>
-internal sealed class SiteStatus(ClassHubDbContext db) : ISiteStatus
+internal sealed class SiteStatus(ClassHubDbContext db) : ISiteStatus, ISitePageViewStats
 {
+    public async Task<IReadOnlyDictionary<DateOnly, int>> DailyAsync(DateOnly from, DateOnly to, CancellationToken cancellationToken) =>
+        await db.Set<SitePageView>().AsNoTracking()
+            .Where(v => v.Day >= from && v.Day <= to)
+            .GroupBy(v => v.Day)
+            .Select(g => new { Day = g.Key, Views = g.Sum(v => v.Views) })
+            .ToDictionaryAsync(x => x.Day, x => x.Views, cancellationToken);
+
     public async Task<(bool Exists, bool IsPublished)> GetStatusAsync(CancellationToken cancellationToken)
     {
         var published = await db.Set<Site>().Select(s => (DateTime?)s.PublishedAtUtc).ToListAsync(cancellationToken);

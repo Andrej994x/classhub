@@ -119,6 +119,15 @@ internal sealed class OfferService(
 
     public Task<int> CountAsync(CancellationToken cancellationToken) => db.Set<Offer>().CountAsync(cancellationToken);
 
+    public async Task<(int Active, int Public)> CountActiveAsync(CancellationToken cancellationToken)
+    {
+        var counts = await db.Set<Offer>().AsNoTracking().Where(o => o.IsActive)
+            .GroupBy(_ => 1)
+            .Select(g => new { Active = g.Count(), Public = g.Count(o => o.ShowOnPublicSite) })
+            .SingleOrDefaultAsync(cancellationToken);
+        return (counts?.Active ?? 0, counts?.Public ?? 0);
+    }
+
     public async Task<IReadOnlyList<PublicOffer>> ListPublicAsync(CancellationToken cancellationToken) =>
         await db.Set<Offer>().AsNoTracking()
             .Where(o => o.ShowOnPublicSite && o.IsActive)
