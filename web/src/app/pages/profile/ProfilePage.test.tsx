@@ -102,6 +102,23 @@ describe('profile page', () => {
     expect(screen.getByLabelText('Презиме')).toBeEnabled();
   });
 
+  it('never re-sends an untouched setting, even after the workspace was refreshed with a newer value', async () => {
+    const user = userEvent.setup();
+    const api = fakeApi({
+      me: teacher(),
+      extra: [(call) => (call.method === 'PUT' && call.path === PROFILE_PATH ? json(200, { ...EMPTY_PROFILE, ...(call.body as object) }) : undefined)],
+    });
+    const { queryClient } = await renderRoute(`/app/w/${WORKSPACE_ID}/profile`);
+    await user.type(await screen.findByLabelText('Име'), 'Ана'); // the form is dirty now
+
+    // Another tab changed the currency; this tab refreshes the workspace while the form stays open.
+    queryClient.setQueryData(['w', WORKSPACE_ID], (w: object) => ({ ...w, currency: 'USD' }));
+    await user.click(screen.getByRole('button', { name: 'Зачувај профил' }));
+
+    expect(await screen.findByText('Профилот е зачуван.')).toBeInTheDocument();
+    expect(api.to(PROFILE_PATH, 'PUT')[0]?.body).toMatchObject({ firstName: 'Ана', timeZone: null, currency: null });
+  });
+
   it('does not touch the workspace settings when only the profile changed', async () => {
     const user = userEvent.setup();
     const api = fakeApi({

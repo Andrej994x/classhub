@@ -195,10 +195,11 @@ function ProfileFormCard({ workspaceId, profile, workspace, catalog }: { workspa
   const currencies = CURRENCIES.includes(workspace.currency) ? CURRENCIES : [workspace.currency, ...CURRENCIES];
 
   const onSubmit = form.handleSubmit(async (values) => {
-    // Each workspace setting is sent only when it was changed here, so a stale value can never undo a change
-    // made elsewhere (the profile version does not cover workspace settings).
-    const timeZoneChanged = values.timeZone !== workspace.timeZone;
-    const currencyChanged = values.currency !== workspace.currency;
+    // Each workspace setting is sent only when the teacher changed it in this form (compared with the form's own
+    // loaded values, not with a refreshed workspace), so an untouched, possibly stale value can never undo a change
+    // made elsewhere. The profile version does not cover workspace settings.
+    const timeZoneChanged = form.getFieldState('timeZone').isDirty;
+    const currencyChanged = form.getFieldState('currency').isDirty;
     await save
       .mutateAsync({
         firstName: empty(values.firstName),
