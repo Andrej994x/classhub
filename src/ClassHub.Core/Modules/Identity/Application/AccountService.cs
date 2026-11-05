@@ -292,8 +292,7 @@ internal sealed partial class AccountService(
     internal static string NormalizeEmail(string email) => email.Trim().ToLowerInvariant();
 
     /// <summary>SQL Server unique index (2601) or unique constraint (2627) violation.</summary>
-    internal static bool IsUniqueViolation(DbUpdateException ex) =>
-        ex.InnerException is Microsoft.Data.SqlClient.SqlException { Number: 2601 or 2627 };
+    internal static bool IsUniqueViolation(DbUpdateException ex) => SqlServerErrors.IsUniqueViolation(ex);
 
     private static BadRequestException InvalidToken() =>
         new("The link is invalid or has expired. Request a new one.", ErrorCodes.InvalidToken);

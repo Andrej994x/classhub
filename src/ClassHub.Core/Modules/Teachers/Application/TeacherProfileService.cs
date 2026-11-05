@@ -55,16 +55,16 @@ internal sealed partial class TeacherProfileService(
         }
 
         var now = clock.GetUtcNow().UtcDateTime;
-        var existing = await db.Set<TeacherProfile>().SingleOrDefaultAsync(cancellationToken);
+        var existing = await EnsureProfileAsync(now, cancellationToken);
         // The version the client loaded must still be current: otherwise the form is stale (another tab or
         // device saved in between) and replacing the fields would silently lose that save.
         // (0 and null both mean "no field save yet", e.g. a profile created only by a photo upload.)
-        if ((request.Version ?? 0) != (existing?.Version ?? 0))
+        if ((request.Version ?? 0) != existing.Version)
         {
             throw new ConflictException("The profile was changed elsewhere. Reload it and apply your changes again.", ErrorCodes.ConcurrencyConflict);
         }
 
-        var profile = existing ?? await LoadOrCreateAsync(now, cancellationToken);
+        var profile = existing;
         profile.Version++;
         profile.FirstName = Clean(request.FirstName);
         profile.LastName = Clean(request.LastName);
@@ -117,27 +117,19 @@ internal sealed partial class TeacherProfileService(
         };
         file.StorageKey = $"{workspaceId:N}/{file.Id:N}.webp";
 
+        // Before the transaction: a first profile may be created concurrently by a form save.
+        await EnsureProfileAsync(now, cancellationToken);
         string? oldKey;
         try
         {
             // Inside the cleanup scope: whatever fails after the blob exists removes it again.
             await files.WriteAsync(file.StorageKey, image.Content, cancellationToken);
-            // The new file, the profile pointer and the removal of the old file row commit together.
+            // The new file row, the profile pointer and the removal of the old file row commit together.
             await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
-            var profile = await LoadOrCreateAsync(now, cancellationToken);
-            var old = profile.PhotoFileId is { } oldId ? await db.Set<StoredFile>().SingleOrDefaultAsync(f => f.Id == oldId, cancellationToken) : null;
             db.Set<StoredFile>().Add(file);
-            profile.PhotoFileId = file.Id;
-            profile.UpdatedAtUtc = now;
             await db.SaveChangesAsync(cancellationToken);
-            if (old is not null)
-            {
-                db.Set<StoredFile>().Remove(old);
-                await db.SaveChangesAsync(cancellationToken);
-            }
-
+            oldKey = await SwapPhotoAsync(file.Id, now, cancellationToken);
             await transaction.CommitAsync(cancellationToken);
-            oldKey = old?.StorageKey;
         }
         catch
         {
@@ -151,28 +143,51 @@ internal sealed partial class TeacherProfileService(
 
     public async Task RemovePhotoAsync(CancellationToken cancellationToken)
     {
-        var profile = await db.Set<TeacherProfile>().SingleOrDefaultAsync(cancellationToken);
-        if (profile?.PhotoFileId is not { } photoId)
+        if (await db.Set<TeacherProfile>().AsNoTracking().Select(p => p.PhotoFileId).SingleOrDefaultAsync(cancellationToken) is null)
         {
             return;
         }
 
-        var file = await db.Set<StoredFile>().SingleOrDefaultAsync(f => f.Id == photoId, cancellationToken);
+        string? oldKey;
         await using (var transaction = await db.Database.BeginTransactionAsync(cancellationToken))
         {
-            profile.PhotoFileId = null;
-            profile.UpdatedAtUtc = clock.GetUtcNow().UtcDateTime;
-            await db.SaveChangesAsync(cancellationToken);
-            if (file is not null)
-            {
-                db.Set<StoredFile>().Remove(file);
-                await db.SaveChangesAsync(cancellationToken);
-            }
-
+            oldKey = await SwapPhotoAsync(null, clock.GetUtcNow().UtcDateTime, cancellationToken);
             await transaction.CommitAsync(cancellationToken);
         }
 
-        await DeleteBlobAsync(file?.StorageKey);
+        await DeleteBlobAsync(oldKey);
+    }
+
+    /// <summary>
+    /// Points the profile at <paramref name="newFileId"/> with an atomic compare-and-swap on the current photo id,
+    /// then deletes the replaced file row and returns its storage key. Only the photo columns are written, so a
+    /// parallel form save (guarded by <see cref="TeacherProfile.Version"/>) and a photo change never conflict; two
+    /// parallel photo changes are serialized by the swap (the loser re-reads and retries).
+    /// </summary>
+    private async Task<string?> SwapPhotoAsync(Guid? newFileId, DateTime now, CancellationToken cancellationToken)
+    {
+        for (var attempt = 0; attempt < 5; attempt++)
+        {
+            var current = await db.Set<TeacherProfile>().AsNoTracking().Select(p => new { p.Id, p.PhotoFileId }).SingleAsync(cancellationToken);
+            var swapped = await db.Set<TeacherProfile>()
+                .Where(p => p.Id == current.Id && p.PhotoFileId == current.PhotoFileId)
+                .ExecuteUpdateAsync(set => set.SetProperty(p => p.PhotoFileId, newFileId).SetProperty(p => p.UpdatedAtUtc, now), cancellationToken);
+            if (swapped != 1)
+            {
+                continue;
+            }
+
+            if (current.PhotoFileId is not { } oldId)
+            {
+                return null;
+            }
+
+            var oldKey = await db.Set<StoredFile>().Where(f => f.Id == oldId).Select(f => f.StorageKey).SingleOrDefaultAsync(cancellationToken);
+            await db.Set<StoredFile>().Where(f => f.Id == oldId).ExecuteDeleteAsync(cancellationToken);
+            return oldKey;
+        }
+
+        throw new ConflictException("The photo was changed at the same time. Try again.", ErrorCodes.ConcurrencyConflict);
     }
 
     /// <summary>The current photo bytes, or null.</summary>
@@ -210,7 +225,12 @@ internal sealed partial class TeacherProfileService(
 
     private static readonly TeacherProfileResponse Empty = new(null, null, null, null, null, [], [], [], false, null, null, null);
 
-    private async Task<TeacherProfile> LoadOrCreateAsync(DateTime now, CancellationToken cancellationToken)
+    /// <summary>
+    /// The workspace's profile, created (and saved) if it does not exist yet. Two first requests in parallel (a photo
+    /// upload and a form save) can both try to create it: the unique workspace index lets one win, and the other
+    /// simply loads the winner's row instead of failing.
+    /// </summary>
+    private async Task<TeacherProfile> EnsureProfileAsync(DateTime now, CancellationToken cancellationToken)
     {
         var profile = await db.Set<TeacherProfile>().SingleOrDefaultAsync(cancellationToken);
         if (profile is not null)
@@ -220,7 +240,16 @@ internal sealed partial class TeacherProfileService(
 
         profile = new TeacherProfile { Id = Guid.NewGuid(), WorkspaceId = tenant.RequireWorkspaceId(), CreatedAtUtc = now, UpdatedAtUtc = now };
         db.Set<TeacherProfile>().Add(profile);
-        return profile;
+        try
+        {
+            await db.SaveChangesAsync(cancellationToken);
+            return profile;
+        }
+        catch (DbUpdateException ex) when (SqlServerErrors.IsUniqueViolation(ex))
+        {
+            db.Entry(profile).State = EntityState.Detached;
+            return await db.Set<TeacherProfile>().SingleAsync(cancellationToken);
+        }
     }
 
     private async Task<TeacherProfileResponse> ToResponseAsync(TeacherProfile profile, CancellationToken cancellationToken)

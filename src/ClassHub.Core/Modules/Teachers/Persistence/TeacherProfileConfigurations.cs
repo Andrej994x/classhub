@@ -23,7 +23,8 @@ internal sealed class TeacherProfileConfiguration : IEntityTypeConfiguration<Tea
         builder.Property(x => x.Bio).HasMaxLength(TeacherProfile.BioMaxLength);
         builder.Property(x => x.TeachingMode).HasConversion<string>().HasMaxLength(20);
         builder.Property(x => x.CountryCode).HasMaxLength(2).IsFixedLength().IsUnicode(false);
-        builder.Property(x => x.RowVersion).IsRowVersion();
+        // The only concurrency token: field saves are checked against it; photo changes use an atomic swap of
+        // the photo column instead (see TeacherProfileService), so the two never conflict.
         builder.Property(x => x.Version).IsConcurrencyToken();
         // The photo must belong to the same workspace (composite tenant FK).
         builder.HasTenantReference<TeacherProfile, StoredFile>(nameof(TeacherProfile.PhotoFileId));

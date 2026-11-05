@@ -12,7 +12,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace ClassHub.Core.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(ClassHubDbContext))]
-    [Migration("20261105065638_AddCatalogProfilesAndFiles")]
+    [Migration("20261105070730_AddCatalogProfilesAndFiles")]
     partial class AddCatalogProfilesAndFiles
     {
         /// <inheritdoc />
@@ -899,12 +899,6 @@ namespace ClassHub.Core.Infrastructure.Persistence.Migrations
 
                     b.Property<Guid?>("PhotoFileId")
                         .HasColumnType("uniqueidentifier");
-
-                    b.Property<byte[]>("RowVersion")
-                        .IsConcurrencyToken()
-                        .IsRequired()
-                        .ValueGeneratedOnAddOrUpdate()
-                        .HasColumnType("rowversion");
 
                     b.Property<string>("TeachingMode")
                         .HasMaxLength(20)

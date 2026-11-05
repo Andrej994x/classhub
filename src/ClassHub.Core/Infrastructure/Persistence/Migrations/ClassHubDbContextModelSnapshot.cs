@@ -897,12 +897,6 @@ namespace ClassHub.Core.Infrastructure.Persistence.Migrations
                     b.Property<Guid?>("PhotoFileId")
                         .HasColumnType("uniqueidentifier");
 
-                    b.Property<byte[]>("RowVersion")
-                        .IsConcurrencyToken()
-                        .IsRequired()
-                        .ValueGeneratedOnAddOrUpdate()
-                        .HasColumnType("rowversion");
-
                     b.Property<string>("TeachingMode")
                         .HasMaxLength(20)
                         .HasColumnType("nvarchar(20)");

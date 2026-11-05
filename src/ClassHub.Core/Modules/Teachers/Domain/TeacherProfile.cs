@@ -45,8 +45,6 @@ public sealed class TeacherProfile : ITenantOwned
     /// rejected. Photo changes do not count, so uploading a photo does not invalidate an open form.
     /// </summary>
     public int Version { get; set; }
-
-    public byte[] RowVersion { get; set; } = [];
 }
 
 public sealed class TeacherProfileSubject : ITenantOwned

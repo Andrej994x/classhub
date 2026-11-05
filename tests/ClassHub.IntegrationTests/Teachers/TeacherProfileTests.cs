@@ -136,6 +136,47 @@ public sealed class TeacherProfileTests(ClassHubApiFixture fixture)
     }
 
     [Fact]
+    public async Task A_first_photo_and_a_first_form_save_in_parallel_both_succeed()
+    {
+        for (var round = 0; round < 5; round++)
+        {
+            using var teacher = await fixture.CreateTeacherAsync();
+            var path = ProfilePath(teacher.WorkspaceId);
+
+            var upload = UploadPhotoAsync(teacher, TestImages.Png(300, 300));
+            var save = teacher.Client.PutAsync(path, new { firstName = "Ана" });
+            using var uploaded = await upload;
+            using var saved = await save;
+
+            uploaded.StatusCode.ShouldBe(HttpStatusCode.OK, await uploaded.Content.ReadAsStringAsync(Ct));
+            saved.StatusCode.ShouldBe(HttpStatusCode.OK, await saved.Content.ReadAsStringAsync(Ct));
+            var profile = await teacher.Client.GetJsonAsync<TeacherProfileResponse>(path);
+            profile.FirstName.ShouldBe("Ана");
+            profile.HasPhoto.ShouldBeTrue();
+        }
+    }
+
+    [Fact]
+    public async Task Parallel_photo_uploads_leave_exactly_one_photo_and_no_orphans()
+    {
+        using var teacher = await fixture.CreateTeacherAsync();
+        (await UploadPhotoAsync(teacher, TestImages.Png(200, 200))).Dispose();
+
+        var uploads = Enumerable.Range(0, 4).Select(i => UploadPhotoAsync(teacher, TestImages.Png(200 + (i * 10), 200))).ToList();
+        foreach (var response in await Task.WhenAll(uploads))
+        {
+            using (response)
+            {
+                response.StatusCode.ShouldBe(HttpStatusCode.OK, await response.Content.ReadAsStringAsync(Ct));
+            }
+        }
+
+        var stored = await StoredFileAsync(teacher.WorkspaceId); // Single: exactly one row is left
+        var folder = Path.Combine(fixture.Factory.FileRoot, teacher.WorkspaceId.ToString("N"));
+        Directory.GetFiles(folder).Select(Path.GetFileName).ShouldBe([Path.GetFileName(stored.StorageKey)]);
+    }
+
+    [Fact]
     public async Task A_photo_upload_does_not_make_an_open_form_stale()
     {
         using var teacher = await fixture.CreateTeacherAsync();
