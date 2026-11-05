@@ -137,7 +137,7 @@ describe('routes and layouts', () => {
     expect(queryClient.getQueryData(['me', 'workspaces'])).toBeUndefined();
   });
 
-  it('ignores a late language answer that arrives after signing out', async () => {
+  it('signs out only after a pending language answer, and the ended session is not brought back', async () => {
     const user = userEvent.setup();
     let answer!: (response: Response) => void;
     const late = new Promise<Response>((resolve) => {
@@ -149,10 +149,14 @@ describe('routes and layouts', () => {
 
     await user.selectOptions(screen.getByRole('combobox', { name: 'Јазик' }), 'en');
     await user.click(await screen.findByRole('button', { name: 'Sign out' }));
-    await screen.findByRole('heading', { level: 1, name: 'Sign in' });
+    // A response arriving after the logout response could carry a renewed session cookie: sign-out waits for it.
+    await expect.poll(() => api.to('/api/auth/me', 'PATCH').length).toBe(1);
+    await new Promise((done) => setTimeout(done, 50));
+    expect(api.to('/api/auth/logout', 'POST')).toHaveLength(0);
 
     answer(new Response(JSON.stringify(teacher({ locale: 'en' })), { status: 200, headers: { 'content-type': 'application/json' } }));
-    await expect.poll(() => api.to('/api/auth/me', 'PATCH').length).toBe(1);
+    await screen.findByRole('heading', { level: 1, name: 'Sign in' });
+    expect(api.to('/api/auth/logout', 'POST')).toHaveLength(1);
     await new Promise((done) => setTimeout(done, 50));
 
     expect(router.state.location.pathname).toBe('/login');

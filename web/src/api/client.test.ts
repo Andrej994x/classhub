@@ -26,6 +26,39 @@ const json = (status: number, body: unknown, headers: Record<string, string> = {
 const antiforgery = (token: string) => json(200, { requestToken: token }, { [XSRF_HEADER]: token });
 
 describe('api client', () => {
+  it('reports idle only when no request is waiting for its response', async () => {
+    let release!: () => void;
+    const slow = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const server = fakeServer(() => json(200, { ok: true }));
+    const delayed = (async (input: RequestInfo | URL, init?: RequestInit) => {
+      await slow;
+      return server.fetch(input, init);
+    }) as typeof fetch;
+    const api = createApiClient({ baseUrl: 'http://localhost', fetch: delayed });
+
+    await api.whenIdle(); // nothing pending
+    const request = api.client.GET('/api/auth/me' as never, {} as never);
+    let idle = false;
+    const waiting = api.whenIdle().then(() => {
+      idle = true;
+    });
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(idle).toBe(false);
+
+    release();
+    await request;
+    await waiting;
+    expect(idle).toBe(true);
+  });
+
+  it('stops waiting for a stuck request after the timeout', async () => {
+    const api = createApiClient({ baseUrl: 'http://localhost', fetch: (() => new Promise<Response>(() => undefined)) as typeof fetch });
+    void api.client.GET('/api/auth/me' as never, {} as never);
+    await expect(api.whenIdle(30)).resolves.toBeUndefined();
+  });
+
   it('fetches an antiforgery token before the first unsafe request and sends it as a header', async () => {
     const server = fakeServer((call) => (call.url === '/api/auth/antiforgery' ? antiforgery('t1') : json(200, { ok: true })));
     const { client } = createApiClient({ baseUrl: 'http://localhost', fetch: server.fetch });

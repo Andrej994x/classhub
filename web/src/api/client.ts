@@ -19,6 +19,18 @@ export interface ApiClientOptions {
 export function createApiClient({ baseUrl = '', fetch: fetchImpl = (input, init) => globalThis.fetch(input, init) }: ApiClientOptions = {}) {
   let token: string | null = null;
   let pending: Promise<string> | null = null;
+  // Requests still waiting for a response, and who waits for none to be left (see whenIdle).
+  let inFlight = 0;
+  let idleWaiters: (() => void)[] = [];
+
+  const settle = () => {
+    inFlight--;
+    if (inFlight === 0) {
+      const waiters = idleWaiters;
+      idleWaiters = [];
+      for (const resolve of waiters) resolve();
+    }
+  };
 
   const capture = (response: Response) => {
     const issued = response.headers.get(XSRF_HEADER);
@@ -50,10 +62,13 @@ export function createApiClient({ baseUrl = '', fetch: fetchImpl = (input, init)
       const request = input.clone();
       if (unsafe) request.headers.set(XSRF_HEADER, token ?? (await refreshToken()));
       let response: Response;
+      inFlight++;
       try {
         response = await fetchImpl(request);
       } catch {
         throw ApiError.network();
+      } finally {
+        settle();
       }
       capture(response);
       if (unsafe && retry && response.status === 400 && (await toApiError(response)).code === 'ANTIFORGERY_INVALID') {
@@ -84,6 +99,21 @@ export function createApiClient({ baseUrl = '', fetch: fetchImpl = (input, init)
   return {
     client,
     refreshToken,
+    /**
+     * Resolves when no API request is waiting for its response (or after `timeoutMs`). Signing out waits for this:
+     * a response that arrives after the logout response can carry a renewed session cookie and sign the browser in
+     * again.
+     */
+    whenIdle: (timeoutMs = 5000): Promise<void> =>
+      inFlight === 0
+        ? Promise.resolve()
+        : new Promise<void>((resolve) => {
+            const timer = setTimeout(resolve, timeoutMs);
+            idleWaiters.push(() => {
+              clearTimeout(timer);
+              resolve();
+            });
+          }),
     /** Drops the cached token (for example after a 401 when the session ended). */
     resetToken: () => {
       token = null;
