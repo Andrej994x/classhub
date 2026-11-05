@@ -29,7 +29,6 @@ internal sealed partial class LeadIntake(
     IOfferLookup offers,
     ITeacherPublicProfile profiles,
     ICatalogLookup catalog,
-    LeadQueries queries,
     LeadFormTokens tokens,
     IServiceScopeFactory scopes,
     IOptions<LeadOptions> options,
@@ -97,13 +96,17 @@ internal sealed partial class LeadIntake(
             throw Invalid("subjectId", "Choose one of the teacher's subjects.");
         }
 
-        if (await queries.CountCreatedSinceAsync(now.UtcDateTime.AddHours(-1), cancellationToken) >= options.Value.MaxPerSitePerHour)
+        await using var scope = scopes.CreateAsyncScope();
+        var db = scope.ServiceProvider.GetRequiredService<ClassHubDbContext>();
+        var intake = scope.ServiceProvider.GetRequiredService<LeadQueries>();
+        // Quota check and insert under one per-workspace lock: parallel submissions cannot exceed the limit.
+        await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
+        await intake.LockIntakeAsync(site.WorkspaceId, cancellationToken);
+        if (await intake.CountCreatedSinceAsync(site.WorkspaceId, now.UtcDateTime.AddHours(-1), cancellationToken) >= options.Value.MaxPerSitePerHour)
         {
             throw new TooManyRequestsException("This teacher has received many requests in the last hour. Please try again later.");
         }
 
-        await using var scope = scopes.CreateAsyncScope();
-        var db = scope.ServiceProvider.GetRequiredService<ClassHubDbContext>();
         var type = Enum.Parse<LeadType>(request.Type!);
         db.Set<Lead>().Add(new Lead
         {
@@ -126,6 +129,7 @@ internal sealed partial class LeadIntake(
         var inbox = $"{links.Value.PublicBaseUrl.TrimEnd('/')}/app/w/{site.WorkspaceId}/leads";
         scope.ServiceProvider.GetRequiredService<IEmailOutbox>().Enqueue(LeadEmails.NewLead(owner.Email, owner.Locale, inbox, type == LeadType.LessonRequest));
         await db.SaveChangesAsync(cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
     }
 
     private async Task<PublishedSiteRef> ResolveAsync(string slug, CancellationToken cancellationToken)

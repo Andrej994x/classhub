@@ -177,6 +177,29 @@ public sealed class LeadTests(ClassHubApiFixture fixture)
     }
 
     [Fact]
+    public async Task Parallel_submissions_never_exceed_the_per_site_limit()
+    {
+        using var site = await PublishedTeacherAsync();
+        var token = await TokenAsync(site.Slug);
+        var limit = new LeadOptions().MaxPerSitePerHour;
+
+        // Twice the quota at once, each from its own client: the lock makes check + insert atomic.
+        var statuses = await Task.WhenAll(Enumerable.Range(0, limit * 2).Select(async _ =>
+        {
+            using var visitor = fixture.Factory.CreateClient();
+            using var response = await visitor.PostAsJsonAsync($"/api/public/sites/{site.Slug}/leads", Request(token), Ct);
+            return response.StatusCode;
+        }));
+
+        statuses.Count(s => s == HttpStatusCode.Accepted).ShouldBe(limit);
+        statuses.Count(s => s == HttpStatusCode.TooManyRequests).ShouldBe(limit);
+        (await ListAsync(site.Teacher)).Total.ShouldBe(limit);
+        await using var db = fixture.CreateDbContext();
+        // One queued email per accepted lead, none for the refused ones.
+        (await db.Set<ClassHub.Core.Infrastructure.Email.EmailOutboxMessage>().CountAsync(m => m.Template == LeadEmails.NewLeadTemplate && m.ToAddress == site.Teacher.Email, Ct)).ShouldBe(limit);
+    }
+
+    [Fact]
     public async Task Unconfirmed_teachers_cannot_publish_or_receive_requests()
     {
         using var unconfirmed = await fixture.CreateTeacherAsync();
