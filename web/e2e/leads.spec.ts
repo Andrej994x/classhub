@@ -37,7 +37,7 @@ test('a visitor request on the public site reaches the teacher inbox', async ({ 
   await form.getByLabel(/^Порака/).fill('Подготовка за матура.');
   await form.getByRole('checkbox').nth(0).check();
   await form.getByRole('checkbox').nth(1).check();
-  await phone.waitForTimeout(1200); // a person needs a moment: faster submissions count as automated
+  // Filled in faster than the minimum fill time: the island waits out the rest instead of being dropped as spam.
   await form.getByRole('button', { name: 'Испрати' }).click();
   await expect(phone.getByText(/Ви благодариме!/)).toBeVisible();
   await visitor.close();

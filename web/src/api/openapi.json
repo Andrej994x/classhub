@@ -1873,7 +1873,8 @@
           "consentVersion",
           "consentText",
           "minorNotice",
-          "minorAgeThreshold"
+          "minorAgeThreshold",
+          "minimumFillSeconds"
         ],
         "type": "object",
         "properties": {
@@ -1908,6 +1909,14 @@
             "type": "string"
           },
           "minorAgeThreshold": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "minimumFillSeconds": {
             "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": [
               "integer",

@@ -14,7 +14,10 @@ interface FormData {
   consentVersion: string;
   consentText: string;
   minorNotice: string;
+  minimumFillSeconds?: number;
 }
+
+type LoadedForm = FormData & { loadedAt: number };
 
 type Values = {
   type: 'Message' | 'LessonRequest';
@@ -47,11 +50,14 @@ const SERVER_FIELD_TEXT: Record<Field, ContactFormKey> = {
   ageConfirmed: 'ageRequired',
 };
 
-async function fetchForm(slug: string): Promise<FormData> {
+async function fetchForm(slug: string): Promise<LoadedForm> {
   const response = await fetch(`/api/public/sites/${encodeURIComponent(slug)}/lead-form`, { credentials: 'omit', cache: 'no-store' });
   if (!response.ok) throw new Error(String(response.status));
-  return (await response.json()) as FormData;
+  // The token's clock starts now: sending sooner than the minimum fill time would be dropped as automated.
+  return { ...((await response.json()) as FormData), loadedAt: Date.now() };
 }
+
+const wait = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
 
 const input = 'w-full rounded-lg border border-site-muted/40 bg-site-surface px-3 py-2 text-base text-site-text focus:outline-none focus-visible:ring-2 focus-visible:ring-site-primary';
 
@@ -64,7 +70,7 @@ export function ContactForm({ slug = '', language = 'mk' }: ContactFormProps) {
   const lang: ContactFormLanguage = language === 'en' ? 'en' : 'mk';
   const t = (key: ContactFormKey) => CONTACT_FORM_TEXT[lang][key];
   const id = useId();
-  const [form, setForm] = useState<FormData | null>(null);
+  const [form, setForm] = useState<LoadedForm | null>(null);
   const [loadFailed, setLoadFailed] = useState(false);
   const [values, setValues] = useState<Values>(EMPTY);
   const [errors, setErrors] = useState<Partial<Record<Field, string>>>({});
@@ -115,6 +121,10 @@ export function ContactForm({ slug = '', language = 'mk' }: ContactFormProps) {
 
     setState('sending');
     try {
+      // A retry right after the token was renewed (or a very fast first fill) must still count as a person:
+      // wait out the rest of the minimum fill time instead of being silently dropped by the server.
+      const remaining = form.loadedAt + ((form.minimumFillSeconds ?? 3) * 1000 + 250) - Date.now();
+      if (remaining > 0) await wait(remaining);
       const response = await fetch(`/api/public/sites/${encodeURIComponent(slug)}/leads`, {
         method: 'POST',
         credentials: 'omit',

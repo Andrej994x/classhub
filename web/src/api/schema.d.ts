@@ -598,6 +598,8 @@ export interface components {
             minorNotice: string;
             /** Format: int32 */
             minorAgeThreshold: number | string;
+            /** Format: int32 */
+            minimumFillSeconds: number | string;
         };
         LeadListItem: {
             /** Format: uuid */

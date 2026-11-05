@@ -13,6 +13,7 @@ const FORM = {
   consentText: 'Се согласувам наставникот да ги добие моите податоци.',
   minorNotice: 'Имам најмалку 16 години, или сум родител.',
   minorAgeThreshold: 16,
+  minimumFillSeconds: 0,
 };
 
 type Answer = (url: string, init?: RequestInit) => Response | Promise<Response>;
@@ -167,6 +168,29 @@ describe('contact-form island', () => {
     expect(await screen.findByText(/Ви благодариме!/)).toBeInTheDocument();
     const second = JSON.parse(String(calls.filter((c) => c.init?.method === 'POST')[1]!.init?.body)) as { consentVersion: string; formToken: string };
     expect(second).toMatchObject({ consentVersion: '2026-12-01.1', formToken: 'token-2' });
+  });
+
+  it('waits out the minimum fill time of a renewed form before sending again', async () => {
+    const user = userEvent.setup();
+    const posts: number[] = [];
+    let forms = 0;
+    server((url) => {
+      if (url.endsWith('/lead-form')) {
+        forms++;
+        return json(200, { ...FORM, minimumFillSeconds: forms === 1 ? 0 : 1 });
+      }
+      posts.push(Date.now());
+      return posts.length === 1 ? json(422, { code: 'FORM_EXPIRED' }) : json(202, { received: true });
+    });
+    render(<ContactForm slug="ana-math" language="mk" />);
+
+    await fillIn(user);
+    await user.click(screen.getByRole('button', { name: 'Испрати' }));
+    expect(await screen.findByText(/Формуларот истече/)).toBeInTheDocument();
+    const renewedAt = Date.now();
+    await user.click(screen.getByRole('button', { name: 'Испрати' })); // at once
+    expect(await screen.findByText(/Ви благодариме!/, undefined, { timeout: 4000 })).toBeInTheDocument();
+    expect(posts[1]! - renewedAt).toBeGreaterThanOrEqual(1000);
   });
 
   it('has the same texts in both languages', () => {

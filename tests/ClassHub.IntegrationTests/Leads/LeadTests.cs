@@ -42,6 +42,7 @@ public sealed class LeadTests(ClassHubApiFixture fixture)
         form.ConsentVersion.ShouldBe(LeadConsent.Version);
         form.ConsentText.ShouldBe(LeadConsent.Text("mk"));
         form.MinorNotice.ShouldContain("16");
+        form.MinimumFillSeconds.ShouldBe(new LeadOptions().MinimumFillSeconds);
     }
 
     [Fact]

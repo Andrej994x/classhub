@@ -45,7 +45,7 @@ internal sealed partial class LeadIntake(
         // D-10b: an unconfirmed teacher does not receive public leads; the form is hidden.
         if (await owners.GetOwnerAsync(site.WorkspaceId, cancellationToken) is not { EmailConfirmed: true })
         {
-            return new LeadFormResponse(false, null, [], [], LeadConsent.Version, consentText, minorNotice, options.Value.MinorAgeThreshold);
+            return new LeadFormResponse(false, null, [], [], LeadConsent.Version, consentText, minorNotice, options.Value.MinorAgeThreshold, options.Value.MinimumFillSeconds);
         }
 
         var publicOffers = await offers.ListPublicAsync(cancellationToken);
@@ -58,7 +58,8 @@ internal sealed partial class LeadIntake(
             LeadConsent.Version,
             consentText,
             minorNotice,
-            options.Value.MinorAgeThreshold);
+            options.Value.MinorAgeThreshold,
+            options.Value.MinimumFillSeconds);
     }
 
     public async Task SubmitAsync(string slug, SubmitLeadRequest request, CancellationToken cancellationToken)

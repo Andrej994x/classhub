@@ -13,7 +13,9 @@ public sealed record LeadFormResponse(
     string ConsentVersion,
     string ConsentText,
     string MinorNotice,
-    int MinorAgeThreshold);
+    int MinorAgeThreshold,
+    /// <summary>The form must not be sent sooner after loading (the island waits out the rest itself).</summary>
+    int MinimumFillSeconds);
 
 public sealed record LeadFormOption(Guid Id, string Name);
 
