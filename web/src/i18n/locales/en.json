@@ -81,7 +81,8 @@
       "FORM_EXPIRED": "The form has expired. Reload the page.",
       "LEADS_UNAVAILABLE": "Requests cannot be received at the moment.",
       "TEST_SLUG_TAKEN": "Another of your tests already uses this address. Choose another one.",
-      "TEST_HAS_ATTEMPTS": "This test already has attempts: questions, options, correct answers, points and subject cannot change. Duplicate it to edit a new version."
+      "TEST_HAS_ATTEMPTS": "This test already has attempts: questions, options, correct answers, points and subject cannot change. Duplicate it to edit a new version.",
+      "TEST_CHANGED": "The teacher changed this test meanwhile. Reload the page and take it again."
     }
   },
   "auth": {
