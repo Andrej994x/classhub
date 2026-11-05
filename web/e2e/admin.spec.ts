@@ -5,11 +5,26 @@ import { grantPlatformOwner, PASSWORD, signIn, teacherViaApi, text, totp, unique
  * R1-P9: the Platform Owner (bootstrapped with the CLI) enrolls the authenticator, signs in again with a TOTP code,
  * suspends a teacher with a reason and finds the entry in the audit log; the teacher's session ends and sign-in fails.
  */
+/** At phone width nothing may scroll sideways (R1-P12 mobile pass). */
+async function expectNoHorizontalScroll(page: import('@playwright/test').Page, what: string) {
+  const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
+  expect(overflow, `${what} scrolls sideways by ${overflow}px`).toBeLessThanOrEqual(0);
+}
+
 test('the platform owner signs in with the authenticator and suspends a teacher', async ({ page, request, playwright, baseURL }) => {
   test.setTimeout(120_000);
   const teacherEmail = uniqueEmail('target');
   const ownerEmail = uniqueEmail('owner');
-  await teacherViaApi(request, teacherEmail);
+  const { workspaceId } = await teacherViaApi(request, teacherEmail);
+  // The teacher has a published page (R1-P12: suspension hides it at once).
+  const slug = `susp-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
+  const draft = (await (await request.get(`/api/w/${workspaceId}/site`)).json()) as { draft: unknown };
+  const saved = (await (await request.put(`/api/w/${workspaceId}/site`, {
+    data: { slug, template: 'classic', palette: 'ocean', language: 'mk', draft: draft.draft, version: null },
+    headers: { 'X-XSRF-TOKEN': await xsrf(request) },
+  })).json()) as { version: number };
+  expect((await request.post(`/api/w/${workspaceId}/site/publish`, { data: { version: saved.version }, headers: { 'X-XSRF-TOKEN': await xsrf(request) } })).ok()).toBe(true);
+  expect((await request.get(`/${slug}`)).status()).toBe(200);
 
   const ownerSetup = await playwright.request.newContext({ baseURL });
   await teacherViaApi(ownerSetup, ownerEmail);
@@ -51,6 +66,12 @@ test('the platform owner signs in with the authenticator and suspends a teacher'
   await page.getByRole('button', { name: text('mk', 'admin.user.suspend') }).click();
   await expect(page.getByRole('button', { name: text('mk', 'admin.user.reactivate') })).toBeVisible();
   await expect(page.getByRole('heading', { level: 1 })).toContainText(text('mk', 'admin.statuses.Suspended'));
+  await expectNoHorizontalScroll(page, 'the user page');
+
+  // The public page is hidden at once (the cache was evicted), and comes back only on reactivation.
+  const anonymous = await playwright.request.newContext({ baseURL });
+  expect((await anonymous.get(`/${slug}`)).status()).toBe(404);
+  await anonymous.dispose();
 
   // The teacher's session ended and signing in is refused.
   expect((await request.get('/api/me/workspaces')).status()).toBe(401);
@@ -65,4 +86,10 @@ test('the platform owner signs in with the authenticator and suspends a teacher'
   await expect(entry).toContainText('user.suspended');
   await entry.getByText(text('mk', 'admin.audit.details')).click();
   await expect(entry).toContainText('Spam on the public page');
+  await expectNoHorizontalScroll(page, 'the audit log');
+  for (const area of ['/admin', '/admin/users', '/admin/plans', '/admin/reports', '/admin/moderation', '/admin/catalog', '/admin/security']) {
+    await page.goto(area);
+    await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+    await expectNoHorizontalScroll(page, area);
+  }
 });

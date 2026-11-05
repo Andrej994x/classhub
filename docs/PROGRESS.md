@@ -7,10 +7,10 @@ This is the live status of the autonomous implementation loop ([ROADMAP.md](ROAD
 | Field | Value |
 |---|---|
 | Release | R1 — Teacher presence (R0 complete) |
-| Current phase | R1-P11 — Moderation & reference data admin |
-| Branch | `feature/r1-p11-moderation-catalog` (from `main` @ `1f2a0f5`) |
+| Current phase | R1-P12 — Release 1 hardening |
+| Branch | `chore/r1-p12-hardening` (from `main` @ `5c90a22`) |
 | Workflow step | 5 — signed Codex review, then PR |
-| Next action | R1-P11 PR; then R1-P12 (Release 1 hardening) |
+| Next action | R1-P12 PR (Release 1 closeout); then R2-P1 (students) |
 | Open blockers | None. User actions (optional): direct-push probe (R0-P8); remove the now redundant required `pr-gate` check (see Decisions) |
 
 ## Phase status
@@ -40,10 +40,21 @@ Status values: `not started`, `in progress`, `in review` (PR open), `merged`, `b
 | R1-P8 | Basic teacher dashboard | merged | `feature/r1-p8-teacher-dashboard` | [#20](https://github.com/Andrej994x/classhub/pull/20) | `2878b06` | 1 round: no actionable defects | green | No migration |
 | R1-P9 | Platform admin foundation | merged | `feature/r1-p9-admin-foundation` | [#21](https://github.com/Andrej994x/classhub/pull/21) | `c2e3ac4` | 4 rounds: 2 × P2 fixed (authenticator replacement needs the current factor; lockout enforced on step-up); rounds 3–4 clean | green after 1 CI fix (CodeQL regex escaping in the E2E spec) | No migration |
 | R1-P10 | SaaS plans & entitlements | merged | `feature/r1-p10-plans-entitlements` | [#22](https://github.com/Andrej994x/classhub/pull/22) | `1f2a0f5` | 3 rounds: 2 × P2 fixed (null plan-limit list validation; expiry recorded before reactivation); round 3 clean | green | Migration applied to local `ClassHubDb` |
-| R1-P11 | Moderation & reference data admin | in progress | `feature/r1-p11-moderation-catalog` | | | | | Plan: report island + endpoint (rate limit, honeypot, cap), staff queue, hide/restore site/section/test honored by every public query and the cache, teacher notices, catalog admin (deactivate, never delete) |
-| R1-P12 | Release 1 hardening | not started | | | | | | |
+| R1-P11 | Moderation & reference data admin | merged | `feature/r1-p11-moderation-catalog` | [#23](https://github.com/Andrej994x/classhub/pull/23) | `5c90a22` | 3 rounds: 4 × P2 fixed (parallel section hides, deactivated references on edit, parallel report decisions, atomic report cap); round 3 clean | green | Migration applied to local `ClassHubDb` |
+| R1-P12 | Release 1 hardening | in progress | `chore/r1-p12-hardening` | | | | | Isolation sweep, release-journey E2E, SEO checks + Lighthouse, mobile pass, release-level Codex review, Release 1 closeout |
 
 Releases 2–3 and Beta are listed in [ROADMAP.md](ROADMAP.md) section D. They are added to this table when Release 1 is complete.
+
+## Release 1 — Teacher presence (closeout in R1-P12)
+
+Definition of Done (ROADMAP D, R1-P1…P12) demonstrated:
+- A teacher builds a profile, offers and a public site, publishes it, and receives visitor requests and diagnostic-test requests; the whole journey runs through the UI in Playwright on desktop and phone (`release.spec.ts`, `leads.spec.ts`, `diagnostic.spec.ts`).
+- Isolation: every workspace route denies other teachers (404) and anonymous callers (401), every admin route denies teachers (403) — discovered from the endpoint table (`IsolationSweepTests`), on top of the per-module isolation tests.
+- Platform operations: MFA admin console, suspension hides the site at once (Playwright), plans with enforced limits, moderation with reports and hidden content, catalog admin; all audited.
+- SEO: server-rendered pages with complete metadata, JSON-LD, sitemap and robots (Playwright checks); Lighthouse SEO 100 on a sample page.
+- Mobile: no horizontal scroll at phone width on the teacher, public and admin pages (Playwright, Pixel 7).
+- Release-level Codex review over all Release 1 changes (`codex review --base 7973981`, 276 files): no actionable defects. Every phase PR carried signed, commit-bound evidence of its final review.
+- Remaining provisional items (block Beta, not Release 1): D-18 consent wording, D-19 CAPTCHA, D-27 export/deletion, D-28 hosting, D-29 final plan limits.
 
 ## Release 0 — complete (2026-11-04)
 
@@ -75,6 +86,10 @@ Definition of Done (ROADMAP E) demonstrated:
 - **Gate passed:** `dotnet ef database update` created `ClassHubDb` on `.\SQLEXPRESS` via Windows authentication. The running API connects as `EFCore/10.0.14` over **Shared memory**, `NTLM`. Collation `Macedonian_FYROM_100_CI_AS_SC`, RCSI on, migrations `InitialTechnical` + `EnableReadCommittedSnapshot` applied. No SQL Server configuration was changed.
 - Local tests: 49/49 green (unit 5, architecture 1, integration 43 on Testcontainers SQL Server 2022).
 - CI `migrations` job sequence verified locally against a throwaway container.
+
+### R1-P11 — Moderation & reference data admin (merged, PR #23, `5c90a22`)
+
+- Report island and anonymous endpoint (rate limit, honeypot, atomic cap), staff queue with hide/dismiss, hidden content honored by every public query and the cache, teacher notices without reporter details, catalog admin (deactivate, never delete); 591 backend / 160 Vitest / 24 Playwright tests.
 
 ### R1-P10 — SaaS plans & entitlements (merged, PR #22, `1f2a0f5`)
 
