@@ -32,7 +32,6 @@ public sealed class DiagnosticTestsModule : IModule
         // "{testSlug:testslug}": the address shape of a test (also used by the Razor test page).
         services.Configure<RouteOptions>(options => options.SetParameterPolicy<TestSlugRouteConstraint>(TestSlugRouteConstraint.Name));
         // R1-P10 replaces this with the plan-aware quota.
-        services.TryAddScoped<IPublishedTestQuota, UnlimitedPublishedTestQuota>();
     }
 
     public void MapEndpoints(IEndpointRouteBuilder endpoints)

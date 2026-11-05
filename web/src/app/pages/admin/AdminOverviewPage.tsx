@@ -3,14 +3,16 @@ import { Link } from 'react-router';
 import { errorMessage } from '../../../api/errors.ts';
 import { useAdminOverview } from '../../../admin/api.ts';
 import { Alert } from '../../../components/ui/alert.tsx';
+import { formatMoney } from '../../../lib/format.ts';
 import { num } from '../../../teacher/offers.ts';
 
 const n = (value: number | string | null | undefined) => num(value) ?? 0;
 
 /** Platform numbers (aggregates only). */
 export function AdminOverviewPage() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const overview = useAdminOverview();
+  const language = i18n.resolvedLanguage ?? 'mk';
 
   if (overview.isError) return <Alert variant="error">{errorMessage(overview.error, t)}</Alert>;
   const data = overview.data;
@@ -22,6 +24,7 @@ export function AdminOverviewPage() {
         { key: 'newUsers', value: n(data.newUsersLast7Days), hint: t('admin.overview.newUsersHint', { count: n(data.newUsersLast30Days) }) },
         { key: 'publishedSites', value: n(data.publishedSites) },
         { key: 'staff', value: n(data.platformStaff), to: '/admin/users?staff=true' },
+        { key: 'proWorkspaces', value: n(data.proWorkspaces), to: '/admin/plans' },
       ]
     : [];
 
@@ -57,6 +60,16 @@ export function AdminOverviewPage() {
             );
           })}
         </ul>
+      )}
+      {data && (
+        <div className="flex flex-col gap-1">
+          <h2 className="text-lg font-semibold">{t('admin.overview.revenue')}</h2>
+          <p className="text-sm text-muted-foreground">
+            {data.revenueLast30Days.length === 0
+              ? t('admin.overview.noRevenue')
+              : data.revenueLast30Days.map((r) => formatMoney(n(r.amountMinor), r.currency, language)).join(' · ')}
+          </p>
+        </div>
       )}
     </section>
   );

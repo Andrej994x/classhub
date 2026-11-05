@@ -1,8 +1,9 @@
 namespace ClassHub.Core.Modules.Admin.Contracts;
 
 /// <summary>
-/// Platform numbers (R1-P9). Teachers own a workspace; active teachers are not suspended and signed in during the last
-/// 30 days; new users registered during the last 7 or 30 days. Aggregates only.
+/// Platform numbers (R1-P9, R1-P10). Teachers own a workspace; active teachers are not suspended and signed in during
+/// the last 30 days; new users registered during the last 7 or 30 days; Pro workspaces are inside a paid period; the
+/// revenue is the manually recorded Pro payments of the last 30 days, per currency. Aggregates only.
 /// </summary>
 public sealed record AdminOverviewResponse(
     int Users,
@@ -12,7 +13,9 @@ public sealed record AdminOverviewResponse(
     int NewUsersLast7Days,
     int NewUsersLast30Days,
     int PublishedSites,
-    int PlatformStaff);
+    int PlatformStaff,
+    int ProWorkspaces,
+    IReadOnlyList<ClassHub.Core.Modules.Subscriptions.Contracts.MoneyTotal> RevenueLast30Days);
 
 /// <summary>The account's workspace and site as metadata (never their content).</summary>
 public sealed record AdminWorkspaceSummary(Guid Id, string Name, DateTime CreatedAtUtc, string? SiteSlug, bool SitePublished);

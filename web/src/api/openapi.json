@@ -2440,6 +2440,195 @@
         }
       }
     },
+    "/api/w/{workspaceId}/plan": {
+      "get": {
+        "tags": [
+          "Plan"
+        ],
+        "summary": "The workspace's plan, its limits and what is in use. Teachers cannot change it (platform staff do).",
+        "operationId": "GetWorkspacePlan",
+        "parameters": [
+          {
+            "name": "workspaceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TeacherPlanResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/plans": {
+      "get": {
+        "tags": [
+          "Admin"
+        ],
+        "operationId": "ListPlans",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AdminPlanResponse"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/plans/{code}": {
+      "put": {
+        "tags": [
+          "Admin"
+        ],
+        "summary": "Platform Owner only (D-39): new values for every limit of the plan.",
+        "operationId": "UpdatePlanLimits",
+        "parameters": [
+          {
+            "name": "code",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdatePlanLimitsRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminPlanResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpValidationProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/workspaces/{workspaceId}/subscription": {
+      "get": {
+        "tags": [
+          "Admin"
+        ],
+        "operationId": "GetWorkspaceSubscription",
+        "parameters": [
+          {
+            "name": "workspaceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminSubscriptionResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/workspaces/{workspaceId}/subscription/pro": {
+      "post": {
+        "tags": [
+          "Admin"
+        ],
+        "summary": "Activate Pro for N months, or extend an active Pro period from its end, recording the payment (D-30).",
+        "operationId": "ActivatePro",
+        "parameters": [
+          {
+            "name": "workspaceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ActivateProRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminSubscriptionResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpValidationProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/w/{workspaceId}/profile": {
       "get": {
         "tags": [
@@ -2732,6 +2921,69 @@
           }
         }
       },
+      "ActivateProRequest": {
+        "required": [
+          "months",
+          "amountMinor",
+          "currency",
+          "paymentMethod",
+          "paymentReference",
+          "paidOn",
+          "note"
+        ],
+        "type": "object",
+        "properties": {
+          "months": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "amountMinor": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "currency": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "paymentMethod": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "paymentReference": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "paidOn": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date"
+          },
+          "note": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
       "AddLeadNoteRequest": {
         "required": [
           "text"
@@ -2855,7 +3107,9 @@
           "newUsersLast7Days",
           "newUsersLast30Days",
           "publishedSites",
-          "platformStaff"
+          "platformStaff",
+          "proWorkspaces",
+          "revenueLast30Days"
         ],
         "type": "object",
         "properties": {
@@ -2922,6 +3176,69 @@
               "string"
             ],
             "format": "int32"
+          },
+          "proWorkspaces": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "revenueLast30Days": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MoneyTotal"
+            }
+          }
+        }
+      },
+      "AdminPlanResponse": {
+        "required": [
+          "id",
+          "code",
+          "nameMk",
+          "nameEn",
+          "isDefault",
+          "limits",
+          "version",
+          "updatedAtUtc"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "code": {
+            "type": "string"
+          },
+          "nameMk": {
+            "type": "string"
+          },
+          "nameEn": {
+            "type": "string"
+          },
+          "isDefault": {
+            "type": "boolean"
+          },
+          "limits": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PlanLimitValue"
+            }
+          },
+          "version": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "updatedAtUtc": {
+            "type": "string",
+            "format": "date-time"
           }
         }
       },
@@ -2950,6 +3267,37 @@
               "null",
               "string"
             ]
+          }
+        }
+      },
+      "AdminSubscriptionResponse": {
+        "required": [
+          "workspaceId",
+          "planCode",
+          "paidUntilUtc",
+          "history"
+        ],
+        "type": "object",
+        "properties": {
+          "workspaceId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "planCode": {
+            "type": "string"
+          },
+          "paidUntilUtc": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "history": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SubscriptionEventResponse"
+            }
           }
         }
       },
@@ -4336,6 +4684,26 @@
           }
         }
       },
+      "MoneyTotal": {
+        "required": [
+          "currency",
+          "amountMinor"
+        ],
+        "type": "object",
+        "properties": {
+          "currency": {
+            "type": "string"
+          },
+          "amountMinor": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          }
+        }
+      },
       "MyWorkspaceResponse": {
         "required": [
           "id",
@@ -4513,6 +4881,60 @@
           },
           "available": {
             "type": "boolean"
+          }
+        }
+      },
+      "PlanLimitUsage": {
+        "required": [
+          "key",
+          "limit",
+          "used"
+        ],
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string"
+          },
+          "limit": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "used": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
+      "PlanLimitValue": {
+        "required": [
+          "key",
+          "value"
+        ],
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "value": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
           }
         }
       },
@@ -5458,6 +5880,142 @@
           }
         }
       },
+      "SubscriptionEventResponse": {
+        "required": [
+          "id",
+          "kind",
+          "planCode",
+          "periodStartUtc",
+          "periodEndUtc",
+          "months",
+          "amountMinor",
+          "currency",
+          "paymentMethod",
+          "paymentReference",
+          "paidOn",
+          "note",
+          "actorUserId",
+          "occurredAtUtc"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "kind": {
+            "type": "string"
+          },
+          "planCode": {
+            "type": "string"
+          },
+          "periodStartUtc": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "periodEndUtc": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "months": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "amountMinor": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "currency": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "paymentMethod": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "paymentReference": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "paidOn": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date"
+          },
+          "note": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "actorUserId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "occurredAtUtc": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "TeacherPlanResponse": {
+        "required": [
+          "code",
+          "nameMk",
+          "nameEn",
+          "paidUntilUtc",
+          "limits"
+        ],
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "nameMk": {
+            "type": "string"
+          },
+          "nameEn": {
+            "type": "string"
+          },
+          "paidUntilUtc": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "limits": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PlanLimitUsage"
+            }
+          }
+        }
+      },
       "TeacherProfileResponse": {
         "required": [
           "firstName",
@@ -5710,6 +6268,33 @@
           }
         }
       },
+      "UpdatePlanLimitsRequest": {
+        "required": [
+          "limits",
+          "version"
+        ],
+        "type": "object",
+        "properties": {
+          "limits": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/PlanLimitValue"
+            }
+          },
+          "version": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
       "UpdateTeacherProfileRequest": {
         "required": [
           "firstName",
@@ -5912,6 +6497,9 @@
     },
     {
       "name": "Site"
+    },
+    {
+      "name": "Plan"
     },
     {
       "name": "Teacher profile"

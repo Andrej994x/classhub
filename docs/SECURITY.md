@@ -82,6 +82,13 @@ ASP.NET Core Identity with cookie sessions. See [ARCHITECTURE.md](ARCHITECTURE.m
 - Policies: `Authenticated`; workspace policies `ws:<permission>` (for example `ws:workspace.read`). Permissions are code constants (`WorkspacePermissions`), mapped from workspace roles (`WorkspaceRolePermissions`; today `Owner` has all workspace permissions). Unknown permission names fail when the policy is resolved.
 - Platform roles (`PlatformOwner`, `PlatformAdmin`) are Identity roles. **They grant no workspace access**: a platform admin without membership gets 404 on workspace routes (tested). The first Platform Owner is created only with the local CLI `dotnet run --project src/ClassHub.Api -- grant-platform-owner <email> [--force-add]` (audited, never exposed over HTTP). The owner check, the grant, the session revocation and the audit entry run in one transaction under an application lock (`sp_getapplock`), so concurrent bootstraps cannot both add an owner without `--force-add`.
 
+## Plans & entitlements (R1-P10)
+
+- Teachers cannot change their own plan: the only write endpoints are under `/api/admin` (`platform:staff`; plan limits `platform:owner`, D-39). Tested with a teacher session.
+- Limits are enforced on the server inside the creating transaction under an application lock, so parallel requests cannot exceed them (tested with parallel publications).
+- Payment records hold amount, currency, method, an optional reference and note; no card data is ever entered (manual records only, no payment provider).
+- Expiry never deletes or hides data; it only blocks new creations over the lower limit (D-29b).
+
 ## Platform administration and MFA (R1-P9)
 
 - **MFA:** Identity's authenticator (TOTP, RFC 6238) with 10 single-use recovery codes. A password-correct account with the authenticator gets `202` from `/api/auth/login` and only a 5-minute `SameSite=Strict` two-factor cookie; `/api/auth/login/two-factor` takes the code (or a recovery code) and signs in with `amr=mfa`. Wrong codes count towards the Identity lockout (5 attempts, 15 minutes) and all auth endpoints are rate-limited (`auth`). A suspended account cannot finish the second step.

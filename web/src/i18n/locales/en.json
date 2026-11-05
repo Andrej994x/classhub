@@ -30,7 +30,9 @@
     "adminOverview": "Overview",
     "adminUsers": "Users",
     "adminAudit": "Audit log",
-    "adminSecurity": "Security"
+    "adminSecurity": "Security",
+    "plan": "Plan",
+    "adminPlans": "Plans"
   },
   "layout": {
     "teacherArea": "Teacher workspace",
@@ -131,7 +133,10 @@
       "newUsersHint_one": "{{count}} in 30 days",
       "newUsersHint_other": "{{count}} in 30 days",
       "publishedSites": "Published sites",
-      "staff": "Platform staff"
+      "staff": "Platform staff",
+      "proWorkspaces": "On Pro",
+      "revenue": "Recorded payments, last 30 days",
+      "noRevenue": "No payments recorded."
     },
     "users": {
       "title": "Users",
@@ -214,6 +219,47 @@
       "proof": "Current code or a recovery code",
       "proofHint": "A recovery code is used up.",
       "replace": "Create a new key"
+    },
+    "plans": {
+      "title": "Plans",
+      "leadOwner": "Provisional limits (D-29). Changes apply to every workspace on the plan at once; nothing is deleted when a workspace is over a lower limit.",
+      "leadAdmin": "Provisional limits (D-29). Only the Platform Owner changes them.",
+      "default": "Every workspace without a paid period",
+      "paid": "Activated by the ClassHub team for a paid period",
+      "save": "Save limits"
+    },
+    "subscription": {
+      "title": "Plan",
+      "onFree": "On Free.",
+      "proUntil": "On Pro until {{date}}.",
+      "activate": "Activate Pro",
+      "extend": "Extend Pro",
+      "months": "Period",
+      "monthCount_one": "{{count}} month",
+      "monthCount_other": "{{count}} months",
+      "method": "Payment method",
+      "methods": {
+        "bank-transfer": "Bank transfer",
+        "cash": "Cash",
+        "card": "Card",
+        "complimentary": "Complimentary",
+        "other": "Other"
+      },
+      "amount": "Amount paid",
+      "currency": "Currency",
+      "paidOn": "Paid on",
+      "reference": "Payment reference (optional)",
+      "note": "Note (optional)",
+      "amountInvalid": "Enter the amount that was paid and the payment date.",
+      "saved": "Saved. The new limits apply at once.",
+      "history": "History",
+      "noHistory": "Free since registration.",
+      "until": "until {{date}}",
+      "kinds": {
+        "Activated": "Pro activated",
+        "Extended": "Pro extended",
+        "Expired": "Back to Free"
+      }
     }
   },
   "notFound": {
@@ -256,7 +302,8 @@
       "MFA_REQUIRED": "Sign in with your authenticator app to continue.",
       "MFA_CODE_INVALID": "The code is not valid. Enter the current code from your authenticator app.",
       "SIGN_IN_EXPIRED": "The sign-in has expired. Go back and sign in again.",
-      "ADMIN_TARGET_FORBIDDEN": "You cannot make this change to this account."
+      "ADMIN_TARGET_FORBIDDEN": "You cannot make this change to this account.",
+      "PLAN_LIMIT_REACHED": "Your plan does not allow more of this. Open Plan in the menu to see the limits and how to move to Pro."
     }
   },
   "auth": {
@@ -720,5 +767,29 @@
       "score": "{{points}} of {{max}} points",
       "openRequest": "Open the request"
     }
+  },
+  "plan": {
+    "title": "Your plan",
+    "lead": "What your plan allows. When it ends, nothing is deleted: you keep everything and only adding more is limited.",
+    "current": "Plan: {{name}}",
+    "paidUntil": "Paid until {{date}}",
+    "freeForever": "Free, with no end date",
+    "limits": "Limits",
+    "usedOf": "{{used}} of {{limit}}",
+    "upTo": "up to {{limit}}",
+    "storage": "up to {{limit}} MB",
+    "analytics": {
+      "basic": "Basic",
+      "advanced": "Advanced"
+    },
+    "keys": {
+      "active-students": "Active students",
+      "published-tests": "Published tests",
+      "activities": "Activities",
+      "storage-mb": "Storage for materials",
+      "analytics-level": "Analytics"
+    },
+    "upgradeTitle": "Need more?",
+    "upgradeText": "Pro raises the limits. Online payment comes later; for now the ClassHub team activates Pro for you after your payment."
   }
 }

@@ -56,6 +56,8 @@ public interface IWorkspaceDirectory
     Task<IReadOnlyDictionary<Guid, OwnedWorkspace>> OwnedByAsync(IReadOnlyCollection<Guid> userIds, CancellationToken cancellationToken);
 
     Task<TeacherCounts> CountTeachersAsync(DateTime activeSinceUtc, CancellationToken cancellationToken);
+
+    Task<bool> ExistsAsync(Guid workspaceId, CancellationToken cancellationToken);
 }
 
 /// <summary>The workspace owner's address for notifications, and whether it is confirmed (D-10b).</summary>
