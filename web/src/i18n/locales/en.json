@@ -24,7 +24,8 @@
     "register": "Sign up",
     "openWorkspace": "Open my workspace",
     "profile": "Profile",
-    "offers": "Offers"
+    "offers": "Offers",
+    "site": "Website"
   },
   "layout": {
     "teacherArea": "Teacher workspace",
@@ -75,7 +76,9 @@
       "INVALID_TOKEN": "The link is invalid or has expired. Request a new one.",
       "EMAIL_ALREADY_CONFIRMED": "This email address is already confirmed.",
       "NETWORK_ERROR": "Cannot reach the server. Check your internet connection.",
-      "IMAGE_INVALID": "This image cannot be used. Choose a JPEG, PNG or WebP photo of at least 128 × 128 pixels and up to 5 MB."
+      "IMAGE_INVALID": "This image cannot be used. Choose a JPEG, PNG or WebP photo of at least 128 × 128 pixels and up to 5 MB.",
+      "SLUG_TAKEN": "This address is already taken. Choose another one.",
+      "SITE_NOT_CREATED": "Save your website once before previewing it."
     }
   },
   "auth": {
@@ -268,6 +271,100 @@
       "price": "Enter a price of 0 or more, with at most two decimals.",
       "lessons": "A package has between 1 and 200 lessons.",
       "seats": "A group program has between 1 and 500 seats."
+    }
+  },
+  "site": {
+    "title": "Website",
+    "lead": "Your public page. Edit the draft and preview it; visitors see nothing until you publish (coming soon).",
+    "settings": "Address and look",
+    "settingsHint": "The address is how students find you. It must be unique.",
+    "sectionsTitle": "Sections",
+    "save": "Save draft",
+    "saved": "Draft saved.",
+    "preview": "Preview",
+    "previewTitle": "Preview of the draft",
+    "openPreview": "Open in a new tab",
+    "previewNeedsSave": "Save to preview your latest changes.",
+    "changedElsewhere": "The website was changed elsewhere (another tab or device). Reload the page and apply your changes again.",
+    "visible": "Show",
+    "showSection": "Show the section “{{name}}”",
+    "moveUp": "Move “{{name}}” up",
+    "moveDown": "Move “{{name}}” down",
+    "removeItem": "Remove",
+    "sectionTypes": {
+      "hero": "Hero",
+      "about": "About me",
+      "subjects": "Subjects",
+      "experience": "Teaching experience",
+      "offers": "Offers & pricing",
+      "testimonials": "Testimonials",
+      "faq": "FAQ",
+      "contact": "Contact"
+    },
+    "templates": {
+      "classic": "Classic",
+      "classicHint": "Calm, cards on a light background.",
+      "modern": "Modern",
+      "modernHint": "Bold accent stripes.",
+      "minimal": "Minimal",
+      "minimalHint": "Plain, text first."
+    },
+    "palettes": {
+      "ocean": "Ocean",
+      "forest": "Forest",
+      "sunset": "Sunset",
+      "plum": "Plum",
+      "graphite": "Graphite"
+    },
+    "slug": {
+      "available": "available",
+      "taken": "already taken",
+      "reserved": "reserved, choose another",
+      "format": "use lowercase letters, digits and single hyphens",
+      "length": "use 3 to 40 characters"
+    },
+    "fields": {
+      "slug": "Web address",
+      "slugHint": "Lowercase letters, digits and hyphens, 3–40 characters (for example ana-math).",
+      "template": "Template",
+      "palette": "Colours",
+      "language": "Language of the page",
+      "languageHint": "The language visitors read; independent of your app language.",
+      "headline": "Headline",
+      "message": "Short message",
+      "sectionTitle": "Title of “{{name}}”",
+      "text": "Text of “{{name}}”",
+      "showPhoto": "Show my profile photo",
+      "subjectsHint": "The subjects from your profile are listed below this text.",
+      "offersHint": "Your offers marked “show on my public page” are listed below this text."
+    },
+    "items": {
+      "experience": {
+        "label": "Experience {{number}}",
+        "title": "Role or place",
+        "subtitle": "Period",
+        "text": "Description",
+        "add": "Add experience"
+      },
+      "testimonials": {
+        "label": "Testimonial {{number}}",
+        "title": "Who says it",
+        "text": "What they say",
+        "add": "Add testimonial"
+      },
+      "faq": {
+        "label": "Question {{number}}",
+        "title": "Question",
+        "text": "Answer",
+        "add": "Add question"
+      }
+    },
+    "validation": {
+      "tooLong": "This is too long.",
+      "tooManyItems": "At most 30 entries.",
+      "slugLength": "Use 3 to 40 characters.",
+      "slugFormat": "Use lowercase letters, digits and single hyphens; no hyphen at the start or end.",
+      "checkFields": "Some fields need attention; see the highlighted messages below."
     }
   }
 }

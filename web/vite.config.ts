@@ -25,6 +25,8 @@ export default defineConfig(({ command }) => ({
     strictPort: true,
     proxy: {
       '/api': { target: apiTarget, changeOrigin: false },
+      // Server-rendered pages of the API (site preview; public sites from R1-P4).
+      '/preview': { target: apiTarget, changeOrigin: false },
     },
   },
   test: {

@@ -3,6 +3,7 @@ using ClassHub.Core.Infrastructure.Files;
 using ClassHub.Core.Infrastructure.Persistence;
 using ClassHub.Core.Modules.Catalog.Contracts;
 using ClassHub.Core.Modules.Offers.Contracts;
+using ClassHub.Core.Modules.Sites.Contracts;
 using ClassHub.Core.Modules.Teachers.Contracts;
 using ClassHub.Core.Modules.Teachers.Domain;
 using ClassHub.Core.Modules.Workspaces.Contracts;
@@ -22,10 +23,20 @@ internal sealed partial class TeacherProfileService(
     ICatalogLookup catalog,
     IWorkspaceSettings workspaceSettings,
     IOfferLookup offers,
+    ISiteStatus site,
     IFileStorage files,
     TimeProvider clock,
-    ILogger<TeacherProfileService> logger)
+    ILogger<TeacherProfileService> logger) : ITeacherSummary, ITeacherPhoto
 {
+    async Task<(Stream Content, string ContentType)?> ITeacherPhoto.OpenAsync(CancellationToken cancellationToken) =>
+        await OpenPhotoAsync(cancellationToken) is { } photo ? (photo.Content, photo.ContentType) : null;
+
+    public async Task<TeacherSummary> GetSummaryAsync(CancellationToken cancellationToken)
+    {
+        var profile = await GetAsync(cancellationToken);
+        return new TeacherSummary(profile.FirstName, profile.LastName, profile.PhotoVersion);
+    }
+
     public const string PhotoPurpose = "profile-photo";
 
     public async Task<TeacherProfileResponse> GetAsync(CancellationToken cancellationToken)
@@ -214,14 +225,15 @@ internal sealed partial class TeacherProfileService(
             && !string.IsNullOrWhiteSpace(profile.Bio) && profile.TeachingMode is not null && profile.CountryCode is not null
             && profile.Languages.Count > 0 && profile.HasPhoto;
         var hasOffer = await offers.CountAsync(cancellationToken) > 0;
-        // The public site (R1-P3/P4) does not exist yet: its steps are shown, not yet available.
+        var (siteExists, sitePublished) = await site.GetStatusAsync(cancellationToken);
+        // Publishing arrives with R1-P4: that step is shown, not yet available.
         OnboardingStep[] steps =
         [
             new(OnboardingSteps.Profile, profileComplete, true),
             new(OnboardingSteps.Subjects, profile.SubjectIds.Count > 0, true),
             new(OnboardingSteps.FirstOffer, hasOffer, true),
-            new(OnboardingSteps.PublicPage, false, false),
-            new(OnboardingSteps.Publish, false, false),
+            new(OnboardingSteps.PublicPage, siteExists, true),
+            new(OnboardingSteps.Publish, sitePublished, false),
         ];
         return new OnboardingResponse(steps, steps.Count(s => s.Completed), steps.Length);
     }

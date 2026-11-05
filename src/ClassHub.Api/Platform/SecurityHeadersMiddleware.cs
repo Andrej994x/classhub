@@ -25,7 +25,11 @@ internal sealed class SecurityHeadersMiddleware(RequestDelegate next, IHostEnvir
             var isApi = path.StartsWithSegments("/api") || path.StartsWithSegments("/health") || path.StartsWithSegments("/openapi");
 
             headers.XContentTypeOptions = "nosniff";
-            headers["Referrer-Policy"] = "strict-origin-when-cross-origin";
+            // A page may tighten it (the token-bearing site preview sends no referrer at all).
+            if (!headers.ContainsKey("Referrer-Policy"))
+            {
+                headers["Referrer-Policy"] = "strict-origin-when-cross-origin";
+            }
             headers["Cross-Origin-Opener-Policy"] = "same-origin";
             headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=(), payment=(), usb=()";
 

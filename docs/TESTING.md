@@ -41,6 +41,12 @@ npm run e2e                                # builds the SPA and the API, then ru
 
 Flows (each in **mk and en**, on **desktop and mobile**): register → dev mailbox → confirm → sign in → the dashboard shows the workspace → sign out; forgot password → reset link → the old password fails, the new one works; a second teacher opening the first teacher's workspace URL sees "not found". Texts come from the app's locale files, so wording changes do not break tests. CI job `e2e` uploads the HTML report and traces on failure.
 
+## Site tests (R1-P3)
+
+- Unit: `SiteRulesTests` (slug rules and reserved words, name-based suggestion with transliteration, WCAG AA contrast of every palette, section schema, normalization).
+- Integration: `SiteTests` (suggestions, draft save and version conflicts, slug uniqueness, **concurrent claims of one slug with exactly one winner**, settings and section validation, preview: encoded HTML, noindex, hidden sections, invalid/tampered/expired tokens, isolation kit, onboarding step, every SPA prefix reserved).
+- Vitest: `SiteEditorPage.test.tsx` (suggestions, save with order/visibility/items, sandboxed preview, live availability, browser validation, conflicts).
+
 ## Offer tests (R1-P2)
 
 - Unit: `OfferRulesTests` (kind-specific fields, price, duration, mode, currency).

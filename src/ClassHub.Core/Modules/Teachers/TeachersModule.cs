@@ -25,6 +25,8 @@ public sealed class TeachersModule : IModule
     public void AddServices(IServiceCollection services, IConfiguration configuration)
     {
         services.AddScoped<TeacherProfileService>();
+        services.AddScoped<ITeacherSummary>(sp => sp.GetRequiredService<TeacherProfileService>());
+        services.AddScoped<ITeacherPhoto>(sp => sp.GetRequiredService<TeacherProfileService>());
         services.AddClassHubFiles(configuration);
     }
 

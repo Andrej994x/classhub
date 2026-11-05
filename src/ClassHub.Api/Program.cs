@@ -33,6 +33,8 @@ builder.Services.AddClassHubPersistence(builder.Configuration);
 builder.Services.AddClassHubEmail(builder.Configuration, builder.Environment);
 builder.Services.AddClassHubModules(builder.Configuration);
 builder.Services.AddOpenApi("v1", options => options.AddOperationTransformer<RouteParameterOperationTransformer>());
+// Server-rendered pages: the site preview now (R1-P3), the public teacher sites with R1-P4.
+builder.Services.AddRazorPages();
 
 var app = builder.Build();
 
@@ -84,6 +86,17 @@ app.MapHealthChecks("/health/ready", new HealthCheckOptions
     .AllowAnonymous();
 
 app.MapClassHubModules();
+app.MapRazorPages();
+// The hero photo of a site preview, authorized by the same signed token as the page.
+app.MapGet("/preview/{token}/photo", async Task<IResult> (string token, HttpContext http, ClassHub.Core.Modules.Sites.Contracts.ISitePreview preview, CancellationToken ct) =>
+    {
+        http.Response.Headers.CacheControl = "no-store";
+        http.Response.Headers["Referrer-Policy"] = "no-referrer";
+        http.Response.Headers["X-Robots-Tag"] = "noindex";
+        return await preview.OpenPhotoAsync(token, ct) is { } photo ? Results.Stream(photo.Content, photo.ContentType) : Results.NotFound();
+    })
+    .AllowAnonymous()
+    .ExcludeFromDescription();
 
 // The OpenAPI document is the contract for the generated TypeScript types (web/src/api/schema.d.ts).
 if (app.Environment.IsDevelopment() || app.Environment.IsEnvironment("Testing"))
