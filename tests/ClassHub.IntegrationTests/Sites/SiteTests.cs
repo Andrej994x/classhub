@@ -49,6 +49,18 @@ public sealed class SiteTests(ClassHubApiFixture fixture)
     }
 
     [Fact]
+    public async Task Saving_the_site_completes_the_onboarding_step()
+    {
+        using var teacher = await fixture.CreateTeacherAsync();
+        var step = async () => (await teacher.Client.GetJsonAsync<ClassHub.Core.Modules.Teachers.Contracts.OnboardingResponse>($"/api/w/{teacher.WorkspaceId}/onboarding"))
+            .Steps.Single(s => s.Key == ClassHub.Core.Modules.Teachers.Contracts.OnboardingSteps.PublicPage);
+
+        (await step()).Completed.ShouldBeFalse();
+        await SaveAsync(teacher, Body(UniqueSlug()));
+        (await step()).Completed.ShouldBeTrue();
+    }
+
+    [Fact]
     public async Task A_slug_belongs_to_one_site_and_availability_reflects_it()
     {
         using var first = await fixture.CreateTeacherAsync();

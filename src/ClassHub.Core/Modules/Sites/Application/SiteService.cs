@@ -168,3 +168,16 @@ internal sealed class SiteService(
     private static SiteResponse ToResponse(Site site) =>
         new(true, site.Slug, site.Template, site.Palette, site.Language, Read(site.DraftJson), site.PublishedAtUtc is not null, site.UpdatedAtUtc, site.Version);
 }
+
+/// <summary>
+/// Site state for other modules (onboarding). Deliberately its own small class with no module dependencies: the
+/// teacher profile asks for it, and the site service itself depends on the teacher summary.
+/// </summary>
+internal sealed class SiteStatus(ClassHubDbContext db) : ISiteStatus
+{
+    public async Task<(bool Exists, bool IsPublished)> GetStatusAsync(CancellationToken cancellationToken)
+    {
+        var published = await db.Set<Site>().Select(s => (DateTime?)s.PublishedAtUtc).ToListAsync(cancellationToken);
+        return (published.Count > 0, published.Any(p => p is not null));
+    }
+}

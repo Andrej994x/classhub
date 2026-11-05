@@ -43,7 +43,7 @@ public sealed class TeacherProfileTests(ClassHubApiFixture fixture)
     }
 
     [Fact]
-    public async Task A_new_teacher_has_an_empty_profile_and_three_open_onboarding_steps()
+    public async Task A_new_teacher_has_an_empty_profile_and_four_open_onboarding_steps()
     {
         using var teacher = await fixture.CreateTeacherAsync();
 
@@ -54,8 +54,8 @@ public sealed class TeacherProfileTests(ClassHubApiFixture fixture)
 
         var onboarding = await teacher.Client.GetJsonAsync<OnboardingResponse>($"/api/w/{teacher.WorkspaceId}/onboarding");
         onboarding.Steps.Select(s => s.Key).ShouldBe([OnboardingSteps.Profile, OnboardingSteps.Subjects, OnboardingSteps.FirstOffer, OnboardingSteps.PublicPage, OnboardingSteps.Publish]);
-        // The public-site steps arrive with R1-P3/P4; offers exist since R1-P2.
-        onboarding.Steps.Where(s => s.Available).Select(s => s.Key).ShouldBe([OnboardingSteps.Profile, OnboardingSteps.Subjects, OnboardingSteps.FirstOffer]);
+        // Publishing arrives with R1-P4; offers (R1-P2) and the site editor (R1-P3) exist.
+        onboarding.Steps.Where(s => s.Available).Select(s => s.Key).ShouldBe([OnboardingSteps.Profile, OnboardingSteps.Subjects, OnboardingSteps.FirstOffer, OnboardingSteps.PublicPage]);
         onboarding.Completed.ShouldBe(0);
     }
 

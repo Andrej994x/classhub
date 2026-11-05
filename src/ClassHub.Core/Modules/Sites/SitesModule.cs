@@ -18,6 +18,7 @@ public sealed class SitesModule : IModule
     public void AddServices(IServiceCollection services, IConfiguration configuration)
     {
         services.AddScoped<SiteService>();
+        services.AddScoped<ISiteStatus, SiteStatus>();
         services.AddScoped<SiteSlugQueries>();
         services.AddScoped<SitePreviewTokens>();
         services.AddScoped<ISitePreview, SitePreview>();

@@ -122,6 +122,13 @@ public static partial class SiteSlugs
     }
 }
 
+/// <summary>Site state of the current workspace for other modules (onboarding).</summary>
+public interface ISiteStatus
+{
+    /// <summary>(Exists, IsPublished) of the current workspace's site.</summary>
+    Task<(bool Exists, bool IsPublished)> GetStatusAsync(CancellationToken cancellationToken);
+}
+
 /// <summary>Renders the draft for the preview page (Razor, R1-P3) from a signed preview token.</summary>
 public interface ISitePreview
 {
