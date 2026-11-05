@@ -1,0 +1,195 @@
+@*
+    The one site renderer: the public page and the editor preview both render a SiteRenderModel with this partial.
+    Every teacher text is HTML-encoded by Razor and shown as plain text (line breaks kept); no HTML is ever accepted.
+*@
+@model SiteRenderModel
+@{
+    var site = Model;
+    var lang = site.Language;
+    var template = site.Template;
+    var sectionClass = SiteViewHelpers.SectionClass(template);
+    var hasContact = site.Sections.Any(s => s.Type == SiteSectionTypes.Contact);
+    var hasHero = site.Sections.Any(s => s.Type == SiteSectionTypes.Hero);
+}
+<main class="mx-auto flex max-w-3xl flex-col gap-6 px-4 py-8 sm:py-12">
+    @if (!hasHero)
+    {
+        <h1 class="sr-only">@(site.TeacherName ?? site.Slug)</h1>
+    }
+    @foreach (var block in site.Sections)
+    {
+        switch (block.Type)
+        {
+            case SiteSectionTypes.Hero:
+                <section class="@SiteViewHelpers.HeroClass(template)" data-section="hero">
+                    <div class="flex flex-col items-center gap-6 text-center sm:flex-row sm:text-left">
+                        @if (site.PhotoUrl is not null)
+                        {
+                            <img src="@site.PhotoUrl" alt="@site.TeacherName" width="160" height="160" class="size-32 shrink-0 rounded-full object-cover sm:size-40" />
+                        }
+                        <div class="flex flex-col gap-3">
+                            @if (site.TeacherName is not null)
+                            {
+                                <p class="text-sm font-semibold uppercase tracking-wide @SiteViewHelpers.HeroTextClass(template)">@site.TeacherName</p>
+                            }
+                            <h1 class="text-3xl font-bold leading-tight sm:text-4xl @SiteViewHelpers.HeroHeadingClass(template)">@(block.Title ?? site.TeacherName ?? site.Slug)</h1>
+                            @if (block.Text is not null)
+                            {
+                                <p class="site-text text-lg @SiteViewHelpers.HeroTextClass(template)">@block.Text</p>
+                            }
+                            @if (hasContact)
+                            {
+                                <p>
+                                    <a href="#contact" class="@(template == SiteTemplates.Modern ? "bg-site-on-primary text-site-primary" : "bg-site-primary text-site-on-primary") inline-block rounded-full px-5 py-2 font-semibold focus:outline-none focus-visible:ring-2 focus-visible:ring-site-text">@PublicText.Get(lang, "site.contactCta")</a>
+                                </p>
+                            }
+                        </div>
+                    </div>
+                </section>
+                break;
+
+            case SiteSectionTypes.Subjects:
+                <section class="@sectionClass" data-section="subjects">
+                    <h2 class="mb-3 text-xl font-semibold text-site-primary">@block.Title</h2>
+                    @if (block.Text is not null)
+                    {
+                        <p class="site-text mb-4">@block.Text</p>
+                    }
+                    @if (site.Teaching.Subjects.Count > 0)
+                    {
+                        <ul class="mb-4 flex flex-wrap gap-2" aria-label="@PublicText.Get(lang, "site.subjects")">
+                            @foreach (var subject in site.Teaching.Subjects)
+                            {
+                                <li class="rounded-full bg-site-primary px-3 py-1 text-sm text-site-on-primary">@subject</li>
+                            }
+                        </ul>
+                    }
+                    <dl class="grid gap-2 text-sm sm:grid-cols-[auto_1fr] sm:gap-x-4">
+                        @if (site.Teaching.Levels.Count > 0)
+                        {
+                            <dt class="font-semibold">@PublicText.Get(lang, "site.levels")</dt>
+                            <dd class="text-site-muted">@string.Join(", ", site.Teaching.Levels)</dd>
+                        }
+                        @if (site.Teaching.Languages.Count > 0)
+                        {
+                            <dt class="font-semibold">@PublicText.Get(lang, "site.languages")</dt>
+                            <dd class="text-site-muted">@string.Join(", ", site.Teaching.Languages)</dd>
+                        }
+                        @if (site.Teaching.Mode is not null)
+                        {
+                            <dt class="font-semibold">@PublicText.Get(lang, "site.mode")</dt>
+                            <dd class="text-site-muted">@PublicText.Get(lang, $"site.mode.{site.Teaching.Mode}")</dd>
+                        }
+                    </dl>
+                </section>
+                break;
+
+            case SiteSectionTypes.Offers:
+                <section class="@sectionClass" data-section="offers">
+                    <h2 class="mb-3 text-xl font-semibold text-site-primary">@block.Title</h2>
+                    @if (block.Text is not null)
+                    {
+                        <p class="site-text mb-4">@block.Text</p>
+                    }
+                    @if (site.Offers.Count == 0)
+                    {
+                        <p class="text-site-muted">@PublicText.Get(lang, "site.noOffers")</p>
+                    }
+                    else
+                    {
+                        <ul class="grid gap-4 sm:grid-cols-2">
+                            @foreach (var offer in site.Offers)
+                            {
+                                <li class="flex flex-col gap-2 rounded-xl border border-site-muted/30 p-4" data-offer>
+                                    <p class="text-xs font-semibold uppercase tracking-wide text-site-muted">@PublicText.Get(lang, $"site.kind.{offer.Kind}")@(offer.Subject is null ? "" : $" · {offer.Subject}")</p>
+                                    <h3 class="text-lg font-semibold">@offer.Title</h3>
+                                    <p class="text-sm text-site-muted">@SiteViewHelpers.Details(offer, lang)</p>
+                                    @if (offer.Description is not null)
+                                    {
+                                        <p class="site-text text-sm">@offer.Description</p>
+                                    }
+                                    <p class="mt-auto text-lg font-bold text-site-primary">@SiteViewHelpers.Price(offer, lang)</p>
+                                </li>
+                            }
+                        </ul>
+                    }
+                </section>
+                break;
+
+            case SiteSectionTypes.Experience:
+                <section class="@sectionClass" data-section="experience">
+                    <h2 class="mb-3 text-xl font-semibold text-site-primary">@block.Title</h2>
+                    <ol class="flex flex-col gap-4">
+                        @foreach (var item in block.Items ?? [])
+                        {
+                            <li>
+                                <p class="font-semibold">@item.Title@if (item.Subtitle is not null) {<span class="font-normal text-site-muted"> · @item.Subtitle</span>}</p>
+                                @if (item.Text is not null)
+                                {
+                                    <p class="site-text text-sm">@item.Text</p>
+                                }
+                            </li>
+                        }
+                    </ol>
+                </section>
+                break;
+
+            case SiteSectionTypes.Testimonials:
+                <section class="@sectionClass" data-section="testimonials">
+                    <h2 class="mb-3 text-xl font-semibold text-site-primary">@block.Title</h2>
+                    <div class="grid gap-4 sm:grid-cols-2">
+                        @foreach (var item in block.Items ?? [])
+                        {
+                            <figure class="rounded-xl border border-site-muted/30 p-4">
+                                @if (item.Text is not null)
+                                {
+                                    <blockquote class="site-text">“@item.Text”</blockquote>
+                                }
+                                <figcaption class="mt-2 text-sm font-semibold text-site-muted">@item.Title@(item.Subtitle is null ? "" : $" · {item.Subtitle}")</figcaption>
+                            </figure>
+                        }
+                    </div>
+                </section>
+                break;
+
+            case SiteSectionTypes.Faq:
+                <section class="@sectionClass" data-section="faq">
+                    <h2 class="mb-3 text-xl font-semibold text-site-primary">@block.Title</h2>
+                    <div class="flex flex-col gap-2">
+                        @foreach (var item in block.Items ?? [])
+                        {
+                            <details class="rounded-lg border border-site-muted/30 p-3">
+                                <summary class="cursor-pointer font-semibold">@item.Title</summary>
+                                @if (item.Text is not null)
+                                {
+                                    <p class="site-text mt-2 text-sm">@item.Text</p>
+                                }
+                            </details>
+                        }
+                    </div>
+                </section>
+                break;
+
+            case SiteSectionTypes.Contact:
+                <section id="contact" class="@sectionClass" data-section="contact">
+                    <h2 class="mb-3 text-xl font-semibold text-site-primary">@block.Title</h2>
+                    @if (block.Text is not null)
+                    {
+                        <p class="site-text mb-2">@block.Text</p>
+                    }
+                    <p class="text-sm text-site-muted">@PublicText.Get(lang, "site.contactSoon")</p>
+                </section>
+                break;
+
+            default:
+                <section class="@sectionClass" data-section="@block.Type">
+                    <h2 class="mb-3 text-xl font-semibold text-site-primary">@block.Title</h2>
+                    @if (block.Text is not null)
+                    {
+                        <p class="site-text">@block.Text</p>
+                    }
+                </section>
+                break;
+        }
+    }
+</main>

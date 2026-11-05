@@ -19,16 +19,27 @@ export function formatTime(isoUtc: string, language: string, timeZone: string): 
   return new Intl.DateTimeFormat(toLocale(language), { timeStyle: 'short', timeZone }).format(new Date(isoUtc));
 }
 
-/** Minor units → localized amount with currency, e.g. 150000 MKD → "1.500,00 ден." */
-export function formatMoney(amountMinor: number, currency: string, language: string): string {
-  const format = new Intl.NumberFormat(toLocale(language), { style: 'currency', currency });
-  const digits = format.resolvedOptions().maximumFractionDigits ?? 2;
-  return format.format(amountMinor / 10 ** digits);
+/**
+ * Currencies whose minor unit has 0 or 3 digits (all others: 2). A fixed table, identical to the API's
+ * `Currencies.MinorDigits` (Iso.cs; a test compares them), because prices are stored as integer minor units: their
+ * meaning must never depend on the CLDR version of the browser (Intl reports e.g. COP differently across versions).
+ */
+export const ZERO_DIGIT_CURRENCIES: readonly string[] = [
+  'AFN', 'ALL', 'BIF', 'CLP', 'DJF', 'GNF', 'IQD', 'IRR', 'ISK', 'JPY', 'KMF', 'KPW', 'KRW', 'LAK', 'LBP',
+  'MGA', 'MMK', 'PYG', 'RSD', 'RWF', 'SOS', 'SYP', 'UGX', 'VND', 'VUV', 'XAF', 'XOF', 'XPF', 'YER',
+];
+export const THREE_DIGIT_CURRENCIES: readonly string[] = ['BHD', 'JOD', 'KWD', 'LYD', 'OMR', 'TND'];
+
+/** Number of minor-unit digits of a currency (2 for EUR/MKD, 0 for JPY, 3 for KWD). */
+export function currencyDigits(currency: string): number {
+  return ZERO_DIGIT_CURRENCIES.includes(currency) ? 0 : THREE_DIGIT_CURRENCIES.includes(currency) ? 3 : 2;
 }
 
-/** Number of minor-unit digits of a currency (2 for EUR/MKD, 0 for JPY). */
-export function currencyDigits(currency: string): number {
-  return new Intl.NumberFormat('en', { style: 'currency', currency }).resolvedOptions().maximumFractionDigits ?? 2;
+/** Minor units → localized amount with currency, e.g. 150000 MKD → "1.500,00 ден." */
+export function formatMoney(amountMinor: number, currency: string, language: string): string {
+  const digits = currencyDigits(currency);
+  const format = new Intl.NumberFormat(toLocale(language), { style: 'currency', currency, minimumFractionDigits: digits, maximumFractionDigits: digits });
+  return format.format(amountMinor / 10 ** digits);
 }
 
 /**

@@ -23,6 +23,23 @@ public static class Currencies
     /// <summary>True for an active ISO 4217 code (case-insensitive; store it upper-case).</summary>
     public static bool IsActiveIsoCode(string? code) =>
         code is { Length: 3 } && Active.Contains(code.ToUpperInvariant());
+
+    // Minor-unit digits of stored prices. A fixed table (CLDR "digits" as of 2026), never the runtime's ICU/CLDR data,
+    // which changes between versions: a stored amount must keep its meaning. The SPA has the same table
+    // (web/src/lib/format.ts); web/src/lib/currencyDigits.test.ts compares them.
+    private const string ZeroDigitCodes = "AFN ALL BIF CLP DJF GNF IQD IRR ISK JPY KMF KPW KRW LAK LBP MGA MMK PYG RSD RWF SOS SYP UGX VND VUV XAF XOF XPF YER";
+    private const string ThreeDigitCodes = "BHD JOD KWD LYD OMR TND";
+
+    private static readonly FrozenSet<string> ZeroDigits = ZeroDigitCodes.Split(' ').ToFrozenSet(StringComparer.Ordinal);
+    private static readonly FrozenSet<string> ThreeDigits = ThreeDigitCodes.Split(' ').ToFrozenSet(StringComparer.Ordinal);
+
+    /// <summary>Number of minor-unit digits of a currency (2 for MKD/EUR, 0 for JPY, 3 for KWD).</summary>
+    public static int MinorDigits(string code) =>
+        ZeroDigits.Contains(code) ? 0 : ThreeDigits.Contains(code) ? 3 : 2;
+
+    /// <summary>An amount in minor units as a decimal amount in major units (exact).</summary>
+    public static decimal ToMajorUnits(long amountMinor, string code) =>
+        amountMinor / MinorDigits(code) switch { 0 => 1m, 3 => 1000m, _ => 100m };
 }
 
 /// <summary>IANA time zone ids (never Windows ids), resolvable on this machine.</summary>

@@ -1,5 +1,5 @@
 import { zodResolver } from '@hookform/resolvers/zod';
-import { ArrowDown, ArrowUp, Eye, Plus, Trash2 } from 'lucide-react';
+import { ArrowDown, ArrowUp, ExternalLink, Eye, Globe, Plus, Trash2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useFieldArray, useForm, useWatch, type Control, type UseFormRegister } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
@@ -11,7 +11,8 @@ import { Button } from '../../../components/ui/button.tsx';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../../components/ui/card.tsx';
 import { FormField } from '../../../components/ui/form-field.tsx';
 import { Label } from '../../../components/ui/label.tsx';
-import { ITEM_SECTIONS, SITE_PALETTES, SITE_TEMPLATES, SLUG_PATTERN, usePreview, useSaveSite, useSite, useSlugAvailability, type Site } from '../../../teacher/site.ts';
+import { formatDateTime } from '../../../lib/format.ts';
+import { ITEM_SECTIONS, SITE_PALETTES, SITE_TEMPLATES, SLUG_PATTERN, usePreview, usePublishSite, useSaveSite, useSite, useSlugAvailability, type Site } from '../../../teacher/site.ts';
 import { NotFoundContent } from '../Pages.tsx';
 
 const text = (max: number) => z.string().max(max, 'site.validation.tooLong');
@@ -52,6 +53,8 @@ const toForm = (site: Site): SiteForm => ({
 });
 
 const orNull = (value: string) => (value.trim() === '' ? null : value.trim());
+
+const browserTimeZone = new Intl.DateTimeFormat().resolvedOptions().timeZone;
 
 export function SiteEditorPage() {
   const { t } = useTranslation();
@@ -111,9 +114,11 @@ function SiteEditor({ workspaceId, site }: { workspaceId: string; site: Site }) 
         <h1 className="text-2xl font-semibold tracking-tight">{t('site.title')}</h1>
         <p className="text-sm text-muted-foreground">{t('site.lead')}</p>
       </div>
+      {/* Publishing never touches the draft: unsaved edits stay (keepDirtyValues), only the version follows the server. */}
+      <PublishCard workspaceId={workspaceId} site={site} dirty={isDirty} onChanged={(saved) => form.reset(toForm(saved), { keepDirtyValues: true })} />
       <form noValidate onSubmit={onSubmit} className="flex flex-col gap-6">
         <fieldset disabled={isSubmitting} aria-busy={isSubmitting} className="contents">
-          <SettingsCard workspaceId={workspaceId} savedSlug={exists ? site.slug : null} form={form} />
+          <SettingsCard workspaceId={workspaceId} savedSlug={exists ? site.slug : null} published={site.isPublished} form={form} />
 
           <div className="flex flex-col gap-3">
             <h2 className="text-lg font-semibold">{t('site.sectionsTitle')}</h2>
@@ -170,7 +175,86 @@ function SiteEditor({ workspaceId, site }: { workspaceId: string; site: Site }) 
   );
 }
 
-function SettingsCard({ workspaceId, savedSlug, form }: { workspaceId: string; savedSlug: string | null; form: ReturnType<typeof useForm<SiteForm>> }) {
+/**
+ * Publishing: the saved draft becomes the public page at /{slug}. Only a saved, unchanged form can be published, so
+ * what the teacher sees in the preview is what visitors get.
+ */
+function PublishCard({ workspaceId, site, dirty, onChanged }: { workspaceId: string; site: Site; dirty: boolean; onChanged: (saved: Site) => void }) {
+  const { t, i18n } = useTranslation();
+  const publish = usePublishSite(workspaceId);
+  const [confirmUnpublish, setConfirmUnpublish] = useState(false);
+  const version = site.version === null || site.version === undefined ? null : Number(site.version);
+  const publicPath = `/${site.slug}`;
+
+  const run = (doPublish: boolean) => {
+    setConfirmUnpublish(false);
+    publish.mutate({ publish: doPublish, version }, { onSuccess: onChanged });
+  };
+
+  const error =
+    publish.error instanceof ApiError && publish.error.code === 'CONCURRENCY_CONFLICT'
+      ? t('site.changedElsewhere')
+      : publish.error
+        ? errorMessage(publish.error, t)
+        : null;
+
+  return (
+    <Card data-testid="publish-card">
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2 text-lg">
+          <Globe className="h-5 w-5" aria-hidden />
+          {site.isPublished ? t('site.publish.published') : t('site.publish.notPublished')}
+        </CardTitle>
+        <CardDescription>
+          {site.isPublished && site.publishedAtUtc
+            ? t('site.publish.publishedAt', { date: formatDateTime(site.publishedAtUtc, i18n.resolvedLanguage ?? 'mk', browserTimeZone) })
+            : t('site.publish.notPublishedHint')}
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="flex flex-col gap-4">
+        {site.isPublished && (
+          <p className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
+            <a className="inline-flex items-center gap-1 font-medium text-primary underline-offset-4 hover:underline" href={publicPath} target="_blank" rel="noopener">
+              classhub.app{publicPath}
+              <ExternalLink className="h-4 w-4" aria-hidden />
+              <span className="sr-only">{t('site.publish.opensNewTab')}</span>
+            </a>
+            <span className="text-muted-foreground">{t('site.publish.views', { count: Number(site.viewsLast30Days) })}</span>
+          </p>
+        )}
+        {site.isPublished && site.hasUnpublishedChanges && <Alert variant="info">{t('site.publish.unpublishedChanges')}</Alert>}
+        {error && <Alert variant="error">{error}</Alert>}
+        <div className="flex flex-wrap items-center gap-2">
+          <Button type="button" disabled={!site.exists || dirty || publish.isPending} onClick={() => run(true)}>
+            {site.isPublished ? t('site.publish.publishChanges') : t('site.publish.publish')}
+          </Button>
+          {site.isPublished && !confirmUnpublish && (
+            <Button type="button" variant="outline" disabled={publish.isPending} onClick={() => setConfirmUnpublish(true)}>
+              {t('site.publish.unpublish')}
+            </Button>
+          )}
+          {(!site.exists || dirty) && <p className="text-sm text-muted-foreground">{t('site.publish.saveFirst')}</p>}
+        </div>
+        {confirmUnpublish && (
+          <fieldset className="flex flex-col gap-3 rounded-md border border-border p-3">
+            <legend className="sr-only">{t('site.publish.unpublish')}</legend>
+            <p className="text-sm">{t('site.publish.confirmUnpublish')}</p>
+            <div className="flex flex-wrap gap-2">
+              <Button type="button" variant="destructive" disabled={publish.isPending} onClick={() => run(false)}>
+                {t('site.publish.unpublishConfirm')}
+              </Button>
+              <Button type="button" variant="ghost" onClick={() => setConfirmUnpublish(false)}>
+                {t('site.publish.cancel')}
+              </Button>
+            </div>
+          </fieldset>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function SettingsCard({ workspaceId, savedSlug, published, form }: { workspaceId: string; savedSlug: string | null; published: boolean; form: ReturnType<typeof useForm<SiteForm>> }) {
   const { t } = useTranslation();
   const { errors } = form.formState;
   const slug = useWatch({ control: form.control, name: 'slug' });
@@ -210,6 +294,7 @@ function SettingsCard({ workspaceId, savedSlug, form }: { workspaceId: string; s
             classhub.app/<strong>{slug || '…'}</strong>
             {availabilityText && <span data-testid="slug-availability"> · {availabilityText}</span>}
           </p>
+          {published && savedSlug !== null && slug.trim() !== savedSlug && <p className="text-sm text-muted-foreground">{t('site.publish.slugMoves')}</p>}
         </div>
 
         <fieldset className="flex flex-col gap-2">

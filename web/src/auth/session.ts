@@ -79,6 +79,10 @@ export function useSignOut() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async () => {
+      // Responses of requests still in flight could arrive after the logout response with a renewed session
+      // cookie and sign this browser in again: stop the queries and wait until no request is pending.
+      await queryClient.cancelQueries();
+      await api.whenIdle();
       try {
         await api.client.POST('/api/auth/logout');
       } catch (error) {

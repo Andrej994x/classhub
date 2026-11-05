@@ -2,6 +2,7 @@ using ClassHub.Core.Infrastructure.Persistence;
 using ClassHub.Core.Modules.Catalog.Contracts;
 using ClassHub.Core.Modules.Offers.Contracts;
 using ClassHub.Core.Modules.Offers.Domain;
+using ClassHub.Core.Modules.Sites.Contracts;
 using ClassHub.Core.Modules.Workspaces.Contracts;
 using ClassHub.Core.SharedKernel.Errors;
 using ClassHub.Core.SharedKernel.Globalization;
@@ -17,6 +18,7 @@ internal sealed class OfferService(
     ITenantContext tenant,
     ICatalogLookup catalog,
     IWorkspaceSettings workspace,
+    IPublicSiteCache siteCache,
     TimeProvider clock) : IOfferLookup
 {
     public async Task<IReadOnlyList<OfferResponse>> ListAsync(CancellationToken cancellationToken) =>
@@ -45,6 +47,7 @@ internal sealed class OfferService(
         Apply(offer, request, now);
         db.Set<Offer>().Add(offer);
         await db.SaveChangesAsync(cancellationToken);
+        await siteCache.EvictCurrentWorkspaceAsync(cancellationToken);
         return ToResponse(offer);
     }
 
@@ -67,6 +70,7 @@ internal sealed class OfferService(
         Apply(offer, request, now);
         offer.Version++;
         await db.SaveChangesAsync(cancellationToken);
+        await siteCache.EvictCurrentWorkspaceAsync(cancellationToken);
         return ToResponse(offer);
     }
 
@@ -79,6 +83,7 @@ internal sealed class OfferService(
         offer.ShowOnPublicSite = false;
         offer.Version++;
         await db.SaveChangesAsync(cancellationToken);
+        await siteCache.EvictCurrentWorkspaceAsync(cancellationToken);
     }
 
     /// <summary>Sets the display order. The list must contain exactly the workspace's current offers.</summary>
@@ -105,6 +110,7 @@ internal sealed class OfferService(
         }
 
         await db.SaveChangesAsync(cancellationToken);
+        await siteCache.EvictCurrentWorkspaceAsync(cancellationToken);
         return await ListAsync(cancellationToken);
     }
 
@@ -112,6 +118,14 @@ internal sealed class OfferService(
         db.Set<Offer>().AnyAsync(o => o.Id == offerId && o.IsActive, cancellationToken);
 
     public Task<int> CountAsync(CancellationToken cancellationToken) => db.Set<Offer>().CountAsync(cancellationToken);
+
+    public async Task<IReadOnlyList<PublicOffer>> ListPublicAsync(CancellationToken cancellationToken) =>
+        await db.Set<Offer>().AsNoTracking()
+            .Where(o => o.ShowOnPublicSite && o.IsActive)
+            .OrderBy(o => o.DisplayOrder).ThenBy(o => o.CreatedAtUtc)
+            .Select(o => new PublicOffer(o.Title, o.Description, o.Kind.ToString(), o.SubjectId, o.DurationMinutes, o.PriceMinor, o.Currency,
+                o.Mode.ToString(), o.LessonCount, o.Seats))
+            .ToListAsync(cancellationToken);
 
     private static void Apply(Offer offer, SaveOfferRequest request, DateTime now)
     {

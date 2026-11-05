@@ -1,46 +1,23 @@
 import { useQuery } from '@tanstack/react-query';
+import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Link, Navigate, useParams } from 'react-router';
+import { Navigate, useParams } from 'react-router';
 import { api } from '../../api/client.ts';
 import { ApiError, errorMessage } from '../../api/errors.ts';
-import { useMe, useMyWorkspaces } from '../../auth/session.ts';
+import { useMyWorkspaces } from '../../auth/session.ts';
 import { Alert } from '../../components/ui/alert.tsx';
+import { loadFromServer } from '../../lib/navigation.ts';
 import { OnboardingChecklist } from './profile/OnboardingChecklist.tsx';
 import { buttonVariants } from '../../components/ui/button.tsx';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card.tsx';
-import { LanguageSwitcher } from '../components/LanguageSwitcher.tsx';
 
+/**
+ * `/` belongs to the server-rendered landing page (Razor, SEO). The SPA only reaches this route through client-side
+ * navigation, so it hands over to the server with a full page load.
+ */
 export function HomePage() {
-  const { t } = useTranslation();
-  const me = useMe();
-  return (
-    <div className="min-h-dvh bg-background">
-      <header className="flex h-14 items-center justify-between px-4">
-        <span className="font-semibold">{t('app.name')}</span>
-        <LanguageSwitcher />
-      </header>
-      <main className="mx-auto flex max-w-2xl flex-col gap-6 px-4 py-16">
-        <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">{t('home.title')}</h1>
-        <p className="text-lg text-muted-foreground">{t('home.lead')}</p>
-        <div className="flex flex-wrap gap-3">
-          {me.data ? (
-            <Link className={buttonVariants()} to="/app">
-              {t('nav.openWorkspace')}
-            </Link>
-          ) : (
-            <>
-              <Link className={buttonVariants()} to="/register">
-                {t('nav.register')}
-              </Link>
-              <Link className={buttonVariants({ variant: 'outline' })} to="/login">
-                {t('nav.signIn')}
-              </Link>
-            </>
-          )}
-        </div>
-      </main>
-    </div>
-  );
+  useEffect(() => loadFromServer('/'), []);
+  return null;
 }
 
 function AreaHome({ titleKey, emptyKey }: { titleKey: string; emptyKey: string }) {
@@ -123,9 +100,9 @@ export function NotFoundPage() {
           <CardDescription>{t('notFound.lead')}</CardDescription>
         </CardHeader>
         <CardContent>
-          <Link className={buttonVariants({ variant: 'outline' })} to="/">
+          <a className={buttonVariants({ variant: 'outline' })} href="/">
             {t('common.backHome')}
-          </Link>
+          </a>
         </CardContent>
       </Card>
     </main>

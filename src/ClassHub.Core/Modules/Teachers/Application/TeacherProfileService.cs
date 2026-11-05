@@ -24,10 +24,18 @@ internal sealed partial class TeacherProfileService(
     IWorkspaceSettings workspaceSettings,
     IOfferLookup offers,
     ISiteStatus site,
+    IPublicSiteCache siteCache,
     IFileStorage files,
     TimeProvider clock,
-    ILogger<TeacherProfileService> logger) : ITeacherSummary, ITeacherPhoto
+    ILogger<TeacherProfileService> logger) : ITeacherSummary, ITeacherPhoto, ITeacherPublicProfile
 {
+    public async Task<PublicTeacherProfile> GetPublicProfileAsync(CancellationToken cancellationToken)
+    {
+        var profile = await GetAsync(cancellationToken);
+        return new PublicTeacherProfile(profile.FirstName, profile.LastName, profile.TeachingMode, profile.SubjectIds, profile.LevelIds,
+            profile.Languages, profile.PhotoVersion);
+    }
+
     async Task<(Stream Content, string ContentType)?> ITeacherPhoto.OpenAsync(CancellationToken cancellationToken) =>
         await OpenPhotoAsync(cancellationToken) is { } photo ? (photo.Content, photo.ContentType) : null;
 
@@ -102,6 +110,8 @@ internal sealed partial class TeacherProfileService(
         // Time zone and currency: same unit of work, so profile and settings commit together or not at all.
         await workspaceSettings.ApplyAsync(request.TimeZone, request.Currency?.ToUpperInvariant(), cancellationToken);
         await db.SaveChangesAsync(cancellationToken);
+        // The public site shows name, subjects, levels, languages and teaching mode from the profile.
+        await siteCache.EvictCurrentWorkspaceAsync(cancellationToken);
         return await ToResponseAsync(profile, cancellationToken);
     }
 
@@ -150,6 +160,7 @@ internal sealed partial class TeacherProfileService(
             throw;
         }
 
+        await siteCache.EvictCurrentWorkspaceAsync(cancellationToken);
         await DeleteBlobAsync(oldKey);
         return await GetAsync(cancellationToken);
     }
@@ -168,6 +179,7 @@ internal sealed partial class TeacherProfileService(
             await transaction.CommitAsync(cancellationToken);
         }
 
+        await siteCache.EvictCurrentWorkspaceAsync(cancellationToken);
         await DeleteBlobAsync(oldKey);
     }
 
@@ -226,14 +238,13 @@ internal sealed partial class TeacherProfileService(
             && profile.Languages.Count > 0 && profile.HasPhoto;
         var hasOffer = await offers.CountAsync(cancellationToken) > 0;
         var (siteExists, sitePublished) = await site.GetStatusAsync(cancellationToken);
-        // Publishing arrives with R1-P4: that step is shown, not yet available.
         OnboardingStep[] steps =
         [
             new(OnboardingSteps.Profile, profileComplete, true),
             new(OnboardingSteps.Subjects, profile.SubjectIds.Count > 0, true),
             new(OnboardingSteps.FirstOffer, hasOffer, true),
             new(OnboardingSteps.PublicPage, siteExists, true),
-            new(OnboardingSteps.Publish, sitePublished, false),
+            new(OnboardingSteps.Publish, sitePublished, true),
         ];
         return new OnboardingResponse(steps, steps.Count(s => s.Completed), steps.Length);
     }

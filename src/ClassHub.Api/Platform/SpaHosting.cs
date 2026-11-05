@@ -4,8 +4,8 @@ namespace ClassHub.Api.Platform;
 
 /// <summary>
 /// Serves the built React SPA (web/ → wwwroot/dist) from the API's origin, so cookies, antiforgery and CSP
-/// work without CORS. Only the SPA's own areas fall back to index.html; /api, health checks and (from
-/// R1-P4) Razor public pages are never answered with the SPA.
+/// work without CORS. Only the SPA's own areas fall back to index.html; /api, health checks and the Razor public
+/// pages (landing page at /, teacher sites at /{slug}) are never answered with the SPA.
 /// </summary>
 internal static class SpaHosting
 {
@@ -33,10 +33,9 @@ internal static class SpaHosting
         return app;
     }
 
-    /// <summary>Maps the SPA entry point for "/" and every SPA prefix (anonymous: the data APIs are protected).</summary>
+    /// <summary>Maps the SPA entry point for every SPA prefix (anonymous: the data APIs are protected).</summary>
     public static WebApplication MapClassHubSpa(this WebApplication app)
     {
-        app.MapFallbackToFile("/", IndexFile, NoCache()).AllowAnonymous();
         var environment = app.Environment;
         var prefixes = environment.IsDevelopment() || environment.IsEnvironment("Testing") || environment.IsEnvironment("E2E")
             ? [.. Prefixes, DevMailboxPrefix]

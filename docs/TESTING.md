@@ -41,6 +41,13 @@ npm run e2e                                # builds the SPA and the API, then ru
 
 Flows (each in **mk and en**, on **desktop and mobile**): register → dev mailbox → confirm → sign in → the dashboard shows the workspace → sign out; forgot password → reset link → the old password fails, the new one works; a second teacher opening the first teacher's workspace URL sees "not found". Texts come from the app's locale files, so wording changes do not break tests. CI job `e2e` uploads the HTML report and traces on failure.
 
+## Public site tests (R1-P4)
+
+- Unit: `PublicSiteRulesTests` (SEO title/description/fallbacks, JSON-LD content and escaping, currency minor units and price formatting, mk/en text parity, palette CSS = `SitePalettes`, slug route constraint, page-view visitor filter, robots/sitemap output, **render-model allow-list snapshot**, Vite manifest resolution and missing build); `SiteRulesTests` also checks contrast on the page background.
+- Integration: `PublicSiteTests` (404 + noindex for unknown/unpublished, complete HTML with meta tags and parsed JSON-LD, only public offers and visible sections, encoded XSS payloads incl. `</script>`, draft vs published and unpublish, audit entries, **cache hit proven by a change behind the app's back, then eviction by profile and offer changes**, signed-in requests bypass the cache, query strings share an entry, suspended owner hidden and back after reactivation, sitemap/robots, page views only for visitors and from cached hits, concurrent first views counted, public photo rules, publish validation and isolation, onboarding step, slug change moves the page, landing page in both languages, read-only public tenant binding); `SpaHostingTests` (`/` is the Razor landing page with the built stylesheet).
+- Vitest: publish card (publish, address, views, version follow-up, unpublish confirmation, disabled before the first save, slug-move warning), `copy-link` island and `mountIsland`, fixed minor-unit table identical to `Currencies.MinorDigits` (never the browser's CLDR data), `/` hands over to the server.
+- Playwright `public-site.spec.ts`: publish → anonymous **phone** visit (Pixel 7: heading, title, canonical, island, no horizontal scroll, no console/CSP errors) → unpublish → 404 with noindex; landing page links to registration.
+
 ## Site tests (R1-P3)
 
 - Unit: `SiteRulesTests` (slug rules and reserved words, name-based suggestion with transliteration, WCAG AA contrast of every palette, section schema, normalization).

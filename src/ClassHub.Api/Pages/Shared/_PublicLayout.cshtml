@@ -1,0 +1,25 @@
+@*
+    Shell of every server-rendered public page (landing page, teacher sites, preview, not-found). No inline scripts
+    or styles: the strict public CSP allows only same-origin files. Pages set ViewData["Lang"], ["Title"],
+    ["BodyClass"] and optionally ["Robots"], and add their SEO tags in the "Head" section.
+*@
+@{
+    var lang = ViewData["Lang"] as string ?? "mk";
+}
+<!DOCTYPE html>
+<html lang="@lang">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>@ViewData["Title"]</title>
+    @if (ViewData["Robots"] is string robots)
+    {
+        <meta name="robots" content="@robots" />
+    }
+    @await RenderSectionAsync("Head", required: false)
+    <vite-asset entry="src/public/public.css" />
+</head>
+<body class="@ViewData["BodyClass"] min-h-dvh bg-site-bg text-site-text antialiased">
+    @RenderBody()
+</body>
+</html>

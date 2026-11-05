@@ -1025,8 +1025,6 @@ namespace ClassHub.Core.Infrastructure.Persistence.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasAlternateKey("WorkspaceId", "Id");
-
                     b.HasIndex("Slug")
                         .IsUnique();
 
@@ -1040,6 +1038,34 @@ namespace ClassHub.Core.Infrastructure.Persistence.Migrations
                             t.HasCheckConstraint("CK_Sites_PublishedJson", "[PublishedJson] IS NULL OR ISJSON([PublishedJson]) = 1");
 
                             t.HasCheckConstraint("CK_Sites_Slug", "LEN([Slug]) BETWEEN 3 AND 40 AND [Slug] NOT LIKE '%[^a-z0-9-]%'");
+                        });
+                });
+
+            modelBuilder.Entity("ClassHub.Core.Modules.Sites.Domain.SitePageView", b =>
+                {
+                    b.Property<Guid>("SiteId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateOnly>("Day")
+                        .HasColumnType("date");
+
+                    b.Property<int>("Views")
+                        .HasColumnType("int");
+
+                    b.Property<Guid>("WorkspaceId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("SiteId", "Day");
+
+                    b.HasIndex("WorkspaceId");
+
+                    b.HasIndex("WorkspaceId", "Day");
+
+                    b.HasIndex("WorkspaceId", "SiteId");
+
+                    b.ToTable("SitePageViews", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_SitePageViews_Views", "[Views] >= 0");
                         });
                 });
 
@@ -1403,6 +1429,16 @@ namespace ClassHub.Core.Infrastructure.Persistence.Migrations
                     b.HasOne("ClassHub.Core.Modules.Workspaces.Domain.Workspace", null)
                         .WithMany()
                         .HasForeignKey("WorkspaceId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("ClassHub.Core.Modules.Sites.Domain.SitePageView", b =>
+                {
+                    b.HasOne("ClassHub.Core.Modules.Sites.Domain.Site", null)
+                        .WithMany()
+                        .HasForeignKey("WorkspaceId", "SiteId")
+                        .HasPrincipalKey("WorkspaceId", "Id")
                         .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
                 });

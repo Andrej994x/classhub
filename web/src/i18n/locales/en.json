@@ -22,7 +22,6 @@
     "adminHome": "Administration",
     "signIn": "Sign in",
     "register": "Sign up",
-    "openWorkspace": "Open my workspace",
     "profile": "Profile",
     "offers": "Offers",
     "site": "Website"
@@ -31,10 +30,6 @@
     "teacherArea": "Teacher workspace",
     "studentArea": "Student area",
     "adminArea": "Platform administration"
-  },
-  "home": {
-    "title": "Welcome to ClassHub",
-    "lead": "Build your teacher website, attract students and run your lessons from one place."
   },
   "dashboard": {
     "title": "Home",
@@ -275,7 +270,7 @@
   },
   "site": {
     "title": "Website",
-    "lead": "Your public page. Edit the draft and preview it; visitors see nothing until you publish (coming soon).",
+    "lead": "Your public page. Edit and save the draft, check the preview, then publish it. Visitors only see what you publish.",
     "settings": "Address and look",
     "settingsHint": "The address is how students find you. It must be unique.",
     "sectionsTitle": "Sections",
@@ -365,6 +360,24 @@
       "slugLength": "Use 3 to 40 characters.",
       "slugFormat": "Use lowercase letters, digits and single hyphens; no hyphen at the start or end.",
       "checkFields": "Some fields need attention; see the highlighted messages below."
+    },
+    "publish": {
+      "published": "Your page is published",
+      "notPublished": "Your page is not published",
+      "publishedAt": "Published {{date}}.",
+      "notPublishedHint": "Visitors see nothing yet. Save your draft, check the preview and publish when you are ready.",
+      "opensNewTab": "(opens in a new tab)",
+      "views_one": "{{count}} view in the last 30 days",
+      "views_other": "{{count}} views in the last 30 days",
+      "unpublishedChanges": "You have saved changes that are not published yet. Publish them to show them to visitors.",
+      "publish": "Publish",
+      "publishChanges": "Publish changes",
+      "unpublish": "Unpublish",
+      "saveFirst": "Save your changes before publishing.",
+      "confirmUnpublish": "Take your page offline? Visitors will see “page not found” until you publish again. Your draft is kept.",
+      "unpublishConfirm": "Yes, unpublish",
+      "cancel": "Cancel",
+      "slugMoves": "Your page is published: saving a new address moves it there at once, and the old address stops working."
     }
   }
 }

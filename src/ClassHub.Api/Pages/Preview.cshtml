@@ -1,85 +1,12 @@
 @page "/preview/{token}"
 @model PreviewModel
 @{
-    Layout = null;
+    Layout = "_PublicLayout";
     var site = Model.Site;
-    var p = site.Palette;
-    var lang = site.Language;
+    ViewData["Lang"] = site.Language;
+    ViewData["Title"] = $"{PublicText.Get(site.Language, "preview.banner")} · {site.Slug}";
+    ViewData["Robots"] = "noindex, nofollow, noarchive";
+    ViewData["BodyClass"] = $"palette-{site.Palette.Key}";
 }
-<!DOCTYPE html>
-<html lang="@lang">
-<head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="robots" content="noindex, nofollow, noarchive" />
-    <title>@PreviewModel.Label(lang, "preview") · @site.Slug</title>
-    <style>
-        :root { --primary: @p.Primary; --on-primary: @p.OnPrimary; --bg: @p.Background; --surface: @p.Surface; --text: @p.Text; --muted: @p.Muted; }
-        * { box-sizing: border-box; }
-        body { margin: 0; font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; background: var(--bg); color: var(--text); line-height: 1.55; }
-        .banner { background: var(--text); color: var(--bg); font-size: .85rem; padding: .4rem 1rem; text-align: center; }
-        main { max-width: 56rem; margin: 0 auto; padding: 1.5rem 1rem 3rem; }
-        section { background: var(--surface); border-radius: .75rem; padding: 1.5rem; margin-bottom: 1rem; }
-        .hero { display: flex; gap: 1.5rem; align-items: center; flex-wrap: wrap; }
-        .hero img { width: 8rem; height: 8rem; border-radius: 50%; object-fit: cover; }
-        h1 { margin: 0 0 .5rem; font-size: clamp(1.6rem, 4vw, 2.4rem); color: var(--primary); }
-        h2 { margin: 0 0 .75rem; font-size: 1.3rem; color: var(--primary); }
-        .muted { color: var(--muted); }
-        .item { border-top: 1px solid color-mix(in srgb, var(--muted) 25%, transparent); padding: .75rem 0; }
-        .item:first-of-type { border-top: 0; }
-        .template-modern section { border-left: .35rem solid var(--primary); }
-        .template-minimal section { background: transparent; padding-left: 0; padding-right: 0; }
-        .pill { display: inline-block; background: var(--primary); color: var(--on-primary); border-radius: 999px; padding: .2rem .75rem; font-size: .85rem; }
-        p { white-space: pre-line; margin: 0 0 .5rem; }
-    </style>
-</head>
-<body class="template-@site.Template">
-    <div class="banner">@PreviewModel.Label(lang, "preview") · classhub.app/@site.Slug</div>
-    <main>
-        @foreach (var block in site.Sections.Where(s => s.Visible))
-        {
-            switch (block.Type)
-            {
-                case SiteSectionTypes.Hero:
-                    <section class="hero" data-section="hero">
-                        @if (block.ShowPhoto && site.PhotoUrl is not null)
-                        {
-                            <img src="@site.PhotoUrl" alt="@site.TeacherName" />
-                        }
-                        <div>
-                            @if (site.TeacherName is not null) { <span class="pill">@site.TeacherName</span> }
-                            <h1>@block.Title</h1>
-                            <p class="muted">@block.Text</p>
-                        </div>
-                    </section>
-                    break;
-                case SiteSectionTypes.Experience:
-                case SiteSectionTypes.Testimonials:
-                case SiteSectionTypes.Faq:
-                    <section data-section="@block.Type">
-                        <h2>@block.Title</h2>
-                        @foreach (var item in block.Items ?? [])
-                        {
-                            <div class="item">
-                                <strong>@item.Title</strong>
-                                @if (item.Subtitle is not null) { <span class="muted"> · @item.Subtitle</span> }
-                                <p>@item.Text</p>
-                            </div>
-                        }
-                    </section>
-                    break;
-                default:
-                    <section data-section="@block.Type">
-                        <h2>@block.Title</h2>
-                        <p>@block.Text</p>
-                        @if (block.Type is SiteSectionTypes.Subjects or SiteSectionTypes.Offers or SiteSectionTypes.Contact)
-                        {
-                            <p class="muted"><em>@PreviewModel.Label(lang, block.Type)</em></p>
-                        }
-                    </section>
-                    break;
-            }
-        }
-    </main>
-</body>
-</html>
+<div class="bg-site-text px-4 py-2 text-center text-sm text-site-bg">@PublicText.Get(site.Language, "preview.banner") · /@site.Slug</div>
+<partial name="_SiteBody" model="site" />

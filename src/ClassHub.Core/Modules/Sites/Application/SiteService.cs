@@ -1,4 +1,5 @@
 using System.Text.Json;
+using ClassHub.Core.Infrastructure.Audit;
 using ClassHub.Core.Infrastructure.Persistence;
 using ClassHub.Core.Modules.Sites.Contracts;
 using ClassHub.Core.Modules.Sites.Domain;
@@ -19,8 +20,13 @@ internal sealed class SiteService(
     IWorkspaceSettings workspace,
     SitePreviewTokens previewTokens,
     SiteSlugQueries slugs,
+    PublicSiteCache cache,
+    IAuditLog audit,
     TimeProvider clock)
 {
+    /// <summary>Page views are summed over this many UTC days (today included).</summary>
+    public const int ViewWindowDays = 30;
+
     internal static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
 
     public async Task<SiteResponse> GetAsync(CancellationToken cancellationToken)
@@ -28,14 +34,14 @@ internal sealed class SiteService(
         var site = await db.Set<Site>().AsNoTracking().SingleOrDefaultAsync(cancellationToken);
         if (site is not null)
         {
-            return ToResponse(site);
+            return await ToResponseAsync(site, cancellationToken);
         }
 
         // Not created yet: suggestions the editor starts from (nothing is stored until the first save).
         var summary = await teacher.GetSummaryAsync(cancellationToken);
         var language = await workspace.GetLocaleAsync(cancellationToken);
         return new SiteResponse(false, SuggestSlug(summary), SiteTemplates.Classic, SitePalettes.All[0].Key, language,
-            DefaultContent(language), false, null, null);
+            DefaultContent(language), false, null, null, null, false, 0);
     }
 
     public async Task<SiteResponse> SaveAsync(SaveSiteRequest request, CancellationToken cancellationToken)
@@ -48,6 +54,7 @@ internal sealed class SiteService(
         }
 
         var draftJson = JsonSerializer.Serialize(Normalize(request.Draft!), Json);
+        var previousSlug = site?.Slug;
         if (site is null)
         {
             site = new Site
@@ -85,7 +92,70 @@ internal sealed class SiteService(
             throw new ConflictException("This address is already taken. Choose another one.", ErrorCodes.SlugTaken);
         }
 
-        return ToResponse(site);
+        // Draft edits do not change the public page, but the address does (the slug applies at once).
+        if (site.PublishedAtUtc is not null && previousSlug != site.Slug)
+        {
+            await cache.EvictCurrentWorkspaceAsync(cancellationToken);
+            await cache.EvictSitemapAsync();
+        }
+
+        return await ToResponseAsync(site, cancellationToken);
+    }
+
+    /// <summary>
+    /// Publishes the saved draft: template, palette, language and sections are copied to the public version, which
+    /// visitors see at <c>/{slug}</c> from now on. Audited.
+    /// </summary>
+    public async Task<SiteResponse> PublishAsync(PublishSiteRequest request, CancellationToken cancellationToken)
+    {
+        var site = await LoadForChangeAsync(request.Version, cancellationToken);
+        var now = clock.GetUtcNow().UtcDateTime;
+        var firstPublication = site.PublishedAtUtc is null;
+        site.PublishedJson = SiteSnapshot.FromDraft(site).Serialize();
+        site.PublishedAtUtc = now;
+        site.UpdatedAtUtc = now;
+        site.Version++;
+        audit.Record("site.published", "Site", site.Id.ToString(), site.WorkspaceId, after: new { site.Slug, site.Template, site.Palette, site.Language });
+        await db.SaveChangesAsync(cancellationToken);
+        await cache.EvictCurrentWorkspaceAsync(cancellationToken);
+        if (firstPublication)
+        {
+            await cache.EvictSitemapAsync();
+        }
+
+        return await ToResponseAsync(site, cancellationToken);
+    }
+
+    /// <summary>Takes the page offline: <c>/{slug}</c> answers 404 and leaves the sitemap. The draft is kept. Audited.</summary>
+    public async Task<SiteResponse> UnpublishAsync(PublishSiteRequest request, CancellationToken cancellationToken)
+    {
+        var site = await LoadForChangeAsync(request.Version, cancellationToken);
+        if (site.PublishedAtUtc is null)
+        {
+            return await ToResponseAsync(site, cancellationToken);
+        }
+
+        site.PublishedJson = null;
+        site.PublishedAtUtc = null;
+        site.UpdatedAtUtc = clock.GetUtcNow().UtcDateTime;
+        site.Version++;
+        audit.Record("site.unpublished", "Site", site.Id.ToString(), site.WorkspaceId, before: new { site.Slug });
+        await db.SaveChangesAsync(cancellationToken);
+        await cache.EvictCurrentWorkspaceAsync(cancellationToken);
+        await cache.EvictSitemapAsync();
+        return await ToResponseAsync(site, cancellationToken);
+    }
+
+    private async Task<Site> LoadForChangeAsync(int? version, CancellationToken cancellationToken)
+    {
+        var site = await db.Set<Site>().SingleOrDefaultAsync(cancellationToken)
+            ?? throw new BusinessRuleException("Save the site once before publishing it.", ErrorCodes.SiteNotCreated);
+        if (version != site.Version)
+        {
+            throw new ConflictException("The site was changed elsewhere. Reload it and apply your changes again.", ErrorCodes.ConcurrencyConflict);
+        }
+
+        return site;
     }
 
     public async Task<SlugAvailabilityResponse> CheckSlugAsync(string? slug, CancellationToken cancellationToken)
@@ -165,8 +235,15 @@ internal sealed class SiteService(
 
     private static string? Clean(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 
-    private static SiteResponse ToResponse(Site site) =>
-        new(true, site.Slug, site.Template, site.Palette, site.Language, Read(site.DraftJson), site.PublishedAtUtc is not null, site.UpdatedAtUtc, site.Version);
+    private async Task<SiteResponse> ToResponseAsync(Site site, CancellationToken cancellationToken)
+    {
+        var from = DateOnly.FromDateTime(clock.GetUtcNow().UtcDateTime).AddDays(-(ViewWindowDays - 1));
+        var views = await db.Set<SitePageView>().Where(v => v.SiteId == site.Id && v.Day >= from).SumAsync(v => (int?)v.Views, cancellationToken) ?? 0;
+        var published = site.PublishedAtUtc is not null;
+        var changed = published && site.PublishedJson != SiteSnapshot.FromDraft(site).Serialize();
+        return new(true, site.Slug, site.Template, site.Palette, site.Language, Read(site.DraftJson), published, site.UpdatedAtUtc, site.Version,
+            site.PublishedAtUtc, changed, views);
+    }
 }
 
 /// <summary>

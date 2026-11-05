@@ -29,7 +29,16 @@ public sealed record SiteResponse(
     SiteContent Draft,
     bool IsPublished,
     DateTime? UpdatedAtUtc,
-    int? Version);
+    int? Version,
+    /// <summary>When the current public version was published; null while unpublished.</summary>
+    DateTime? PublishedAtUtc,
+    /// <summary>True when the saved draft (template, palette, language or sections) differs from the public version.</summary>
+    bool HasUnpublishedChanges,
+    /// <summary>Page views of the public page in the last 30 days (UTC days; D-32: no cookies, no IP addresses).</summary>
+    int ViewsLast30Days);
+
+/// <summary>Publish or unpublish the saved draft. <c>Version</c> is the version the client loaded (409 if stale).</summary>
+public sealed record PublishSiteRequest(int? Version);
 
 /// <summary>Saves the draft. <c>Version</c>: null for the first save, then the version the client loaded (409 if stale).</summary>
 public sealed record SaveSiteRequest(string? Slug, string? Template, string? Palette, string? Language, SiteContent? Draft, int? Version = null);
@@ -55,7 +64,7 @@ public static class SiteSectionTypes
     public static IReadOnlySet<string> WithItems { get; } = new HashSet<string>(StringComparer.Ordinal) { Experience, Testimonials, Faq };
 }
 
-/// <summary>Templates (layouts) of the public page; rendered in full by R1-P4.</summary>
+/// <summary>Templates (layouts) of the public page.</summary>
 public static class SiteTemplates
 {
     public const string Classic = "classic";
@@ -130,21 +139,108 @@ public interface ISiteStatus
     Task<(bool Exists, bool IsPublished)> GetStatusAsync(CancellationToken cancellationToken);
 }
 
-/// <summary>Renders the draft for the preview page (Razor, R1-P3) from a signed preview token.</summary>
+/// <summary>Renders the draft for the preview page (Razor) from a signed preview token.</summary>
 public interface ISitePreview
 {
     /// <summary>The preview model, or null when the token is invalid, expired or no longer authorized.</summary>
-    Task<SitePreviewModel?> ReadAsync(string token, CancellationToken cancellationToken);
+    Task<SiteRenderModel?> ReadAsync(string token, CancellationToken cancellationToken);
 
     /// <summary>The teacher photo for a valid preview token (same checks as <see cref="ReadAsync"/>), or null.</summary>
     Task<(Stream Content, string ContentType)?> OpenPhotoAsync(string token, CancellationToken cancellationToken);
 }
 
-public sealed record SitePreviewModel(
+/// <summary>
+/// Everything a site template may render (preview and public page use the same renderer). It is an allow-list:
+/// only visible sections, and only the public profile and offer fields, ever reach a template.
+/// </summary>
+public sealed record SiteRenderModel(
     string Slug,
     string Template,
     SitePalette Palette,
     string Language,
+    /// <summary>The visible sections that have content, in order (hidden and empty ones are not part of the model).</summary>
     IReadOnlyList<SiteSection> Sections,
     string? TeacherName,
-    string? PhotoUrl);
+    /// <summary>Relative photo URL, or null when the hero does not show the photo or there is none.</summary>
+    string? PhotoUrl,
+    SiteTeaching Teaching,
+    IReadOnlyList<SiteOfferView> Offers);
+
+/// <summary>From the teacher profile: subject, level and language names in the site language, and the teaching mode.</summary>
+public sealed record SiteTeaching(IReadOnlyList<string> Subjects, IReadOnlyList<string> Levels, IReadOnlyList<string> Languages, string? Mode);
+
+/// <summary>A public offer as shown on the site. <c>Price</c> is in major units of <c>Currency</c>.</summary>
+public sealed record SiteOfferView(
+    string Title,
+    string? Description,
+    string Kind,
+    string? Subject,
+    int DurationMinutes,
+    decimal Price,
+    string Currency,
+    string Mode,
+    int? LessonCount,
+    int? Seats);
+
+/// <summary>The SEO head of a public page (absolute URLs from the configured public base URL, never the Host header).</summary>
+public sealed record SiteSeoHead(string Title, string Description, string CanonicalUrl, string? ImageUrl, string OgLocale, string JsonLd);
+
+/// <summary>A published, visible public page and the output-cache tag it is stored under.</summary>
+public sealed record PublicSitePage(SiteRenderModel Site, SiteSeoHead Seo, string CacheTag);
+
+public sealed record SitemapEntry(string Slug, DateTime LastModifiedUtc);
+
+/// <summary>
+/// Read side of the public sites (Razor pages, photo, sitemap). Only published sites of visible owners (active
+/// owner account) are returned; everything else is "not found".
+/// </summary>
+public interface IPublicSites
+{
+    /// <summary>The published page for <paramref name="slug"/>, or null (unknown, unpublished, hidden owner).</summary>
+    Task<PublicSitePage?> FindAsync(string slug, CancellationToken cancellationToken);
+
+    /// <summary>The teacher photo of a published site whose hero shows it; null otherwise.</summary>
+    Task<(Stream Content, string ContentType)?> OpenPhotoAsync(string slug, CancellationToken cancellationToken);
+
+    Task<IReadOnlyList<SitemapEntry>> ListForSitemapAsync(CancellationToken cancellationToken);
+
+    /// <summary>Counts one page view of a published site for today (UTC). Never throws.</summary>
+    Task RecordViewAsync(string slug, CancellationToken cancellationToken);
+}
+
+/// <summary>
+/// Clears cached public pages after a change that shows on them (site, profile, photo, offers). Call it after the
+/// change committed.
+/// </summary>
+public interface IPublicSiteCache
+{
+    /// <summary>The current workspace's public page.</summary>
+    Task EvictCurrentWorkspaceAsync(CancellationToken cancellationToken);
+
+    /// <summary>Every public site page and the sitemap (account suspension and reactivation; rare).</summary>
+    Task EvictAllAsync(CancellationToken cancellationToken);
+}
+
+/// <summary>Output-cache policy names and tags of the public pages.</summary>
+public static class PublicSiteCaching
+{
+    public const string SitePolicy = "public-site";
+    public const string StaticPolicy = "public-static";
+    public const string SitemapPolicy = "public-sitemap";
+    public const string SitemapTag = "public-sitemap";
+    public const string LandingTag = "public-landing";
+
+    /// <summary>Carried by every cached teacher site page (next to its workspace tag).</summary>
+    public const string AllSitesTag = "public-sites";
+
+    /// <summary>
+    /// Cache entries vary by this query key only, which no page uses: arbitrary query strings (<c>?utm=…</c>) share
+    /// one entry instead of filling the cache.
+    /// </summary>
+    public const string NoQueryKey = "__none";
+
+    public static readonly TimeSpan SiteLifetime = TimeSpan.FromMinutes(5);
+    public static readonly TimeSpan StaticLifetime = TimeSpan.FromHours(1);
+
+    public static string WorkspaceTag(Guid workspaceId) => $"public-site:{workspaceId:N}";
+}
