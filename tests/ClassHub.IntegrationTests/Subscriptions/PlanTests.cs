@@ -161,7 +161,7 @@ public sealed class PlanTests(ClassHubApiFixture fixture)
 
         await using (var db = fixture.CreateDbContext())
         {
-            await db.Database.ExecuteSqlAsync($"UPDATE WorkspaceSubscriptions SET StartsAtUtc = DATEADD(month, -2, SYSUTCDATETIME()), EndsAtUtc = DATEADD(minute, -1, SYSUTCDATETIME()) WHERE WorkspaceId = {teacher.WorkspaceId}", Ct);
+            await EndPaidPeriodAsync(db, teacher.WorkspaceId);
         }
 
         // The limits follow the end date at once, even before the job runs.
@@ -186,6 +186,30 @@ public sealed class PlanTests(ClassHubApiFixture fixture)
         await using var check = fixture.CreateDbContext();
         var target = teacher.WorkspaceId.ToString();
         (await check.Set<AuditLogEntry>().CountAsync(e => e.TargetId == target && e.Action == "subscription.expired" && e.ActorUserId == null, Ct)).ShouldBe(1);
+    }
+
+    [Fact]
+    public async Task Reactivating_before_the_job_runs_still_records_the_expiry()
+    {
+        using var admin = await fixture.CreatePlatformStaffAsync(PlatformRoles.Admin);
+        using var teacher = await fixture.CreateTeacherAsync();
+        await ActivateAsync(admin, teacher.WorkspaceId, months: 1);
+        await using (var db = fixture.CreateDbContext())
+        {
+            await EndPaidPeriodAsync(db, teacher.WorkspaceId);
+        }
+
+        var restarted = await ActivateAsync(admin, teacher.WorkspaceId, months: 1);
+
+        restarted.History.Select(h => h.Kind).ShouldBe(["Activated", "Expired", "Activated"]);
+        restarted.PaidUntilUtc!.Value.ShouldBeGreaterThan(DateTime.UtcNow.AddDays(27));
+        // The job finds nothing left to do for this workspace and records no second expiry.
+        await fixture.Factory.Services.GetRequiredService<SubscriptionExpiryJob>().RunOnceAsync(Ct);
+        (await admin.Client.GetJsonAsync<AdminSubscriptionResponse>($"/api/admin/workspaces/{teacher.WorkspaceId}/subscription"))
+            .History.Count(h => h.Kind == "Expired").ShouldBe(1);
+        await using var check = fixture.CreateDbContext();
+        var target = teacher.WorkspaceId.ToString();
+        (await check.Set<AuditLogEntry>().CountAsync(e => e.TargetId == target && e.Action == "subscription.expired", Ct)).ShouldBe(1);
     }
 
     [Fact]
@@ -259,6 +283,13 @@ public sealed class PlanTests(ClassHubApiFixture fixture)
 
         response.StatusCode.ShouldBe(HttpStatusCode.BadRequest, await response.Content.ReadAsStringAsync(Ct));
         (await response.ReadJsonAsync()).GetProperty("errors").EnumerateObject().ShouldNotBeEmpty();
+    }
+
+    /// <summary>Moves the workspace's paid period (and its activation record) two months back, ended a minute ago.</summary>
+    private static async Task EndPaidPeriodAsync(Core.Infrastructure.Persistence.ClassHubDbContext db, Guid workspaceId)
+    {
+        await db.Database.ExecuteSqlAsync($"UPDATE WorkspaceSubscriptions SET StartsAtUtc = DATEADD(month, -2, SYSUTCDATETIME()), EndsAtUtc = DATEADD(minute, -1, SYSUTCDATETIME()) WHERE WorkspaceId = {workspaceId}", Ct);
+        await db.Database.ExecuteSqlAsync($"UPDATE SubscriptionEvents SET OccurredAtUtc = DATEADD(month, -2, SYSUTCDATETIME()), PeriodStartUtc = DATEADD(month, -2, SYSUTCDATETIME()), PeriodEndUtc = DATEADD(minute, -1, SYSUTCDATETIME()) WHERE WorkspaceId = {workspaceId}", Ct);
     }
 
     private static string Today() => DateOnly.FromDateTime(DateTime.UtcNow).ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture);

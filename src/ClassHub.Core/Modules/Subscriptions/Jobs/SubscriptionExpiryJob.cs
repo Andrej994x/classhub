@@ -63,29 +63,14 @@ internal sealed partial class SubscriptionExpiryJob(IServiceScopeFactory scopes,
             await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
             await queries.LockSubscriptionAsync(workspaceId, cancellationToken);
             var subscription = await queries.FindAsync(workspaceId, tracking: true, cancellationToken);
-            // Re-checked under the lock: staff may have extended the period meanwhile.
-            if (subscription is not { EndsAtUtc: { } end } || end > now || subscription.PlanId == defaultPlan.Id)
+            // Re-checked under the lock: staff may have extended or restarted the period meanwhile.
+            if (!SubscriptionExpiry.RecordIfEnded(db, audit, subscription, defaultPlan, now))
             {
                 await transaction.RollbackAsync(cancellationToken);
                 db.ChangeTracker.Clear();
                 continue;
             }
 
-            db.Set<SubscriptionEvent>().Add(new SubscriptionEvent
-            {
-                Id = Guid.CreateVersion7(),
-                WorkspaceId = workspaceId,
-                Kind = SubscriptionEventKind.Expired,
-                PlanId = defaultPlan.Id,
-                PeriodStartUtc = end,
-                OccurredAtUtc = now,
-            });
-            audit.Record("subscription.expired", "Workspace", workspaceId.ToString(), workspaceId, before: new { endsAtUtc = end }, after: new { plan = defaultPlan.Code });
-            subscription.PlanId = defaultPlan.Id;
-            subscription.StartsAtUtc = end;
-            subscription.EndsAtUtc = null;
-            subscription.UpdatedAtUtc = now;
-            subscription.Version++;
             await db.SaveChangesAsync(cancellationToken);
             await transaction.CommitAsync(cancellationToken);
             db.ChangeTracker.Clear();

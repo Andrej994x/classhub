@@ -107,6 +107,9 @@ internal sealed class SubscriptionAdminService(
         {
             await queries.LockSubscriptionAsync(workspaceId, cancellationToken);
             var subscription = await queries.FindAsync(workspaceId, tracking: true, cancellationToken);
+            // A period that ended but was not processed by the expiry job yet is recorded first, so its expiry is
+            // never lost from the history when Pro starts again.
+            SubscriptionExpiry.RecordIfEnded(db, audit, subscription, await plans.DefaultPlanAsync(cancellationToken), now);
             var (kind, start, end) = SubscriptionPeriods.Add(subscription, pro.Id, request.Months!.Value, now);
             if (subscription is null)
             {
