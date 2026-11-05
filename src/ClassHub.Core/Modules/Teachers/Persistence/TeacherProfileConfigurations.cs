@@ -24,6 +24,7 @@ internal sealed class TeacherProfileConfiguration : IEntityTypeConfiguration<Tea
         builder.Property(x => x.TeachingMode).HasConversion<string>().HasMaxLength(20);
         builder.Property(x => x.CountryCode).HasMaxLength(2).IsFixedLength().IsUnicode(false);
         builder.Property(x => x.RowVersion).IsRowVersion();
+        builder.Property(x => x.Version).IsConcurrencyToken();
         // The photo must belong to the same workspace (composite tenant FK).
         builder.HasTenantReference<TeacherProfile, StoredFile>(nameof(TeacherProfile.PhotoFileId));
         builder.HasOne(WorkspaceForeignKeyTargets.Workspace, navigationName: null).WithMany().HasForeignKey(nameof(TeacherProfile.WorkspaceId)).OnDelete(DeleteBehavior.NoAction);

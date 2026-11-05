@@ -364,6 +364,8 @@ export interface components {
             photoVersion: null | string;
             /** Format: date-time */
             updatedAtUtc: null | string;
+            /** Format: int32 */
+            version: null | number | string;
         };
         UpdateMeRequest: {
             locale: null | string;
@@ -380,6 +382,8 @@ export interface components {
             languages: null | string[];
             timeZone?: null | string;
             currency?: null | string;
+            /** Format: int32 */
+            version?: null | number | string;
         };
         UpdateWorkspaceRequest: {
             name: null | string;

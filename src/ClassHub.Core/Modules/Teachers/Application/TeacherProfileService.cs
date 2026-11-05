@@ -55,7 +55,17 @@ internal sealed partial class TeacherProfileService(
         }
 
         var now = clock.GetUtcNow().UtcDateTime;
-        var profile = await LoadOrCreateAsync(now, cancellationToken);
+        var existing = await db.Set<TeacherProfile>().SingleOrDefaultAsync(cancellationToken);
+        // The version the client loaded must still be current: otherwise the form is stale (another tab or
+        // device saved in between) and replacing the fields would silently lose that save.
+        // (0 and null both mean "no field save yet", e.g. a profile created only by a photo upload.)
+        if ((request.Version ?? 0) != (existing?.Version ?? 0))
+        {
+            throw new ConflictException("The profile was changed elsewhere. Reload it and apply your changes again.", ErrorCodes.ConcurrencyConflict);
+        }
+
+        var profile = existing ?? await LoadOrCreateAsync(now, cancellationToken);
+        profile.Version++;
         profile.FirstName = Clean(request.FirstName);
         profile.LastName = Clean(request.LastName);
         profile.Bio = Clean(request.Bio);
@@ -198,7 +208,7 @@ internal sealed partial class TeacherProfileService(
         return new OnboardingResponse(steps, steps.Count(s => s.Completed), steps.Length);
     }
 
-    private static readonly TeacherProfileResponse Empty = new(null, null, null, null, null, [], [], [], false, null, null);
+    private static readonly TeacherProfileResponse Empty = new(null, null, null, null, null, [], [], [], false, null, null, null);
 
     private async Task<TeacherProfile> LoadOrCreateAsync(DateTime now, CancellationToken cancellationToken)
     {
@@ -224,7 +234,7 @@ internal sealed partial class TeacherProfileService(
         return new TeacherProfileResponse(
             profile.FirstName, profile.LastName, profile.Bio, profile.TeachingMode?.ToString(), profile.CountryCode,
             [.. subjects.Order()], [.. levels.Order()], [.. languages.Order(StringComparer.Ordinal)],
-            photoVersion is not null, photoVersion, profile.UpdatedAtUtc);
+            photoVersion is not null, photoVersion, profile.UpdatedAtUtc, profile.Version);
     }
 
     private async Task DeleteBlobAsync(string? key)

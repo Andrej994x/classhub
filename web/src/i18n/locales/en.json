@@ -203,6 +203,7 @@
       "tooManySubjects": "Choose at most 20 subjects.",
       "tooManyLevels": "Choose at most 10 education levels.",
       "tooManyLanguages": "Choose at most 10 teaching languages."
-    }
+    },
+    "changedElsewhere": "The profile was changed elsewhere (another tab or device). Reload the page and apply your changes again."
   }
 }

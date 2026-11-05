@@ -54,8 +54,9 @@ export const CATALOG = {
 };
 
 export const EMPTY_PROFILE = {
-  firstName: null, lastName: null, bio: null, teachingMode: null, countryCode: null,
-  subjectIds: [] as string[], levelIds: [] as string[], languages: [] as string[], hasPhoto: false, photoVersion: null as string | null, updatedAtUtc: null,
+  firstName: null as string | null, lastName: null as string | null, bio: null as string | null,
+  teachingMode: null as string | null, countryCode: null as string | null,
+  subjectIds: [] as string[], levelIds: [] as string[], languages: [] as string[], hasPhoto: false, photoVersion: null as string | null, updatedAtUtc: null, version: null as number | null,
 };
 
 export const ONBOARDING = (completed: number) => ({

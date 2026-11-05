@@ -106,6 +106,51 @@ public sealed class TeacherProfileTests(ClassHubApiFixture fixture)
         (await db.AuditLog.CountAsync(a => a.Action == "workspace.settings.updated" && a.WorkspaceId == teacher.WorkspaceId, Ct)).ShouldBe(1);
     }
 
+    [Fact]
+    public async Task A_stale_form_cannot_overwrite_a_newer_save()
+    {
+        using var teacher = await fixture.CreateTeacherAsync();
+        var path = ProfilePath(teacher.WorkspaceId);
+        var first = await PutProfileAsync(teacher, new { firstName = "Ана" });
+        var loadedVersion = first.Version;
+
+        // Tab A saves on top of the loaded version ...
+        using (var tabA = await teacher.Client.PutAsync(path, new { firstName = "Ана Марија", version = loadedVersion }))
+        {
+            tabA.StatusCode.ShouldBe(HttpStatusCode.OK);
+        }
+
+        // ... then tab B, still on the old version, is refused and changes nothing.
+        using (var tabB = await teacher.Client.PutAsync(path, new { firstName = "Стара", version = loadedVersion }))
+        {
+            tabB.StatusCode.ShouldBe(HttpStatusCode.Conflict);
+            (await tabB.ErrorCodeAsync()).ShouldBe(ErrorCodes.ConcurrencyConflict);
+        }
+
+        using (var noVersion = await teacher.Client.PutAsync(path, new { firstName = "Без верзија" }))
+        {
+            noVersion.StatusCode.ShouldBe(HttpStatusCode.Conflict);
+        }
+
+        (await teacher.Client.GetJsonAsync<TeacherProfileResponse>(path)).FirstName.ShouldBe("Ана Марија");
+    }
+
+    [Fact]
+    public async Task A_photo_upload_does_not_make_an_open_form_stale()
+    {
+        using var teacher = await fixture.CreateTeacherAsync();
+        var path = ProfilePath(teacher.WorkspaceId);
+        var loaded = await teacher.Client.GetJsonAsync<TeacherProfileResponse>(path); // no profile yet: version null
+
+        (await UploadPhotoAsync(teacher, TestImages.Png(300, 300))).Dispose();
+
+        using var save = await teacher.Client.PutAsync(path, new { firstName = "Ана", version = loaded.Version });
+        save.StatusCode.ShouldBe(HttpStatusCode.OK, await save.Content.ReadAsStringAsync(Ct));
+        var saved = await save.Content.ReadFromJsonAsync<TeacherProfileResponse>(Ct);
+        saved!.HasPhoto.ShouldBeTrue();
+        saved.Version.ShouldBe(1);
+    }
+
     [Theory]
     [InlineData("timeZone", "Mars/Olympus")]
     [InlineData("currency", "ABC")]
@@ -296,9 +341,13 @@ public sealed class TeacherProfileTests(ClassHubApiFixture fixture)
         languages = new[] { "mk", "en", "mk" },
     };
 
+    /// <summary>Saves like the SPA does: with the version of the profile as currently stored.</summary>
     private static async Task<TeacherProfileResponse> PutProfileAsync(TeacherSession teacher, object body)
     {
-        using var response = await teacher.Client.PutAsync(ProfilePath(teacher.WorkspaceId), body);
+        var current = await teacher.Client.GetJsonAsync<TeacherProfileResponse>(ProfilePath(teacher.WorkspaceId));
+        var withVersion = System.Text.Json.JsonSerializer.SerializeToNode(body, System.Text.Json.JsonSerializerOptions.Web)!.AsObject();
+        withVersion["version"] = current.Version;
+        using var response = await teacher.Client.PutAsync(ProfilePath(teacher.WorkspaceId), withVersion);
         response.StatusCode.ShouldBe(HttpStatusCode.OK, await response.Content.ReadAsStringAsync(Ct));
         return (await response.Content.ReadFromJsonAsync<TeacherProfileResponse>(Ct))!;
     }

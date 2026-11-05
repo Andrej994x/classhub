@@ -1069,7 +1069,8 @@
           "languages",
           "hasPhoto",
           "photoVersion",
-          "updatedAtUtc"
+          "updatedAtUtc",
+          "version"
         ],
         "type": "object",
         "properties": {
@@ -1138,6 +1139,15 @@
               "string"
             ],
             "format": "date-time"
+          },
+          "version": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
           }
         }
       },
@@ -1245,6 +1255,15 @@
               "null",
               "string"
             ]
+          },
+          "version": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
           }
         }
       },

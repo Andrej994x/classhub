@@ -41,6 +41,8 @@ const schema = z.object({
   languages: z.array(z.string()).max(10, 'profile.validation.tooManyLanguages'),
   timeZone: z.string().min(1),
   currency: z.string().length(3),
+  /** The profile version this form was loaded from (optimistic concurrency). */
+  version: z.number().nullable(),
 });
 type ProfileForm = z.infer<typeof schema>;
 
@@ -56,6 +58,7 @@ function toForm(profile: TeacherProfile, workspace: Workspace): ProfileForm {
     languages: [...profile.languages],
     timeZone: workspace.timeZone,
     currency: workspace.currency,
+    version: profile.version === null || profile.version === undefined ? null : Number(profile.version),
   };
 }
 
@@ -205,6 +208,7 @@ function ProfileFormCard({ workspaceId, profile, workspace, catalog }: { workspa
         languages: values.languages,
         timeZone: settingsChanged ? values.timeZone : null,
         currency: settingsChanged ? values.currency : null,
+        version: values.version,
       })
       .then((saved) => form.reset(toForm(saved, { ...workspace, timeZone: values.timeZone, currency: values.currency })))
       .catch(() => undefined);
@@ -316,7 +320,11 @@ function ProfileFormCard({ workspaceId, profile, workspace, catalog }: { workspa
         </CardContent>
       </Card>
 
-      {save.error && <Alert variant="error">{errorMessage(save.error, t)}</Alert>}
+      {save.error && (
+        <Alert variant="error">
+          {save.error instanceof ApiError && save.error.code === 'CONCURRENCY_CONFLICT' ? t('profile.changedElsewhere') : errorMessage(save.error, t)}
+        </Alert>
+      )}
       {save.isSuccess && !isDirty && <Alert variant="success">{t('profile.saved')}</Alert>}
       <div className="sticky bottom-0 -mx-4 border-t border-border bg-background/95 px-4 py-3 backdrop-blur md:static md:mx-0 md:border-0 md:bg-transparent md:p-0">
         <Button type="submit" className="w-full sm:w-auto" disabled={isSubmitting}>

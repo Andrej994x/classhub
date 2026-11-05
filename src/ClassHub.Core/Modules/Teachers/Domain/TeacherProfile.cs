@@ -40,6 +40,12 @@ public sealed class TeacherProfile : ITenantOwned
 
     public DateTime UpdatedAtUtc { get; set; }
 
+    /// <summary>
+    /// Optimistic concurrency for the profile fields: clients send the version they loaded and stale saves are
+    /// rejected. Photo changes do not count, so uploading a photo does not invalidate an open form.
+    /// </summary>
+    public int Version { get; set; }
+
     public byte[] RowVersion { get; set; } = [];
 }
 

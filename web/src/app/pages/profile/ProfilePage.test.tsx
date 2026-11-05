@@ -58,10 +58,27 @@ describe('profile page', () => {
         languages: ['mk'],
         timeZone: 'Europe/Skopje',
         currency: 'EUR',
+        version: null, // the version the form was loaded from (no profile yet)
       },
     });
     // One request, so the API can save profile and settings atomically.
     expect(api.to(`/api/w/${WORKSPACE_ID}`, 'PATCH')).toHaveLength(0);
+  });
+
+  it('explains a save that conflicts with a newer one (another tab or device)', async () => {
+    const user = userEvent.setup();
+    const api = fakeApi({
+      me: teacher(),
+      extra: [(call) => (call.method === 'PUT' && call.path === PROFILE_PATH ? problem(409, 'CONCURRENCY_CONFLICT') : undefined)],
+    });
+    api.state.profile = { ...EMPTY_PROFILE, firstName: 'Ана', version: 3 };
+    await renderRoute(`/app/w/${WORKSPACE_ID}/profile`);
+
+    await user.type(await screen.findByLabelText('Презиме'), 'Петровска');
+    await user.click(screen.getByRole('button', { name: 'Зачувај профил' }));
+
+    expect(await screen.findByText(/Профилот е променет на друго место/)).toBeInTheDocument();
+    expect(api.to(PROFILE_PATH, 'PUT')[0]?.body).toMatchObject({ version: 3 });
   });
 
   it('does not touch the workspace settings when only the profile changed', async () => {
