@@ -114,7 +114,8 @@ function SiteEditor({ workspaceId, site }: { workspaceId: string; site: Site }) 
         <h1 className="text-2xl font-semibold tracking-tight">{t('site.title')}</h1>
         <p className="text-sm text-muted-foreground">{t('site.lead')}</p>
       </div>
-      <PublishCard workspaceId={workspaceId} site={site} dirty={isDirty} onChanged={(saved) => form.reset(toForm(saved))} />
+      {/* Publishing never touches the draft: unsaved edits stay (keepDirtyValues), only the version follows the server. */}
+      <PublishCard workspaceId={workspaceId} site={site} dirty={isDirty} onChanged={(saved) => form.reset(toForm(saved), { keepDirtyValues: true })} />
       <form noValidate onSubmit={onSubmit} className="flex flex-col gap-6">
         <fieldset disabled={isSubmitting} aria-busy={isSubmitting} className="contents">
           <SettingsCard workspaceId={workspaceId} savedSlug={exists ? site.slug : null} published={site.isPublished} form={form} />

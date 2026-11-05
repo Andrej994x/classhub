@@ -159,4 +159,26 @@ describe('site editor', () => {
     await user.type(slug, 'ana-nova');
     expect(screen.getByText(/со зачувување на новата адреса се преместува веднаш/)).toBeInTheDocument();
   });
+
+  it('keeps unsaved edits when the page is unpublished and saves them with the new version', async () => {
+    const user = userEvent.setup();
+    const api = fakeApi({ me: teacher() });
+    api.state.site = { ...api.state.site, exists: true, isPublished: true, publishedAtUtc: '2026-11-05T10:30:00Z', version: 5 };
+    await renderRoute(PAGE);
+
+    const headline = await screen.findByLabelText('Наслов');
+    await user.clear(headline);
+    await user.type(headline, 'Нов наслов');
+    const card = screen.getByTestId('publish-card');
+    await user.click(within(card).getByRole('button', { name: 'Повлечи од објава' }));
+    await user.click(within(card).getByRole('button', { name: 'Да, повлечи' }));
+    expect(await within(card).findByText('Страницата не е објавена')).toBeInTheDocument();
+
+    expect(screen.getByLabelText('Наслов')).toHaveValue('Нов наслов');
+    await user.click(screen.getByRole('button', { name: 'Зачувај скица' }));
+    expect(await screen.findByText('Скицата е зачувана.')).toBeInTheDocument();
+    const body = api.to(API, 'PUT')[0]!.body as { version: number | null; draft: { sections: { type: string; title: string | null }[] } };
+    expect(body.version).toBe(6);
+    expect(body.draft.sections.find((s) => s.type === 'hero')?.title).toBe('Нов наслов');
+  });
 });

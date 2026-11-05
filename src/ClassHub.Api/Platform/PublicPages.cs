@@ -22,7 +22,7 @@ public sealed class CountsSitePageViewsAttribute : Attribute;
 /// </summary>
 internal sealed partial class SitePageViewMiddleware(RequestDelegate next)
 {
-    public async Task InvokeAsync(HttpContext context, IPublicSites sites)
+    public async Task InvokeAsync(HttpContext context)
     {
         await next(context);
 
@@ -36,8 +36,9 @@ internal sealed partial class SitePageViewMiddleware(RequestDelegate next)
             return;
         }
 
-        // The response is complete; counting must not depend on the client still listening.
-        await sites.RecordViewAsync(slug, CancellationToken.None);
+        // Resolved only here, so other requests do not build the public-site services. The response is complete;
+        // counting must not depend on the client still listening.
+        await context.RequestServices.GetRequiredService<IPublicSites>().RecordViewAsync(slug, CancellationToken.None);
     }
 
     internal static bool IsLikelyVisitor(HttpRequest request)
