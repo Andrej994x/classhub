@@ -337,6 +337,15 @@ public sealed class TeacherProfileTests(ClassHubApiFixture fixture)
             (await json.ErrorCodeAsync()).ShouldBe(ErrorCodes.UnsupportedMediaType);
         }
 
+        // multipart/form-data without a boundary (malformed): a client error with a stable code, never a 500.
+        var noBoundary = new ByteArrayContent("garbage"u8.ToArray());
+        noBoundary.Headers.TryAddWithoutValidation("Content-Type", "multipart/form-data");
+        using (var malformed = await teacher.Client.SendContentAsync(HttpMethod.Put, path, noBoundary))
+        {
+            malformed.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
+            (await malformed.ErrorCodeAsync()).ShouldBe(ErrorCodes.BadRequest);
+        }
+
         using var request = new HttpRequestMessage(HttpMethod.Put, new Uri(path, UriKind.Relative)) { Content = PhotoContent(TestImages.Png(300, 300), "a.png", "image/png") };
         using var noToken = await teacher.Client.Http.SendAsync(request, Ct);
         noToken.StatusCode.ShouldBe(HttpStatusCode.BadRequest);

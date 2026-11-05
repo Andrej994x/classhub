@@ -57,7 +57,16 @@ public sealed class TeachersModule : IModule
                     throw new BadRequestException("Send the photo as multipart/form-data.", ErrorCodes.UnsupportedMediaType);
                 }
 
-                var form = await http.Request.ReadFormAsync(ct);
+                IFormCollection form;
+                try
+                {
+                    form = await http.Request.ReadFormAsync(ct);
+                }
+                catch (InvalidDataException)
+                {
+                    // Malformed multipart (no boundary, broken parts, too many parts): the client's fault, not ours.
+                    throw new BadRequestException("The upload is not valid multipart/form-data.", ErrorCodes.BadRequest);
+                }
                 var file = form.Files.GetFile("file") ?? throw new BadRequestException("The form has no file part named 'file'.", ErrorCodes.ImageInvalid);
                 if (file.Length > ImageRules.ProfilePhoto.MaxBytes)
                 {
