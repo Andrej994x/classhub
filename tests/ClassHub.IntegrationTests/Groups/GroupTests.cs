@@ -152,6 +152,32 @@ public sealed class GroupTests(ClassHubApiFixture fixture)
     }
 
     [Fact]
+    public async Task Re_adding_a_former_member_to_a_full_group_is_refused()
+    {
+        using var teacher = await fixture.CreateTeacherAsync();
+        var group = await CreateAsync(teacher, new { name = "Полна група" });
+        var now = DateTime.UtcNow;
+        var students = Enumerable.Range(0, Group.MaxMembers + 1)
+            .Select(i => new Student { Id = Guid.CreateVersion7(), WorkspaceId = teacher.WorkspaceId, FirstName = $"Ученик {i}", CreatedAtUtc = now, UpdatedAtUtc = now })
+            .ToList();
+        await using (var db = fixture.CreateDbContext())
+        {
+            db.Set<Student>().AddRange(students);
+            db.Set<GroupMember>().AddRange(students.Take(Group.MaxMembers)
+                .Select(s => new GroupMember { WorkspaceId = teacher.WorkspaceId, GroupId = group.Id, StudentId = s.Id, AddedAtUtc = now }));
+            await db.SaveChangesAsync(Ct);
+        }
+
+        // A place frees up and is taken by someone else; the former member cannot come back over the cap.
+        (await teacher.Client.DeleteAsync(Path(teacher, $"/{group.Id}/members/{students[0].Id}"))).StatusCode.ShouldBe(HttpStatusCode.OK);
+        await AddAsync(teacher, group.Id, students[^1].Id);
+        using var readd = await teacher.Client.PostAsync(Path(teacher, $"/{group.Id}/members"), new { studentId = students[0].Id });
+
+        readd.StatusCode.ShouldBe(HttpStatusCode.UnprocessableEntity);
+        (await teacher.Client.GetJsonAsync<GroupResponse>(Path(teacher, $"/{group.Id}"))).Members.Count.ShouldBe(Group.MaxMembers);
+    }
+
+    [Fact]
     public async Task Another_teacher_cannot_see_or_change_a_group()
     {
         using var owner = await fixture.CreateTeacherAsync();

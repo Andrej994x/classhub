@@ -43,7 +43,7 @@ Flows (each in **mk and en**, on **desktop and mobile**): register → dev mailb
 
 ## Group tests (R2-P2)
 
-- Integration: `GroupTests` (build a group and put a student in several groups; adding twice is a no-op and leaves the version; version conflicts; remove/re-add/archive keep the rows; archived groups take no members; a student of another workspace is rejected by the API (400) and by the composite FK (547); archived students are blocked; isolation; **three parallel adds for the last of 100 places → exactly one**). The isolation sweep covers the new routes automatically.
+- Integration: `GroupTests` (build a group and put a student in several groups; adding twice is a no-op and leaves the version; version conflicts; remove/re-add/archive keep the rows; archived groups take no members; a student of another workspace is rejected by the API (400) and by the composite FK (547); archived students are blocked; isolation; **three parallel adds for the last of 100 places → exactly one**; re-adding a former member to a full group is refused). The isolation sweep covers the new routes automatically.
 - Vitest: `GroupsPages.test.tsx` (list with counts, create with validation, add/remove members while unsaved details survive and save with the loaded version, picker search, conflict on save after a refetch, archive, groups on the student page).
 
 ## Student tests (R2-P1)

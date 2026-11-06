@@ -100,23 +100,25 @@ internal sealed class GroupService(ClassHubDbContext db, GroupQueries queries, I
 
         var now = clock.GetUtcNow().UtcDateTime;
         var member = await db.Set<GroupMember>().SingleOrDefaultAsync(m => m.GroupId == group.Id && m.StudentId == studentId, cancellationToken);
+        if (member is { RemovedAtUtc: null })
+        {
+            return await GetAsync(group.Id, cancellationToken); // already a member: nothing changes
+        }
+
+        // New and reopened memberships both take a place (checked under the members lock).
+        if (await db.Set<GroupMember>().CountAsync(m => m.GroupId == group.Id && m.RemovedAtUtc == null, cancellationToken) >= Group.MaxMembers)
+        {
+            throw new BusinessRuleException($"A group has at most {Group.MaxMembers} students.");
+        }
+
         if (member is null)
         {
-            if (await db.Set<GroupMember>().CountAsync(m => m.GroupId == group.Id && m.RemovedAtUtc == null, cancellationToken) >= Group.MaxMembers)
-            {
-                throw new BusinessRuleException($"A group has at most {Group.MaxMembers} students.");
-            }
-
             db.Set<GroupMember>().Add(new GroupMember { WorkspaceId = group.WorkspaceId, GroupId = group.Id, StudentId = studentId, AddedAtUtc = now });
-        }
-        else if (member.RemovedAtUtc is not null)
-        {
-            member.RemovedAtUtc = null;
-            member.AddedAtUtc = now;
         }
         else
         {
-            return await GetAsync(group.Id, cancellationToken); // already a member: nothing changes
+            member.RemovedAtUtc = null;
+            member.AddedAtUtc = now;
         }
 
         // Membership changes are their own idempotent operations: they do not move the version of the group's details,
