@@ -22,6 +22,7 @@ public sealed class StudentsModule : IModule
     {
         services.AddScoped<StudentQueries>();
         services.AddScoped<StudentService>();
+        services.AddScoped<IStudentLookup, StudentLookup>();
     }
 
     public void MapEndpoints(IEndpointRouteBuilder endpoints)

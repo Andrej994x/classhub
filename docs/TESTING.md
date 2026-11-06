@@ -41,6 +41,11 @@ npm run e2e                                # builds the SPA and the API, then ru
 
 Flows (each in **mk and en**, on **desktop and mobile**): register → dev mailbox → confirm → sign in → the dashboard shows the workspace → sign out; forgot password → reset link → the old password fails, the new one works; a second teacher opening the first teacher's workspace URL sees "not found". Texts come from the app's locale files, so wording changes do not break tests. CI job `e2e` uploads the HTML report and traces on failure.
 
+## Group tests (R2-P2)
+
+- Integration: `GroupTests` (build a group and put a student in several groups; adding twice is a no-op and leaves the version; version conflicts; remove/re-add/archive keep the rows; archived groups take no members; a student of another workspace is rejected by the API (400) and by the composite FK (547); archived students are blocked; isolation; **three parallel adds for the last of 100 places → exactly one**; re-adding a former member to a full group is refused). The isolation sweep covers the new routes automatically.
+- Vitest: `GroupsPages.test.tsx` (list with counts, create with validation, add/remove members while unsaved details survive and save with the loaded version, picker search, conflict on save after a refetch, archive, groups on the student page).
+
 ## Student tests (R2-P1)
 
 - Integration: `StudentTests` (add/edit/archive/restore a minor with guardian and subjects, version conflicts, search; isolation; unique email among a teacher's students incl. archived, separate per teacher; conversion creates once, is idempotent and links later requests by email; **five parallel conversions of one request create exactly one student**; Free limit of 10 active students with three parallel adds for the last place → exactly one, conversion blocked at the limit, archived students do not count, restore blocked at the limit; private notes not in student responses; validation).

@@ -17,6 +17,7 @@ import { ForgotPasswordPage, LoginPage, RegisterPage, ResetPasswordPage, VerifyE
 import { OfferEditPage } from './pages/offers/OfferEditPage.tsx';
 import { OffersPage } from './pages/offers/OffersPage.tsx';
 import { PlanPage } from './pages/plan/PlanPage.tsx';
+import { GroupEditPage, GroupsPage } from './pages/groups/GroupsPages.tsx';
 import { StudentEditPage, StudentsPage } from './pages/students/StudentsPages.tsx';
 import { ProfilePage } from './pages/profile/ProfilePage.tsx';
 import { SiteEditorPage } from './pages/site/SiteEditorPage.tsx';
@@ -59,6 +60,9 @@ export const routes: RouteObject[] = [
       { path: 'w/:workspaceId/students', element: <StudentsPage /> },
       { path: 'w/:workspaceId/students/new', element: <StudentEditPage /> },
       { path: 'w/:workspaceId/students/:studentId', element: <StudentEditPage /> },
+      { path: 'w/:workspaceId/groups', element: <GroupsPage /> },
+      { path: 'w/:workspaceId/groups/new', element: <GroupEditPage /> },
+      { path: 'w/:workspaceId/groups/:groupId', element: <GroupEditPage /> },
       { path: 'w/:workspaceId/offers', element: <OffersPage /> },
       { path: 'w/:workspaceId/offers/new', element: <OfferEditPage /> },
       { path: 'w/:workspaceId/offers/:offerId', element: <OfferEditPage /> },

@@ -58,6 +58,7 @@ function studentsApi() {
       return json(201, note);
     }
     if (call.path === `${BASE}/from-lead`) return json(200, { student: state.students[0], created: true });
+    if (call.path === `/api/w/${WORKSPACE_ID}/groups` && call.method === 'GET') return json(200, []); // the student page's groups card
     return undefined;
   };
   const api = fakeApi({ me: teacher(), extra: [handler] });

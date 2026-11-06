@@ -375,6 +375,104 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/w/{workspaceId}/groups": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Active (or archived) groups by name; optionally only those a student is a member of. */
+        get: operations["ListGroups"];
+        put?: never;
+        post: operations["CreateGroup"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/w/{workspaceId}/groups/{groupId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetGroup"];
+        put: operations["UpdateGroup"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/w/{workspaceId}/groups/{groupId}/archive": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["ArchiveGroup"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/w/{workspaceId}/groups/{groupId}/restore": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["RestoreGroup"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/w/{workspaceId}/groups/{groupId}/members": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["AddGroupMember"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/w/{workspaceId}/groups/{groupId}/members/{studentId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** End the membership; the record stays for the lesson history. */
+        delete: operations["RemoveGroupMember"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/auth/antiforgery": {
         parameters: {
             query?: never;
@@ -1257,6 +1355,10 @@ export interface components {
             paidOn: null | string;
             note: null | string;
         };
+        AddGroupMemberRequest: {
+            /** Format: uuid */
+            studentId: null | string;
+        };
         AddLeadNoteRequest: {
             text: null | string;
         };
@@ -1625,6 +1727,47 @@ export interface components {
         EmailRequest: {
             email: null | string;
         };
+        GroupListItem: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            /** Format: uuid */
+            subjectId: null | string;
+            /** Format: int32 */
+            memberCount: number | string;
+            archived: boolean;
+            /** Format: date-time */
+            updatedAtUtc: string;
+        };
+        GroupMemberResponse: {
+            /** Format: uuid */
+            studentId: string;
+            firstName: string;
+            lastName: null | string;
+            studentArchived: boolean;
+            /** Format: date-time */
+            addedAtUtc: string;
+        };
+        GroupResponse: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            /** Format: uuid */
+            subjectId: null | string;
+            description: null | string;
+            archived: boolean;
+            members: components["schemas"]["GroupMemberResponse"][];
+            /** Format: date-time */
+            createdAtUtc: string;
+            /** Format: date-time */
+            updatedAtUtc: string;
+            /** Format: int32 */
+            version: number | string;
+        };
+        GroupVersionRequest: {
+            /** Format: int32 */
+            version: null | number | string;
+        };
         HiddenContentResponse: {
             /** Format: uuid */
             workspaceId: string;
@@ -1913,6 +2056,14 @@ export interface components {
             questions: null | components["schemas"]["SaveTestQuestion"][];
             /** Format: int32 */
             version?: null | number | string;
+        };
+        SaveGroupRequest: {
+            name: null | string;
+            /** Format: uuid */
+            subjectId: null | string;
+            description: null | string;
+            /** Format: int32 */
+            version: null | number | string;
         };
         SaveOfferRequest: {
             kind: null | string;
@@ -2951,6 +3102,239 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["TestAttemptsResponse"];
+                };
+            };
+        };
+    };
+    ListGroups: {
+        parameters: {
+            query?: {
+                archived?: boolean;
+                studentId?: string;
+            };
+            header?: never;
+            path: {
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GroupListItem"][];
+                };
+            };
+        };
+    };
+    CreateGroup: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SaveGroupRequest"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GroupResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["HttpValidationProblemDetails"];
+                };
+            };
+        };
+    };
+    GetGroup: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                groupId: string;
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GroupResponse"];
+                };
+            };
+        };
+    };
+    UpdateGroup: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                groupId: string;
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SaveGroupRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GroupResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["HttpValidationProblemDetails"];
+                };
+            };
+        };
+    };
+    ArchiveGroup: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                groupId: string;
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["GroupVersionRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GroupResponse"];
+                };
+            };
+        };
+    };
+    RestoreGroup: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                groupId: string;
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["GroupVersionRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GroupResponse"];
+                };
+            };
+        };
+    };
+    AddGroupMember: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                groupId: string;
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AddGroupMemberRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GroupResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["HttpValidationProblemDetails"];
+                };
+            };
+        };
+    };
+    RemoveGroupMember: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                groupId: string;
+                studentId: string;
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GroupResponse"];
                 };
             };
         };
