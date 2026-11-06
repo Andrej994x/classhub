@@ -135,7 +135,9 @@ export function StudentEditPage() {
 
   if (studentId && student.isError) return student.error instanceof ApiError && student.error.status === 404 ? <NotFoundContent /> : <Alert variant="error">{errorMessage(student.error, t)}</Alert>;
   if (studentId && !student.data) return <output className="block">{t('common.loading')}</output>;
-  return <StudentEditor key={`${studentId ?? 'new'}-${student.data?.version ?? 0}`} workspaceId={workspaceId} student={studentId ? student.data : undefined} />;
+  // Keyed by the student only: a background refetch (another tab saved meanwhile) must never remount a form with unsaved
+  // edits. The editor keeps the version it loaded; a newer one elsewhere surfaces as a conflict on save.
+  return <StudentEditor key={studentId ?? 'new'} workspaceId={workspaceId} student={studentId ? student.data : undefined} />;
 }
 
 function StudentEditor({ workspaceId, student }: { workspaceId: string; student: Student | undefined }) {
@@ -156,6 +158,8 @@ function StudentEditor({ workspaceId, student }: { workspaceId: string; student:
     subjectIds: [...(student?.subjectIds ?? [])],
   });
   const [errors, setErrors] = useState<Partial<Record<keyof StudentInput, string>>>({});
+  // The version this editing session is based on: its own saves and archive changes move it, refetches do not.
+  const [version, setVersion] = useState<number | null>(student ? (num(student.version) ?? 0) : null);
   const set = <K extends keyof StudentInput>(key: K, value: StudentInput[K]) => setValues((current) => ({ ...current, [key]: value }));
   const text = (key: 'firstName' | 'lastName' | 'email' | 'phone' | 'guardianName' | 'guardianEmail' | 'guardianPhone') => ({
     value: values[key] ?? '',
@@ -172,7 +176,8 @@ function StudentEditor({ workspaceId, student }: { workspaceId: string; student:
     setErrors(found);
     if (Object.keys(found).length > 0) return;
     try {
-      const saved = await save.mutateAsync({ input: values, version: student ? (num(student.version) ?? 0) : null });
+      const saved = await save.mutateAsync({ input: values, version });
+      setVersion(num(saved.version) ?? 0);
       if (!student) void navigate(`/app/w/${workspaceId}/students/${saved.id}`, { replace: true });
     } catch {
       // shown below
@@ -250,13 +255,13 @@ function StudentEditor({ workspaceId, student }: { workspaceId: string; student:
         </Button>
       </form>
 
-      {student && <ArchiveCard workspaceId={workspaceId} student={student} />}
+      {student && version !== null && <ArchiveCard workspaceId={workspaceId} student={student} version={version} onChanged={(changed) => setVersion(num(changed.version) ?? 0)} />}
       {student && <NotesCard workspaceId={workspaceId} studentId={student.id} />}
     </section>
   );
 }
 
-function ArchiveCard({ workspaceId, student }: { workspaceId: string; student: Student }) {
+function ArchiveCard({ workspaceId, student, version, onChanged }: { workspaceId: string; student: Student; version: number; onChanged: (changed: Student) => void }) {
   const { t } = useTranslation();
   const archive = useArchiveStudent(workspaceId, student.id);
   return (
@@ -266,8 +271,10 @@ function ArchiveCard({ workspaceId, student }: { workspaceId: string; student: S
         <CardDescription>{student.archived ? t('students.restoreLead') : t('students.archiveLead')}</CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-3">
-        {archive.error && <Alert variant="error">{errorMessage(archive.error, t)}</Alert>}
-        <Button type="button" variant="outline" className="self-start" disabled={archive.isPending} onClick={() => archive.mutate({ archived: !student.archived, version: num(student.version) ?? 0 })}>
+        {archive.error && (
+          <Alert variant="error">{archive.error instanceof ApiError && archive.error.code === 'CONCURRENCY_CONFLICT' ? t('students.changedElsewhere') : errorMessage(archive.error, t)}</Alert>
+        )}
+        <Button type="button" variant="outline" className="self-start" disabled={archive.isPending} onClick={() => archive.mutate({ archived: !student.archived, version }, { onSuccess: onChanged })}>
           {student.archived ? t('students.restore') : t('students.archive')}
         </Button>
       </CardContent>

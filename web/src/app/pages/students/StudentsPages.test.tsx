@@ -1,4 +1,4 @@
-import { screen, within } from '@testing-library/react';
+import { act, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
 import { fakeApi, json, LEAD, problem, SUBJECT_MATH, teacher, WORKSPACE_ID, type FakeCall } from '../../../test/fakeApi.ts';
@@ -133,6 +133,28 @@ describe('students', () => {
     await user.click(screen.getByRole('button', { name: 'Архивирај ученик' }));
     expect(await screen.findByRole('button', { name: 'Врати ученик' })).toBeInTheDocument();
     expect(api.to(`${BASE}/s1/archive`)[0]!.body).toEqual({ version: 1 });
+  });
+
+  it('keeps unsaved edits when another tab changed the student, and reports the conflict on save', async () => {
+    const user = userEvent.setup();
+    const { api, state } = studentsApi();
+    const { queryClient } = await renderRoute(`/app/w/${WORKSPACE_ID}/students/s1`);
+
+    const last = await screen.findByLabelText('Презиме (по желба)');
+    await user.clear(last);
+    await user.type(last, 'Мое уредување');
+    await user.type(screen.getByLabelText('Нова белешка'), 'Недовршена белешка');
+
+    // Another tab saved meanwhile; this tab refetches (for example after a reconnect).
+    state.students[0] = student({ ...state.students[0], phone: '+389 70 999 999', version: 5 });
+    await act(() => queryClient.invalidateQueries());
+    await expect.poll(() => api.to(`${BASE}/s1`, 'GET').length).toBeGreaterThan(1);
+
+    expect(screen.getByLabelText('Презиме (по желба)')).toHaveValue('Мое уредување');
+    expect(screen.getByLabelText('Нова белешка')).toHaveValue('Недовршена белешка');
+    await user.click(screen.getByRole('button', { name: 'Зачувај' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('Ученикот е изменет на друго место.');
+    expect(api.to(`${BASE}/s1`, 'PUT').at(-1)!.body).toMatchObject({ version: 0 });
   });
 
   it('turns a request into a student from the lead page', async () => {
