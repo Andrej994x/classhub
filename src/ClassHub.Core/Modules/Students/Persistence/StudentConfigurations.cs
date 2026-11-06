@@ -31,6 +31,11 @@ internal sealed class StudentConfiguration : IEntityTypeConfiguration<Student>
         builder.HasIndex(x => new { x.WorkspaceId, x.Email }).IsUnique().HasFilter("[Email] IS NOT NULL");
         builder.HasIndex(x => new { x.WorkspaceId, x.ArchivedAtUtc, x.LastName });
         builder.HasOne(WorkspaceForeignKeyTargets.Workspace, navigationName: null).WithMany().HasForeignKey(nameof(Student.WorkspaceId)).OnDelete(DeleteBehavior.NoAction);
+        // The request a student came from belongs to the same workspace (composite tenant FK).
+        builder.HasOne(ClassHub.Core.Modules.Leads.Contracts.LeadForeignKeyTargets.Lead, navigationName: null).WithMany()
+            .HasForeignKey(nameof(Student.WorkspaceId), nameof(Student.SourceLeadId))
+            .HasPrincipalKey("WorkspaceId", "Id")
+            .OnDelete(DeleteBehavior.NoAction);
     }
 }
 

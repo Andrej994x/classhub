@@ -139,6 +139,25 @@ public sealed class StudentTests(ClassHubApiFixture fixture)
     }
 
     [Fact]
+    public async Task The_database_keeps_students_and_requests_in_one_workspace()
+    {
+        using var teacher = await fixture.CreateTeacherAsync();
+        using var other = await fixture.CreateTeacherAsync();
+        var foreignLead = await AddLeadAsync(other, "Туѓ", "foreign@example.test", null);
+        var student = await CreateAsync(teacher, new { firstName = "Сопствен" });
+        var otherStudent = await CreateAsync(other, new { firstName = "Туѓ ученик" });
+        var ownLead = await AddLeadAsync(teacher, "Сопствено барање", "own@example.test", null);
+
+        await using var db = fixture.CreateDbContext();
+        var sourceError = await Should.ThrowAsync<Microsoft.Data.SqlClient.SqlException>(() =>
+            db.Database.ExecuteSqlAsync($"UPDATE Students SET SourceLeadId = {foreignLead} WHERE Id = {student.Id}", Ct));
+        sourceError.Number.ShouldBe(547); // composite tenant FK: a request of another workspace
+        var leadError = await Should.ThrowAsync<Microsoft.Data.SqlClient.SqlException>(() =>
+            db.Database.ExecuteSqlAsync($"UPDATE Leads SET StudentId = {otherStudent.Id} WHERE Id = {ownLead}", Ct));
+        leadError.Number.ShouldBe(547); // composite tenant FK: a student of another workspace
+    }
+
+    [Fact]
     public async Task A_double_submitted_conversion_creates_exactly_one_student()
     {
         using var teacher = await fixture.CreateTeacherAsync();

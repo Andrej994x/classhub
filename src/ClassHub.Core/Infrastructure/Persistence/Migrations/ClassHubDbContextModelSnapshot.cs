@@ -1610,6 +1610,8 @@ namespace ClassHub.Core.Infrastructure.Persistence.Migrations
                         .IsUnique()
                         .HasFilter("[Email] IS NOT NULL");
 
+                    b.HasIndex("WorkspaceId", "SourceLeadId");
+
                     b.HasIndex("WorkspaceId", "ArchivedAtUtc", "LastName");
 
                     b.ToTable("Students", null, t =>
@@ -2437,6 +2439,12 @@ namespace ClassHub.Core.Infrastructure.Persistence.Migrations
                         .HasForeignKey("WorkspaceId")
                         .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
+
+                    b.HasOne("ClassHub.Core.Modules.Leads.Domain.Lead", null)
+                        .WithMany()
+                        .HasForeignKey("WorkspaceId", "SourceLeadId")
+                        .HasPrincipalKey("WorkspaceId", "Id")
+                        .OnDelete(DeleteBehavior.NoAction);
                 });
 
             modelBuilder.Entity("ClassHub.Core.Modules.Students.Domain.StudentNote", b =>

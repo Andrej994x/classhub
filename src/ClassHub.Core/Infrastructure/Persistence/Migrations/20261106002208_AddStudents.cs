@@ -44,6 +44,11 @@ namespace ClassHub.Core.Infrastructure.Persistence.Migrations
                     table.CheckConstraint("CK_Students_Email", "[Email] IS NULL OR ([Email] = LOWER([Email]) AND [Email] LIKE '%_@_%')");
                     table.CheckConstraint("CK_Students_FirstName", "LEN([FirstName]) >= 1");
                     table.ForeignKey(
+                        name: "FK_Students_Leads_WorkspaceId_SourceLeadId",
+                        columns: x => new { x.WorkspaceId, x.SourceLeadId },
+                        principalTable: "Leads",
+                        principalColumns: new[] { "WorkspaceId", "Id" });
+                    table.ForeignKey(
                         name: "FK_Students_Workspaces_WorkspaceId",
                         column: x => x.WorkspaceId,
                         principalTable: "Workspaces",
@@ -126,6 +131,11 @@ namespace ClassHub.Core.Infrastructure.Persistence.Migrations
                 columns: new[] { "WorkspaceId", "Email" },
                 unique: true,
                 filter: "[Email] IS NOT NULL");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Students_WorkspaceId_SourceLeadId",
+                table: "Students",
+                columns: new[] { "WorkspaceId", "SourceLeadId" });
 
             migrationBuilder.CreateIndex(
                 name: "IX_StudentSubjects_SubjectId",
