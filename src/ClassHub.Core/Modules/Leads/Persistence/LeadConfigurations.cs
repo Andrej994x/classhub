@@ -45,6 +45,11 @@ internal sealed class LeadConfiguration : IEntityTypeConfiguration<Lead>
             .HasPrincipalKey("WorkspaceId", "Id")
             .OnDelete(DeleteBehavior.NoAction);
         builder.HasIndex(x => x.AttemptId).IsUnique().HasFilter("[AttemptId] IS NOT NULL");
+        // A converted request points to a student of the same workspace (several requests may become one student).
+        builder.HasOne(ClassHub.Core.Modules.Students.Contracts.StudentForeignKeyTargets.Student, navigationName: null).WithMany()
+            .HasForeignKey(nameof(Lead.WorkspaceId), nameof(Lead.StudentId))
+            .HasPrincipalKey("WorkspaceId", "Id")
+            .OnDelete(DeleteBehavior.NoAction);
     }
 }
 

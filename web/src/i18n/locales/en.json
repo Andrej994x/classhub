@@ -35,7 +35,8 @@
     "adminPlans": "Plans",
     "adminReports": "Reports",
     "adminHidden": "Hidden content",
-    "adminCatalog": "Catalog"
+    "adminCatalog": "Catalog",
+    "students": "Students"
   },
   "layout": {
     "teacherArea": "Teacher workspace",
@@ -370,7 +371,8 @@
       "MFA_CODE_INVALID": "The code is not valid. Enter the current code from your authenticator app.",
       "SIGN_IN_EXPIRED": "The sign-in has expired. Go back and sign in again.",
       "ADMIN_TARGET_FORBIDDEN": "You cannot make this change to this account.",
-      "PLAN_LIMIT_REACHED": "Your plan does not allow more of this. Open Plan in the menu to see the limits and how to move to Pro."
+      "PLAN_LIMIT_REACHED": "Your plan does not allow more of this. Open Plan in the menu to see the limits and how to move to Pro.",
+      "STUDENT_EMAIL_TAKEN": "Another student in your records already uses this email."
     }
   },
   "auth": {
@@ -741,7 +743,15 @@
     "saveNote": "Save note",
     "test": "Test",
     "resultShared": "{{points}} of {{max}} points (shared by the visitor)",
-    "resultNotShared": "the visitor did not share the result"
+    "resultNotShared": "the visitor did not share the result",
+    "convert": {
+      "title": "Student",
+      "lead": "Turn this request into a student. If a student with the same email exists, the request is added to that student.",
+      "done": "This request is in your students.",
+      "action": "Make a student",
+      "open": "Open the student",
+      "closed": "This request is closed. Reopen it (New or Contacted) to make a student."
+    }
   },
   "tests": {
     "title": "Diagnostic tests",
@@ -867,5 +877,58 @@
     "section": "{{section}}: {{reason}}",
     "contact": "Nothing was deleted. Publishing again does not change this; write to the ClassHub team if you think it is a mistake.",
     "hiddenBadge": "Hidden by ClassHub"
+  },
+  "students": {
+    "title": "Students",
+    "lead": "Your students, with or without a ClassHub account.",
+    "activeCount_one": "{{count}} active.",
+    "activeCount_other": "{{count}} active.",
+    "add": "Add student",
+    "filters": "Filter students",
+    "search": "Search by name, email, phone or guardian",
+    "showArchived": "Show archived students",
+    "empty": "No students yet. Add one, or turn a request into a student.",
+    "noMatches": "No students match.",
+    "minor": "Minor",
+    "archived": "archived",
+    "archivedLead": "Archived: not in your active list. Nothing was deleted.",
+    "back": "Back to students",
+    "newTitle": "New student",
+    "sections": {
+      "details": "Details",
+      "subjects": "Subjects"
+    },
+    "fields": {
+      "firstName": "First name",
+      "lastName": "Last name (optional)",
+      "email": "Email (optional)",
+      "phone": "Phone (optional)",
+      "isMinor": "The student is under 18",
+      "guardianName": "Parent or guardian",
+      "guardianEmail": "Guardian email",
+      "guardianPhone": "Guardian phone"
+    },
+    "guardianLead": "For a minor, record the parent or guardian you agree lessons and payments with.",
+    "validation": {
+      "firstName": "Enter the first name.",
+      "email": "Enter a valid email address.",
+      "phone": "Use digits, spaces and + ( ) -."
+    },
+    "save": "Save",
+    "create": "Add student",
+    "saved": "Saved.",
+    "changedElsewhere": "The student was changed elsewhere. Reload the page and apply your changes again.",
+    "archiveTitle": "Archive",
+    "archiveLead": "The student leaves your active list; the history stays. You can restore them at any time.",
+    "restoreTitle": "Restore",
+    "restoreLead": "Back to your active list (counts towards your plan limit).",
+    "archive": "Archive student",
+    "restore": "Restore student",
+    "notes": {
+      "title": "Private notes",
+      "lead": "Only you see these notes, never the student or a guardian.",
+      "add": "New note",
+      "save": "Save note"
+    }
   }
 }

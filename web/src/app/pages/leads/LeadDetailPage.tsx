@@ -1,14 +1,15 @@
 import { ArrowLeft } from 'lucide-react';
 import { useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Link, useParams } from 'react-router';
+import { Link, useNavigate, useParams } from 'react-router';
 import { ApiError, errorMessage } from '../../../api/errors.ts';
 import { Alert } from '../../../components/ui/alert.tsx';
 import { Button } from '../../../components/ui/button.tsx';
-import { Card, CardContent, CardHeader, CardTitle } from '../../../components/ui/card.tsx';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../../components/ui/card.tsx';
 import { Label } from '../../../components/ui/label.tsx';
 import { formatDateTime } from '../../../lib/format.ts';
 import { NEXT_STATUSES, useAddLeadNote, useArchiveLead, useChangeLeadStatus, useLead, type Lead, type LeadStatus } from '../../../teacher/leads.ts';
+import { useConvertLead } from '../../../teacher/students.ts';
 import { num } from '../../../teacher/offers.ts';
 import { useCatalog } from '../../../teacher/queries.ts';
 import { NotFoundContent } from '../Pages.tsx';
@@ -117,6 +118,8 @@ function LeadDetail({ workspaceId, lead }: { workspaceId: string; lead: Lead }) 
         </CardContent>
       </Card>
 
+      <ConvertCard workspaceId={workspaceId} lead={lead} />
+
       <Card>
         <CardHeader>
           <CardTitle className="text-lg">
@@ -166,5 +169,37 @@ function LeadDetail({ workspaceId, lead }: { workspaceId: string; lead: Lead }) 
         </CardContent>
       </Card>
     </section>
+  );
+}
+
+/** D-12: turn the request into a student (linked by email to an existing one), or open the student it became. */
+function ConvertCard({ workspaceId, lead }: { workspaceId: string; lead: Lead }) {
+  const { t } = useTranslation();
+  const navigate = useNavigate();
+  const convert = useConvertLead(workspaceId);
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-lg">{t('leads.convert.title')}</CardTitle>
+        <CardDescription>{lead.studentId ? t('leads.convert.done') : lead.status === 'Closed' ? t('leads.convert.closed') : t('leads.convert.lead')}</CardDescription>
+      </CardHeader>
+      <CardContent className="flex flex-col gap-3">
+        {convert.error && <Alert variant="error">{errorMessage(convert.error, t)}</Alert>}
+        {lead.studentId ? (
+          <Link className="self-start text-sm font-medium text-primary underline-offset-4 hover:underline" to={`/app/w/${workspaceId}/students/${lead.studentId}`}>
+            {t('leads.convert.open')}
+          </Link>
+        ) : lead.status === 'Closed' ? null : (
+          <Button
+            type="button"
+            className="self-start"
+            disabled={convert.isPending}
+            onClick={() => convert.mutate(lead.id, { onSuccess: (result) => void navigate(`/app/w/${workspaceId}/students/${result.student.id}`) })}
+          >
+            {convert.isPending ? t('common.loading') : t('leads.convert.action')}
+          </Button>
+        )}
+      </CardContent>
+    </Card>
   );
 }

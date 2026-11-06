@@ -58,4 +58,12 @@ test('a visitor request on the public site reaches the teacher inbox', async ({ 
   await page.getByLabel(text(language, 'leads.addNote')).fill('Јавив се, почнуваме во среда.');
   await page.getByRole('button', { name: text(language, 'leads.saveNote') }).click();
   await expect(page.getByRole('list', { name: text(language, 'leads.notes') }).getByText('Јавив се, почнуваме во среда.')).toBeVisible();
+
+  // R2-P1: the request becomes a student (D-12), and the request now links to it.
+  await page.getByRole('button', { name: text(language, 'leads.convert.action') }).click();
+  await expect(page.getByRole('heading', { level: 1, name: 'Марија Илиевска' })).toBeVisible();
+  await expect(page).toHaveURL(new RegExp(`/app/w/${workspaceId}/students/[0-9a-f-]{36}$`));
+  await expect(page.getByLabel(text(language, 'students.fields.email'))).toHaveValue('marija@example.test');
+  await page.getByRole('link', { name: text(language, 'students.back') }).click();
+  await expect(page.getByRole('list', { name: text(language, 'students.title') }).getByRole('link', { name: /Марија Илиевска/ })).toBeVisible();
 });

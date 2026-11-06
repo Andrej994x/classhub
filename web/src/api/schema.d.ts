@@ -989,6 +989,106 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/w/{workspaceId}/students": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Active (or archived) students, by name; search by name, email, phone or guardian. */
+        get: operations["ListStudents"];
+        put?: never;
+        /** Add a student (no login needed). The email must be unique among your students; the Free plan limits active students. */
+        post: operations["CreateStudent"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/w/{workspaceId}/students/{studentId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetStudent"];
+        put: operations["UpdateStudent"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/w/{workspaceId}/students/{studentId}/archive": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["ArchiveStudent"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/w/{workspaceId}/students/{studentId}/restore": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["RestoreStudent"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/w/{workspaceId}/students/from-lead": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** D-12: link the request to the student with the same email, or create one; idempotent. */
+        post: operations["ConvertLeadToStudent"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/w/{workspaceId}/students/{studentId}/notes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The teacher's private notes, newest first. Never part of any student-facing response. */
+        get: operations["ListStudentNotes"];
+        put?: never;
+        post: operations["AddStudentNote"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/w/{workspaceId}/plan": {
         parameters: {
             query?: never;
@@ -1158,6 +1258,9 @@ export interface components {
             note: null | string;
         };
         AddLeadNoteRequest: {
+            text: null | string;
+        };
+        AddStudentNoteRequest: {
             text: null | string;
         };
         AdminAuditEntry: {
@@ -1385,6 +1488,14 @@ export interface components {
             /** Format: uuid */
             userId: string;
             token: null | string;
+        };
+        ConvertLeadRequest: {
+            /** Format: uuid */
+            leadId: null | string;
+        };
+        ConvertLeadResponse: {
+            student: components["schemas"]["StudentResponse"];
+            created: boolean;
         };
         CountByKey: {
             key: string;
@@ -1629,6 +1740,8 @@ export interface components {
             /** Format: int32 */
             version: number | string;
             diagnosticResult: null | components["schemas"]["DiagnosticResultSummary"];
+            /** Format: uuid */
+            studentId?: null | string;
         };
         LeadVersionRequest: {
             /** Format: int32 */
@@ -1831,6 +1944,19 @@ export interface components {
             /** Format: int32 */
             version?: null | number | string;
         };
+        SaveStudentRequest: {
+            firstName: null | string;
+            lastName: null | string;
+            email: null | string;
+            phone: null | string;
+            isMinor: boolean;
+            guardianName: null | string;
+            guardianEmail: null | string;
+            guardianPhone: null | string;
+            subjectIds: null | string[];
+            /** Format: int32 */
+            version: null | number | string;
+        };
         SaveTestOption: {
             /** Format: uuid */
             id: null | string;
@@ -1913,6 +2039,63 @@ export interface components {
             slug: string;
             available: boolean;
             reason: null | string;
+        };
+        StudentListItem: {
+            /** Format: uuid */
+            id: string;
+            firstName: string;
+            lastName: null | string;
+            email: null | string;
+            phone: null | string;
+            isMinor: boolean;
+            subjectIds: string[];
+            archived: boolean;
+            /** Format: date-time */
+            updatedAtUtc: string;
+        };
+        StudentListResponse: {
+            items: components["schemas"]["StudentListItem"][];
+            /** Format: int32 */
+            total: number | string;
+            /** Format: int32 */
+            page: number | string;
+            /** Format: int32 */
+            pageSize: number | string;
+            /** Format: int32 */
+            activeCount: number | string;
+        };
+        StudentNoteResponse: {
+            /** Format: uuid */
+            id: string;
+            text: string;
+            /** Format: date-time */
+            createdAtUtc: string;
+        };
+        StudentResponse: {
+            /** Format: uuid */
+            id: string;
+            firstName: string;
+            lastName: null | string;
+            email: null | string;
+            phone: null | string;
+            isMinor: boolean;
+            guardianName: null | string;
+            guardianEmail: null | string;
+            guardianPhone: null | string;
+            subjectIds: string[];
+            /** Format: uuid */
+            sourceLeadId: null | string;
+            archived: boolean;
+            /** Format: date-time */
+            createdAtUtc: string;
+            /** Format: date-time */
+            updatedAtUtc: string;
+            /** Format: int32 */
+            version: number | string;
+        };
+        StudentVersionRequest: {
+            /** Format: int32 */
+            version: null | number | string;
         };
         SubmitAttemptRequest: {
             /** Format: int32 */
@@ -3975,6 +4158,275 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SitePreviewResponse"];
+                };
+            };
+        };
+    };
+    ListStudents: {
+        parameters: {
+            query?: {
+                q?: string;
+                archived?: boolean;
+                page?: number | string;
+                pageSize?: number | string;
+            };
+            header?: never;
+            path: {
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StudentListResponse"];
+                };
+            };
+        };
+    };
+    CreateStudent: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SaveStudentRequest"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StudentResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["HttpValidationProblemDetails"];
+                };
+            };
+        };
+    };
+    GetStudent: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                studentId: string;
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StudentResponse"];
+                };
+            };
+        };
+    };
+    UpdateStudent: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                studentId: string;
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SaveStudentRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StudentResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["HttpValidationProblemDetails"];
+                };
+            };
+        };
+    };
+    ArchiveStudent: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                studentId: string;
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StudentVersionRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StudentResponse"];
+                };
+            };
+        };
+    };
+    RestoreStudent: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                studentId: string;
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StudentVersionRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StudentResponse"];
+                };
+            };
+        };
+    };
+    ConvertLeadToStudent: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ConvertLeadRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConvertLeadResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["HttpValidationProblemDetails"];
+                };
+            };
+        };
+    };
+    ListStudentNotes: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                studentId: string;
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StudentNoteResponse"][];
+                };
+            };
+        };
+    };
+    AddStudentNote: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                studentId: string;
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AddStudentNoteRequest"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StudentNoteResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["HttpValidationProblemDetails"];
                 };
             };
         };

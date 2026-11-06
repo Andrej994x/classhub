@@ -26,6 +26,8 @@ public sealed partial class SensitiveDataRedactionEnricher : ILogEventEnricher
     {
         "authorization", "cookie", "set-cookie", "securitystamp", "concurrencystamp", "apikey", "api-key",
         "twofactorcode", "recoverycode", "authenticatorkey", "authenticatorcode", "connectionstring", "passwordhash",
+        // Student records (R2-P1): personal data of students, often minors, and of their guardians.
+        "firstname", "lastname", "phone", "guardianname", "guardianemail", "guardianphone", "studentname",
     };
 
     private static readonly string[] SensitiveFragments = ["password", "secret", "token"];

@@ -6,11 +6,11 @@ This is the live status of the autonomous implementation loop ([ROADMAP.md](ROAD
 
 | Field | Value |
 |---|---|
-| Release | R1 — Teacher presence (R0 complete) |
-| Current phase | R1-P12 — Release 1 hardening |
-| Branch | `chore/r1-p12-hardening` (from `main` @ `5c90a22`) |
+| Release | R2 — Teaching operations (R0 and R1 complete) |
+| Current phase | R2-P1 — Students |
+| Branch | `feature/r2-p1-students` (from `main` @ `3c11d1b`) |
 | Workflow step | 5 — signed Codex review, then PR |
-| Next action | R1-P12 PR (Release 1 closeout); then R2-P1 (students) |
+| Next action | R2-P1 PR; then R2-P2 (groups) |
 | Open blockers | None. User actions (optional): direct-push probe (R0-P8); remove the now redundant required `pr-gate` check (see Decisions) |
 
 ## Phase status
@@ -41,11 +41,24 @@ Status values: `not started`, `in progress`, `in review` (PR open), `merged`, `b
 | R1-P9 | Platform admin foundation | merged | `feature/r1-p9-admin-foundation` | [#21](https://github.com/Andrej994x/classhub/pull/21) | `c2e3ac4` | 4 rounds: 2 × P2 fixed (authenticator replacement needs the current factor; lockout enforced on step-up); rounds 3–4 clean | green after 1 CI fix (CodeQL regex escaping in the E2E spec) | No migration |
 | R1-P10 | SaaS plans & entitlements | merged | `feature/r1-p10-plans-entitlements` | [#22](https://github.com/Andrej994x/classhub/pull/22) | `1f2a0f5` | 3 rounds: 2 × P2 fixed (null plan-limit list validation; expiry recorded before reactivation); round 3 clean | green | Migration applied to local `ClassHubDb` |
 | R1-P11 | Moderation & reference data admin | merged | `feature/r1-p11-moderation-catalog` | [#23](https://github.com/Andrej994x/classhub/pull/23) | `5c90a22` | 3 rounds: 4 × P2 fixed (parallel section hides, deactivated references on edit, parallel report decisions, atomic report cap); round 3 clean | green | Migration applied to local `ClassHubDb` |
-| R1-P12 | Release 1 hardening | in progress | `chore/r1-p12-hardening` | | | | | Isolation sweep, release-journey E2E, SEO checks + Lighthouse, mobile pass, release-level Codex review, Release 1 closeout |
+| R1-P12 | Release 1 hardening | merged | `chore/r1-p12-hardening` | [#24](https://github.com/Andrej994x/classhub/pull/24) | `3c11d1b` | 1 round clean; release-level review of all R1 changes clean | green | Release 1 complete |
+| R2-P1 | Students | in progress | `feature/r2-p1-students` | | | | | Plan: students CRUD, archive/restore, guardian fields, private notes, idempotent lead conversion with email dedupe, Free active-student limit under an intake lock |
+| R2-P2 | Groups | not started | | | | | | |
+| R2-P3 | Student accounts & invitations | not started | | | | | | |
+| R2-P4 | Lessons core & calendar | not started | | | | | | |
+| R2-P5 | Recurring lessons | not started | | | | | | |
+| R2-P6 | Availability & booking | not started | | | | | | |
+| R2-P7 | Attendance, notes & history | not started | | | | | | |
+| R2-P8 | Materials | not started | | | | | | |
+| R2-P9 | Homework | not started | | | | | | |
+| R2-P10 | Packages & payments | not started | | | | | | |
+| R2-P11 | Notifications | not started | | | | | | |
+| R2-P12 | Dashboards (teacher + student) | not started | | | | | | |
+| R2-P13 | Release 2 hardening | not started | | | | | | |
 
-Releases 2–3 and Beta are listed in [ROADMAP.md](ROADMAP.md) section D. They are added to this table when Release 1 is complete.
+Release 3 and Beta are listed in [ROADMAP.md](ROADMAP.md) section D. They are added to this table when Release 2 is complete.
 
-## Release 1 — Teacher presence (closeout in R1-P12)
+## Release 1 — complete (2026-11-06, PR #24, `3c11d1b`)
 
 Definition of Done (ROADMAP D, R1-P1…P12) demonstrated:
 - A teacher builds a profile, offers and a public site, publishes it, and receives visitor requests and diagnostic-test requests; the whole journey runs through the UI in Playwright on desktop and phone (`release.spec.ts`, `leads.spec.ts`, `diagnostic.spec.ts`).
@@ -86,6 +99,10 @@ Definition of Done (ROADMAP E) demonstrated:
 - **Gate passed:** `dotnet ef database update` created `ClassHubDb` on `.\SQLEXPRESS` via Windows authentication. The running API connects as `EFCore/10.0.14` over **Shared memory**, `NTLM`. Collation `Macedonian_FYROM_100_CI_AS_SC`, RCSI on, migrations `InitialTechnical` + `EnableReadCommittedSnapshot` applied. No SQL Server configuration was changed.
 - Local tests: 49/49 green (unit 5, architecture 1, integration 43 on Testcontainers SQL Server 2022).
 - CI `migrations` job sequence verified locally against a throwaway container.
+
+### R1-P12 — Release 1 hardening (merged, PR #24, `3c11d1b`)
+
+- Isolation sweep over every workspace and admin route, release-journey and SEO E2E, suspension hides the page, mobile pass, Lighthouse SEO 100, release-level Codex review clean; 593 backend / 160 Vitest / 28 Playwright tests.
 
 ### R1-P11 — Moderation & reference data admin (merged, PR #23, `5c90a22`)
 

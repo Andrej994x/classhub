@@ -78,7 +78,25 @@ public sealed record LeadResponse(
     IReadOnlyList<LeadNoteResponse> Notes,
     int Version,
     /// <summary>For diagnostic requests: the test and, when the visitor shared it, the score.</summary>
-    ClassHub.Core.Modules.DiagnosticTests.Contracts.DiagnosticResultSummary? DiagnosticResult);
+    ClassHub.Core.Modules.DiagnosticTests.Contracts.DiagnosticResultSummary? DiagnosticResult,
+    /// <summary>The student this request became (R2-P1), or null.</summary>
+    Guid? StudentId = null);
+
+/// <summary>
+/// A request as the student conversion sees it (R2-P1). <c>CanConvert</c>: the status rules allow "Converted" (a closed
+/// request must be reopened first).
+/// </summary>
+public sealed record ConvertibleLead(Guid Id, string Name, string Email, string? Phone, Guid? SubjectId, Guid? StudentId, bool CanConvert);
+
+/// <summary>Lead → student conversion (D-12), for the Students module; the current workspace only.</summary>
+public interface ILeadConversion
+{
+    /// <summary>The request (archived ones included), or null.</summary>
+    Task<ConvertibleLead?> FindAsync(Guid leadId, CancellationToken cancellationToken);
+
+    /// <summary>Marks the request converted into <paramref name="studentId"/> in the caller's unit of work (it saves).</summary>
+    Task MarkConvertedAsync(Guid leadId, Guid studentId, CancellationToken cancellationToken);
+}
 
 /// <summary><c>Status</c>: New, Contacted, Converted or Closed. <c>Version</c>: the version the client loaded.</summary>
 public sealed record ChangeLeadStatusRequest(string? Status, int? Version);
