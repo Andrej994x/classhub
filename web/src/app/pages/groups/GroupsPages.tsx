@@ -175,7 +175,9 @@ function Members({ workspaceId, groupId }: { workspaceId: string; groupId: strin
   const { t } = useTranslation();
   const group = useGroup(workspaceId, groupId);
   const [search, setSearch] = useState('');
-  const students = useStudents(workspaceId, { q: search, archived: false, page: 1 });
+  const [page, setPage] = useState(1);
+  const students = useStudents(workspaceId, { q: search, archived: false, page });
+  const pages = Math.max(1, Math.ceil((num(students.data?.total) ?? 0) / (num(students.data?.pageSize) ?? 20)));
   const add = useAddMember(workspaceId, groupId);
   const remove = useRemoveMember(workspaceId, groupId);
   const [pick, setPick] = useState('');
@@ -216,7 +218,17 @@ function Members({ workspaceId, groupId }: { workspaceId: string; groupId: strin
           >
             <div className="flex flex-1 flex-col gap-1">
               <Label htmlFor="group-member-search">{t('groups.members.search')}</Label>
-              <input id="group-member-search" type="search" className={select} value={search} onChange={(e) => setSearch(e.target.value)} />
+              <input
+                id="group-member-search"
+                type="search"
+                className={select}
+                value={search}
+                onChange={(e) => {
+                  setSearch(e.target.value);
+                  setPage(1);
+                  setPick('');
+                }}
+              />
             </div>
             <div className="flex flex-1 flex-col gap-1">
               <Label htmlFor="group-add-member">{t('groups.members.add')}</Label>
@@ -224,7 +236,8 @@ function Members({ workspaceId, groupId }: { workspaceId: string; groupId: strin
                 <option value="">{t('groups.members.choose')}</option>
                 {candidates.map((s) => (
                   <option key={s.id} value={s.id}>
-                    {name(s)}
+                    {/* Contact details tell apart students with the same name. */}
+                    {[name(s), s.email ?? s.phone].filter(Boolean).join(' · ')}
                   </option>
                 ))}
               </select>
@@ -233,6 +246,17 @@ function Members({ workspaceId, groupId }: { workspaceId: string; groupId: strin
               {t('groups.members.addButton')}
             </Button>
           </form>
+        )}
+        {!group.data?.archived && pages > 1 && (
+          <nav aria-label={t('groups.members.pages')} className="flex items-center gap-2">
+            <Button type="button" size="sm" variant="outline" disabled={page <= 1} onClick={() => setPage(page - 1)}>
+              {t('leads.previous')}
+            </Button>
+            <span className="text-sm">{t('leads.pageOf', { page, pages })}</span>
+            <Button type="button" size="sm" variant="outline" disabled={page >= pages} onClick={() => setPage(page + 1)}>
+              {t('leads.next')}
+            </Button>
+          </nav>
         )}
         {(add.error ?? remove.error) && <Alert variant="error">{errorMessage(add.error ?? remove.error, t)}</Alert>}
       </CardContent>

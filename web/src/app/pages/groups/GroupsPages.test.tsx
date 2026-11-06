@@ -11,8 +11,8 @@ const studentItem = (id: string, firstName: string, lastName: string) => ({
   id,
   firstName,
   lastName,
-  email: null,
-  phone: null,
+  email: null as string | null,
+  phone: null as string | null,
   isMinor: false,
   subjectIds: [] as string[],
   archived: false,
@@ -44,9 +44,11 @@ function groupsApi() {
   };
   const handler = (call: FakeCall) => {
     if (call.path === STUDENTS && call.method === 'GET') {
-      const q = new URLSearchParams(call.search).get('q') ?? '';
-      const items = students.filter((s) => !q || `${s.firstName} ${s.lastName}`.includes(q));
-      return json(200, { items, total: items.length, page: 1, pageSize: 20, activeCount: students.length });
+      const params = new URLSearchParams(call.search);
+      const q = params.get('q') ?? '';
+      const page = Number(params.get('page') ?? '1');
+      const matches = students.filter((s) => !q || `${s.firstName} ${s.lastName}`.includes(q));
+      return json(200, { items: matches.slice((page - 1) * 20, page * 20), total: matches.length, page, pageSize: 20, activeCount: students.length });
     }
     if (call.path === `${STUDENTS}/s1` && call.method === 'GET') {
       return json(200, { ...students[0], guardianName: null, guardianEmail: null, guardianPhone: null, sourceLeadId: null, createdAtUtc: '2026-11-05T09:00:00Z', version: 0 });
@@ -90,7 +92,7 @@ function groupsApi() {
     return undefined;
   };
   const api = fakeApi({ me: teacher(), extra: [handler] });
-  return { api, state };
+  return { api, state, students };
 }
 
 describe('groups', () => {
@@ -172,6 +174,25 @@ describe('groups', () => {
     await expect.poll(() => api.to(STUDENTS).some((c) => new URLSearchParams(c.search).get('q') === 'Бор')).toBe(true);
     await expect.poll(() => within(screen.getByLabelText('Ученик за додавање')).queryByRole('option', { name: 'Ана Илиева' })).toBeNull();
     expect(within(screen.getByLabelText('Ученик за додавање')).getByRole('option', { name: 'Борис Трајков' })).toBeInTheDocument();
+  });
+
+  it('pages through more students than fit in the picker and tells namesakes apart', async () => {
+    const user = userEvent.setup();
+    const { api, students } = groupsApi();
+    for (let i = 0; i < 23; i++) students.push(studentItem(`x${i}`, 'Ученик', `Број ${String(i).padStart(2, '0')}`));
+    students.push({ ...studentItem('dup', 'Ана', 'Илиева'), email: 'ana2@example.test' });
+    await renderRoute(`/app/w/${WORKSPACE_ID}/groups/g1`);
+
+    const picker = await screen.findByLabelText('Ученик за додавање');
+    await expect.poll(() => within(picker).queryAllByRole('option').length).toBe(21); // "choose" + 20
+    await user.click(screen.getByRole('button', { name: 'Следна' }));
+    await expect.poll(() => within(picker).queryByRole('option', { name: 'Ана Илиева · ana2@example.test' })).not.toBeNull();
+    expect(screen.getByText('Страница 2 од 2')).toBeInTheDocument();
+
+    await user.selectOptions(picker, 'dup');
+    await user.click(screen.getByRole('button', { name: 'Додај во групата' }));
+    await expect.poll(() => api.to(`${BASE}/g1/members`, 'POST').length).toBe(1);
+    expect(api.to(`${BASE}/g1/members`, 'POST')[0]!.body).toEqual({ studentId: 'dup' });
   });
 
   it('keeps unsaved edits when another tab changed the group, and reports the conflict on save', async () => {

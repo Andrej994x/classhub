@@ -968,7 +968,8 @@
       "choose": "Choose a student",
       "addButton": "Add to group",
       "remove": "Remove {{name}} from the group",
-      "removeShort": "Remove"
+      "removeShort": "Remove",
+      "pages": "Pages of students to add"
     },
     "archiveTitle": "Archive",
     "archiveLead": "The group leaves your active list; members and history stay. You can restore it at any time.",
