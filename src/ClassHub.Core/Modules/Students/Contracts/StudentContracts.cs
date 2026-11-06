@@ -6,6 +6,15 @@ public static class StudentForeignKeyTargets
     public static readonly Type Student = typeof(Domain.Student);
 }
 
+/// <summary>A student's name and state, for other modules (group members; lessons later). Never notes or contacts.</summary>
+public sealed record StudentSummary(Guid Id, string FirstName, string? LastName, bool Archived);
+
+/// <summary>Students of the current workspace (archived ones included), for other modules.</summary>
+public interface IStudentLookup
+{
+    Task<IReadOnlyDictionary<Guid, StudentSummary>> FindAsync(IReadOnlyCollection<Guid> ids, CancellationToken cancellationToken);
+}
+
 /// <summary>
 /// A student for the teacher. Private notes are not part of it (they have their own endpoint and are never part of any
 /// student-facing response).

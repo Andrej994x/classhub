@@ -88,6 +88,11 @@ ASP.NET Core Identity with cookie sessions. See [ARCHITECTURE.md](ARCHITECTURE.m
 - Names, phones and guardian contacts are redacted in logs.
 - No duplicates by email within a workspace (unique index) and no limit overrun under parallel requests (intake lock; tested).
 
+## Groups (R2-P2)
+
+- Group membership can only link a group and a student of the same workspace: checked in the service and enforced by composite tenant FKs (a raw insert across workspaces fails, tested). Other teachers get 404 (isolation kit and sweep).
+- Member names in group responses come from the Students module (`IStudentLookup`); notes are never included.
+
 ## Moderation (R1-P11)
 
 - The reporter's details (text, optional email) are platform data: they are returned only by `/api/admin/*` (platform staff with MFA), never by a teacher endpoint, and the teacher's notice contains only the moderator's reason (tested on the email and the site response).

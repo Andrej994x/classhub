@@ -89,6 +89,14 @@ Details and tests: [SECURITY.md](SECURITY.md#tenant-isolation-r0-p5).
 - API access: `src/api/client.ts` wraps `openapi-fetch` with the generated types. It sends cookies, keeps the antiforgery request token in memory, fetches it from `GET /api/auth/antiforgery` before the first unsafe request, adopts tokens re-issued in the `X-XSRF-TOKEN` response header, retries once on `ANTIFORGERY_INVALID`, and turns ProblemDetails into `ApiError`. `errorMessage()` shows only translated messages for error codes, never server text. TanStack Query is provided in `src/app/Providers.tsx`.
 - Hosting: `npm run build` writes to `src/ClassHub.Api/wwwroot/dist` (git-ignored, base `/dist/`). `Platform/SpaHosting.cs` serves static files before routing (hashed `/dist/assets` immutable, everything else `no-cache`) and maps `dist/index.html` as the fallback for the SPA prefixes only (`/` is the Razor landing page since R1-P4; the SPA's `/` route hands over with a full page load). `/api`, health checks and unknown paths never get the SPA, and the deny-by-default policy still applies to them.
 
+## Groups (R2-P2)
+
+- `Modules/Groups`: `Group` (tenant-owned, archivable; name, optional catalog subject, description, version) and `GroupMember` (key `(GroupId, StudentId)`; composite tenant FKs to `Groups` and `Students`, so a member is always a student of the same workspace). A student can be in several groups.
+- **History kept:** removing a member sets `RemovedAtUtc` (re-adding reopens the row); archiving keeps the members. Later lessons and attendance (R2-P4/P5) reference these rows.
+- **Members lock:** adding or removing members and archiving/restoring run in a transaction under `classhub:group-members:{group}` (`GroupQueries`), so the 100-member cap and "no new members in an archived group" hold under parallel requests. Member changes do not move the group's version, so an open details editor is not invalidated by them. Students are read through `IStudentLookup` (Students contract); archived students cannot be added.
+- **API:** `/api/w/{id}/groups` list (active or archived, optional `studentId`), get, create, update (version), archive/restore, `POST /members`, `DELETE /members/{studentId}`; permissions `groups.read` / `groups.manage`.
+- **SPA:** "Groups" in the teacher area (list, create/edit, member list with search-and-add, remove, archive/restore); a "Groups" card on the student page.
+
 ## Students (R2-P1)
 
 - `Modules/Students`: `Student` (tenant-owned, archivable; first/last name, email lowercase and unique per workspace via a filtered unique index, phone, minor flag with guardian name/email/phone (D-18), source lead), `StudentSubject` and `StudentNote` (private notes; composite tenant FKs). A student exists without a login (accounts with invitations, R2-P3).

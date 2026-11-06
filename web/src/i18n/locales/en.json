@@ -36,7 +36,8 @@
     "adminReports": "Reports",
     "adminHidden": "Hidden content",
     "adminCatalog": "Catalog",
-    "students": "Students"
+    "students": "Students",
+    "groups": "Groups"
   },
   "layout": {
     "teacherArea": "Teacher workspace",
@@ -930,5 +931,51 @@
       "add": "New note",
       "save": "Save note"
     }
+  },
+  "groups": {
+    "title": "Groups",
+    "lead": "Teach several students together: one group per class or course.",
+    "add": "New group",
+    "showArchived": "Show archived groups",
+    "empty": "No groups yet. Create one and add your students.",
+    "noArchived": "No archived groups.",
+    "memberCount_one": "{{count}} student",
+    "memberCount_other": "{{count}} students",
+    "back": "Back to groups",
+    "newTitle": "New group",
+    "archivedLead": "Archived: not in your active list. Members and history are kept.",
+    "details": "Details",
+    "fields": {
+      "name": "Group name",
+      "subject": "Subject",
+      "noSubject": "No subject",
+      "description": "Description (e.g. schedule)"
+    },
+    "validation": {
+      "name": "Enter the group name."
+    },
+    "save": "Save",
+    "create": "Create group",
+    "saved": "Saved.",
+    "changedElsewhere": "The group was changed elsewhere. Reload the page and apply your changes again.",
+    "members": {
+      "title": "Students in the group",
+      "lead": "A student can be in several groups. Removing them keeps their lesson history.",
+      "none": "No students in this group yet.",
+      "search": "Find a student",
+      "add": "Student to add",
+      "choose": "Choose a student",
+      "addButton": "Add to group",
+      "remove": "Remove {{name}} from the group",
+      "removeShort": "Remove"
+    },
+    "archiveTitle": "Archive",
+    "archiveLead": "The group leaves your active list; members and history stay. You can restore it at any time.",
+    "restoreTitle": "Restore",
+    "restoreLead": "Back to your active list.",
+    "archive": "Archive group",
+    "restore": "Restore group",
+    "ofStudent": "Groups",
+    "noneForStudent": "Not in any group."
   }
 }

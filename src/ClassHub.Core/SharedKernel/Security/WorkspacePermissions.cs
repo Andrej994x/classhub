@@ -22,6 +22,8 @@ public static class WorkspacePermissions
     public const string TestsManage = "tests.manage";
     public const string StudentsRead = "students.read";
     public const string StudentsManage = "students.manage";
+    public const string GroupsRead = "groups.read";
+    public const string GroupsManage = "groups.manage";
 
     public static IReadOnlySet<string> All { get; } = new HashSet<string>(StringComparer.Ordinal)
     {
@@ -39,6 +41,8 @@ public static class WorkspacePermissions
         TestsManage,
         StudentsRead,
         StudentsManage,
+        GroupsRead,
+        GroupsManage,
     };
 }
 

@@ -12,6 +12,7 @@ import { formatDateTime } from '../../../lib/format.ts';
 import { num } from '../../../teacher/offers.ts';
 import { useCatalog } from '../../../teacher/queries.ts';
 import { useAddStudentNote, useArchiveStudent, useSaveStudent, useStudent, useStudentNotes, useStudents, type Student, type StudentInput } from '../../../teacher/students.ts';
+import { StudentGroups } from '../groups/GroupsPages.tsx';
 import { NotFoundContent } from '../Pages.tsx';
 
 const browserTimeZone = new Intl.DateTimeFormat().resolvedOptions().timeZone;
@@ -259,6 +260,7 @@ function StudentEditor({ workspaceId, student }: { workspaceId: string; student:
       </form>
 
       {student && version !== null && <ArchiveCard workspaceId={workspaceId} student={student} version={version} onChanged={(changed) => setVersion(num(changed.version) ?? 0)} />}
+      {student && <StudentGroups workspaceId={workspaceId} studentId={student.id} />}
       {student && <NotesCard workspaceId={workspaceId} studentId={student.id} />}
     </section>
   );
