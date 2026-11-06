@@ -82,8 +82,11 @@ public sealed record LeadResponse(
     /// <summary>The student this request became (R2-P1), or null.</summary>
     Guid? StudentId = null);
 
-/// <summary>A request as the student conversion sees it (R2-P1).</summary>
-public sealed record ConvertibleLead(Guid Id, string Name, string Email, string? Phone, Guid? SubjectId, Guid? StudentId);
+/// <summary>
+/// A request as the student conversion sees it (R2-P1). <c>CanConvert</c>: the status rules allow "Converted" (a closed
+/// request must be reopened first).
+/// </summary>
+public sealed record ConvertibleLead(Guid Id, string Name, string Email, string? Phone, Guid? SubjectId, Guid? StudentId, bool CanConvert);
 
 /// <summary>Lead → student conversion (D-12), for the Students module; the current workspace only.</summary>
 public interface ILeadConversion

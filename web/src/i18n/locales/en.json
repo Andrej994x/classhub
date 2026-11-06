@@ -749,7 +749,8 @@
       "lead": "Turn this request into a student. If a student with the same email exists, the request is added to that student.",
       "done": "This request is in your students.",
       "action": "Make a student",
-      "open": "Open the student"
+      "open": "Open the student",
+      "closed": "This request is closed. Reopen it (New or Contacted) to make a student."
     }
   },
   "tests": {

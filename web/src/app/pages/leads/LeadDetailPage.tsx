@@ -181,7 +181,7 @@ function ConvertCard({ workspaceId, lead }: { workspaceId: string; lead: Lead })
     <Card>
       <CardHeader>
         <CardTitle className="text-lg">{t('leads.convert.title')}</CardTitle>
-        <CardDescription>{lead.studentId ? t('leads.convert.done') : t('leads.convert.lead')}</CardDescription>
+        <CardDescription>{lead.studentId ? t('leads.convert.done') : lead.status === 'Closed' ? t('leads.convert.closed') : t('leads.convert.lead')}</CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-3">
         {convert.error && <Alert variant="error">{errorMessage(convert.error, t)}</Alert>}
@@ -189,7 +189,7 @@ function ConvertCard({ workspaceId, lead }: { workspaceId: string; lead: Lead })
           <Link className="self-start text-sm font-medium text-primary underline-offset-4 hover:underline" to={`/app/w/${workspaceId}/students/${lead.studentId}`}>
             {t('leads.convert.open')}
           </Link>
-        ) : (
+        ) : lead.status === 'Closed' ? null : (
           <Button
             type="button"
             className="self-start"

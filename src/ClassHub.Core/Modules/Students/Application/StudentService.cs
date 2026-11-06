@@ -144,6 +144,12 @@ internal sealed class StudentService(
                 return new ConvertLeadResponse(await GetAsync(converted, cancellationToken), Created: false);
             }
 
+            // Checked before anything is created or linked: the same state machine as the status endpoint.
+            if (!lead.CanConvert)
+            {
+                throw new BusinessRuleException("Reopen the request before turning it into a student.", ErrorCodes.InvalidStatusTransition);
+            }
+
             var email = StudentNames.NormalizeEmail(lead.Email);
             var existing = email is null ? null : await queries.WithArchived().Where(s => s.Email == email).Select(s => (Guid?)s.Id).SingleOrDefaultAsync(cancellationToken);
             if (existing is { } id)

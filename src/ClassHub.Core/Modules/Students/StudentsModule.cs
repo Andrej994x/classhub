@@ -98,7 +98,8 @@ internal sealed partial class SaveStudentRequestValidator : AbstractValidator<Sa
         RuleFor(x => x.SubjectIds).Must(s => s is null || s.Count <= Student.MaxSubjects).WithMessage($"At most {Student.MaxSubjects} subjects.");
     }
 
-    [GeneratedRegex(@"^\+?[0-9 ()\-]{5,40}$")]
+    /// <summary>The same format the public request form accepts, so numbers copied from a request stay valid.</summary>
+    [GeneratedRegex(@"\A[0-9+()\-./ ]{5,40}\z")]
     private static partial Regex PhonePattern();
 }
 

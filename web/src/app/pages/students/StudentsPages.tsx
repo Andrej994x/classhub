@@ -17,7 +17,8 @@ import { NotFoundContent } from '../Pages.tsx';
 const browserTimeZone = new Intl.DateTimeFormat().resolvedOptions().timeZone;
 const input = 'h-11 w-full rounded-md border border-input bg-background px-3 text-base sm:h-10 sm:text-sm';
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const PHONE = /^\+?[0-9 ()-]{5,40}$/;
+// The same format the public request form accepts, so numbers copied from a request stay valid.
+const PHONE = /^[0-9+()\-./ ]{5,40}$/;
 
 const fullName = (s: { firstName: string; lastName?: string | null }) => [s.firstName, s.lastName].filter(Boolean).join(' ');
 

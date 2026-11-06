@@ -158,6 +158,38 @@ public sealed class StudentTests(ClassHubApiFixture fixture)
     }
 
     [Fact]
+    public async Task A_closed_request_is_reopened_before_it_becomes_a_student()
+    {
+        using var teacher = await fixture.CreateTeacherAsync();
+        var leadId = await AddLeadAsync(teacher, "Затворено Барање", "closed@example.test", null, LeadStatus.Closed);
+
+        using (var blocked = await teacher.Client.PostAsync(Path(teacher, "/from-lead"), new { leadId }))
+        {
+            blocked.StatusCode.ShouldBe(HttpStatusCode.UnprocessableEntity);
+            (await blocked.ErrorCodeAsync()).ShouldBe(ErrorCodes.InvalidStatusTransition);
+        }
+
+        (await teacher.Client.GetJsonAsync<StudentListResponse>(Path(teacher))).Items.ShouldBeEmpty();
+        var lead = await teacher.Client.GetJsonAsync<LeadResponse>($"/api/w/{teacher.WorkspaceId}/leads/{leadId}");
+        (await teacher.Client.PutAsync($"/api/w/{teacher.WorkspaceId}/leads/{leadId}/status", new { status = "Contacted", version = lead.Version })).StatusCode.ShouldBe(HttpStatusCode.OK);
+        (await teacher.Client.PostAsync(Path(teacher, "/from-lead"), new { leadId })).StatusCode.ShouldBe(HttpStatusCode.OK);
+    }
+
+    [Fact]
+    public async Task A_converted_phone_number_in_the_request_format_stays_valid_on_edit()
+    {
+        using var teacher = await fixture.CreateTeacherAsync();
+        var leadId = await AddLeadAsync(teacher, "Ивана Тасева", "ivana@example.test", "070/123.456");
+        using var converted = await teacher.Client.PostAsync(Path(teacher, "/from-lead"), new { leadId });
+        var student = (await converted.Content.ReadFromJsonAsync<ConvertLeadResponse>(Ct))!.Student;
+        student.Phone.ShouldBe("070/123.456");
+
+        using var edit = await teacher.Client.PutAsync(Path(teacher, $"/{student.Id}"), new { firstName = "Ивана", lastName = "Тасевска", email = student.Email, phone = student.Phone, version = student.Version });
+
+        edit.StatusCode.ShouldBe(HttpStatusCode.OK, await edit.Content.ReadAsStringAsync(Ct));
+    }
+
+    [Fact]
     public async Task A_double_submitted_conversion_creates_exactly_one_student()
     {
         using var teacher = await fixture.CreateTeacherAsync();
@@ -253,7 +285,7 @@ public sealed class StudentTests(ClassHubApiFixture fixture)
     }
 
     /// <summary>A request as the public form would store it (arranged in the database; the intake is tested in LeadTests).</summary>
-    private async Task<Guid> AddLeadAsync(TeacherSession teacher, string name, string email, string? phone)
+    private async Task<Guid> AddLeadAsync(TeacherSession teacher, string name, string email, string? phone, LeadStatus status = LeadStatus.New)
     {
         await using var db = fixture.CreateDbContext();
         var now = DateTime.UtcNow;
@@ -262,7 +294,7 @@ public sealed class StudentTests(ClassHubApiFixture fixture)
             Id = Guid.CreateVersion7(),
             WorkspaceId = teacher.WorkspaceId,
             Type = LeadType.Message,
-            Status = LeadStatus.New,
+            Status = status,
             Name = name,
             Email = email.ToLowerInvariant(),
             Phone = phone,
