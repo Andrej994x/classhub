@@ -134,7 +134,9 @@ export function StudentEditPage() {
   const student = useStudent(workspaceId, studentId);
 
   if (studentId && student.isError) return student.error instanceof ApiError && student.error.status === 404 ? <NotFoundContent /> : <Alert variant="error">{errorMessage(student.error, t)}</Alert>;
-  if (studentId && !student.data) return <output className="block">{t('common.loading')}</output>;
+  // Start editing from the server's current state: a cached copy may be older (another tab saved meanwhile), so the
+  // editor waits for the refetch of this visit; later background refetches never touch an open form.
+  if (studentId && (!student.data || !student.isFetchedAfterMount)) return <output className="block">{t('common.loading')}</output>;
   // Keyed by the student only: a background refetch (another tab saved meanwhile) must never remount a form with unsaved
   // edits. The editor keeps the version it loaded; a newer one elsewhere surfaces as a conflict on save.
   return <StudentEditor key={studentId ?? 'new'} workspaceId={workspaceId} student={studentId ? student.data : undefined} />;

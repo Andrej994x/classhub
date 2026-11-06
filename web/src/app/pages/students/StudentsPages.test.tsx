@@ -157,6 +157,25 @@ describe('students', () => {
     expect(api.to(`${BASE}/s1`, 'PUT').at(-1)!.body).toMatchObject({ version: 0 });
   });
 
+  it('starts editing from the current server state when a cached copy is older', async () => {
+    const user = userEvent.setup();
+    const { api, state } = studentsApi();
+    const { router } = await renderRoute(`/app/w/${WORKSPACE_ID}/students/s1`);
+    expect(await screen.findByLabelText('Презиме (по желба)')).toHaveValue('Стојанов');
+
+    // Leave, another tab saves, come back: the cache still holds version 0.
+    await act(() => router.navigate(`/app/w/${WORKSPACE_ID}/students`));
+    await screen.findByRole('list', { name: 'Ученици' });
+    state.students[0] = student({ ...state.students[0], lastName: 'Ново презиме', version: 3 });
+    await act(() => router.navigate(`/app/w/${WORKSPACE_ID}/students/s1`));
+
+    expect(await screen.findByLabelText('Презиме (по желба)')).toHaveValue('Ново презиме');
+    await user.click(screen.getByRole('button', { name: 'Зачувај' }));
+    await expect.poll(() => api.to(`${BASE}/s1`, 'PUT').length).toBe(1);
+    expect(api.to(`${BASE}/s1`, 'PUT')[0]!.body).toMatchObject({ lastName: 'Ново презиме', version: 3 });
+    expect(await screen.findByText('Зачувано.')).toBeInTheDocument();
+  });
+
   it('turns a request into a student from the lead page', async () => {
     const user = userEvent.setup();
     const { api } = studentsApi();
