@@ -61,6 +61,9 @@ public sealed class Lead : ITenantOwned, IArchivable
     /// <summary>The diagnostic test attempt this request belongs to (type Diagnostic only; one request per attempt).</summary>
     public Guid? AttemptId { get; set; }
 
+    /// <summary>The student this request became (R2-P1); set once, by the conversion.</summary>
+    public Guid? StudentId { get; set; }
+
     /// <summary>Version of the consent and privacy notice text the visitor accepted (D-18).</summary>
     public required string ConsentVersion { get; set; }
 

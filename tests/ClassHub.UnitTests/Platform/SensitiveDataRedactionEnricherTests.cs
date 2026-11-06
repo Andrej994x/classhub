@@ -8,6 +8,12 @@ namespace ClassHub.UnitTests.Platform;
 public sealed class SensitiveDataRedactionEnricherTests
 {
     [Theory]
+    [InlineData("FirstName")]
+    [InlineData("LastName")]
+    [InlineData("Phone")]
+    [InlineData("GuardianName")]
+    [InlineData("GuardianEmail")]
+    [InlineData("GuardianPhone")]
     [InlineData("Password")]
     [InlineData("newPassword")]
     [InlineData("ResetToken")]

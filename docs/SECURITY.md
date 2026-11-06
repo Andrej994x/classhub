@@ -82,6 +82,12 @@ ASP.NET Core Identity with cookie sessions. See [ARCHITECTURE.md](ARCHITECTURE.m
 - Policies: `Authenticated`; workspace policies `ws:<permission>` (for example `ws:workspace.read`). Permissions are code constants (`WorkspacePermissions`), mapped from workspace roles (`WorkspaceRolePermissions`; today `Owner` has all workspace permissions). Unknown permission names fail when the policy is resolved.
 - Platform roles (`PlatformOwner`, `PlatformAdmin`) are Identity roles. **They grant no workspace access**: a platform admin without membership gets 404 on workspace routes (tested). The first Platform Owner is created only with the local CLI `dotnet run --project src/ClassHub.Api -- grant-platform-owner <email> [--force-add]` (audited, never exposed over HTTP). The owner check, the grant, the session revocation and the audit entry run in one transaction under an application lock (`sp_getapplock`), so concurrent bootstraps cannot both add an owner without `--force-add`.
 
+## Student records (R2-P1)
+
+- Student data (often minors) stays in the teacher's workspace: tenant filters, composite tenant FKs, the isolation kit and the endpoint sweep (other teachers 404). Private notes have their own endpoint and are never part of a student response (architecture test), ready for the student portal (R2-P3).
+- Names, phones and guardian contacts are redacted in logs.
+- No duplicates by email within a workspace (unique index) and no limit overrun under parallel requests (intake lock; tested).
+
 ## Moderation (R1-P11)
 
 - The reporter's details (text, optional email) are platform data: they are returned only by `/api/admin/*` (platform staff with MFA), never by a teacher endpoint, and the teacher's notice contains only the moderator's reason (tested on the email and the site response).

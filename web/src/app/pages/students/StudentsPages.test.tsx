@@ -1,0 +1,149 @@
+import { screen, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { describe, expect, it } from 'vitest';
+import { fakeApi, json, LEAD, problem, SUBJECT_MATH, teacher, WORKSPACE_ID, type FakeCall } from '../../../test/fakeApi.ts';
+import { renderRoute } from '../../../test/render.tsx';
+
+const BASE = `/api/w/${WORKSPACE_ID}/students`;
+
+const student = (overrides: Record<string, unknown> = {}) => ({
+  id: 's1',
+  firstName: 'Марко',
+  lastName: 'Стојанов',
+  email: 'marko@example.test',
+  phone: null,
+  isMinor: false,
+  guardianName: null,
+  guardianEmail: null,
+  guardianPhone: null,
+  subjectIds: [] as string[],
+  sourceLeadId: null,
+  archived: false,
+  createdAtUtc: '2026-11-05T09:00:00Z',
+  updatedAtUtc: '2026-11-05T09:00:00Z',
+  version: 0,
+  ...overrides,
+});
+
+function studentsApi() {
+  const state = { students: [student()], notes: [] as { id: string; text: string; createdAtUtc: string }[] };
+  const handler = (call: FakeCall) => {
+    if (call.path === BASE && call.method === 'GET') {
+      const q = new URLSearchParams(call.search).get('q') ?? '';
+      const items = state.students.filter((s) => !q || `${s.firstName} ${s.lastName}`.includes(q));
+      return json(200, { items, total: items.length, page: 1, pageSize: 20, activeCount: state.students.filter((s) => !s.archived).length });
+    }
+    if (call.path === BASE && call.method === 'POST') {
+      const body = call.body as { email: string | null };
+      if (body.email === 'taken@example.test') return problem(409, 'STUDENT_EMAIL_TAKEN');
+      const created = student({ ...(call.body as object), id: 's2', version: 0 });
+      state.students.push(created);
+      return json(201, created);
+    }
+    if (call.path === `${BASE}/s1` && call.method === 'GET') return json(200, state.students[0]);
+    if (call.path === `${BASE}/s2` && call.method === 'GET') return json(200, state.students.find((s) => s.id === 's2'));
+    if (call.path === `${BASE}/s1` && call.method === 'PUT') {
+      if ((call.body as { version: number }).version !== state.students[0]!.version) return problem(409, 'CONCURRENCY_CONFLICT');
+      state.students[0] = student({ ...state.students[0], ...(call.body as object), version: state.students[0]!.version + 1 });
+      return json(200, state.students[0]);
+    }
+    if (call.path === `${BASE}/s1/archive`) {
+      state.students[0] = student({ ...state.students[0], archived: true, version: state.students[0]!.version + 1 });
+      return json(200, state.students[0]);
+    }
+    if (call.path === `${BASE}/s1/notes` && call.method === 'GET') return json(200, state.notes);
+    if (call.path === `${BASE}/s1/notes` && call.method === 'POST') {
+      const note = { id: `n${state.notes.length}`, text: (call.body as { text: string }).text, createdAtUtc: '2026-11-05T10:00:00Z' };
+      state.notes.unshift(note);
+      return json(201, note);
+    }
+    if (call.path === `${BASE}/from-lead`) return json(200, { student: state.students[0], created: true });
+    return undefined;
+  };
+  const api = fakeApi({ me: teacher(), extra: [handler] });
+  return { api, state };
+}
+
+describe('students', () => {
+  it('lists the active students with the count and searches by name', async () => {
+    const user = userEvent.setup();
+    const { api } = studentsApi();
+    await renderRoute(`/app/w/${WORKSPACE_ID}/students`);
+
+    const list = await screen.findByRole('list', { name: 'Ученици' });
+    expect(within(list).getByRole('link', { name: /Марко Стојанов/ })).toHaveAttribute('href', `/app/w/${WORKSPACE_ID}/students/s1`);
+    expect(screen.getByText(/1 активен\./)).toBeInTheDocument();
+
+    await user.type(screen.getByLabelText('Барај по име, е-пошта, телефон или родител'), 'Ана');
+    await expect.poll(() => api.to(BASE).some((c) => c.search.includes('q=%D0%90%D0%BD%D0%B0'))).toBe(true);
+    expect(await screen.findByText('Нема ученици што одговараат.')).toBeInTheDocument();
+  });
+
+  it('adds a minor with the guardian and shows a duplicate email clearly', async () => {
+    const user = userEvent.setup();
+    const { api } = studentsApi();
+    const { router } = await renderRoute(`/app/w/${WORKSPACE_ID}/students/new`);
+
+    await user.click(await screen.findByRole('button', { name: 'Додај ученик' }));
+    expect(screen.getByText('Внесете го името.')).toBeInTheDocument();
+    expect(api.to(BASE, 'POST')).toHaveLength(0);
+
+    await user.type(screen.getByLabelText('Име'), 'Лена');
+    await user.type(screen.getByLabelText('Е-пошта (по желба)'), 'taken@example.test');
+    await user.click(screen.getByLabelText('Ученикот е помлад од 18 години'));
+    await user.type(screen.getByLabelText('Родител или старател'), 'Сања Петрова');
+    await user.type(screen.getByLabelText('Телефон на родителот'), '+389 70 111 222');
+    await user.click(screen.getByRole('checkbox', { name: 'Математика' }));
+    await user.click(screen.getByRole('button', { name: 'Додај ученик' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('Друг ученик во вашата евиденција веќе ја користи оваа е-пошта.');
+
+    await user.clear(screen.getByLabelText('Е-пошта (по желба)'));
+    await user.click(screen.getByRole('button', { name: 'Додај ученик' }));
+    await expect.poll(() => router.state.location.pathname).toBe(`/app/w/${WORKSPACE_ID}/students/s2`);
+    expect(api.to(BASE, 'POST').at(-1)!.body).toEqual({
+      firstName: 'Лена',
+      lastName: null,
+      email: null,
+      phone: null,
+      isMinor: true,
+      guardianName: 'Сања Петрова',
+      guardianEmail: null,
+      guardianPhone: '+389 70 111 222',
+      subjectIds: [SUBJECT_MATH],
+      version: null,
+    });
+  });
+
+  it('edits with the loaded version, archives and keeps private notes', async () => {
+    const user = userEvent.setup();
+    const { api } = studentsApi();
+    await renderRoute(`/app/w/${WORKSPACE_ID}/students/s1`);
+
+    const last = await screen.findByLabelText('Презиме (по желба)');
+    await user.clear(last);
+    await user.type(last, 'Стојановски');
+    await user.click(screen.getByRole('button', { name: 'Зачувај' }));
+    await expect.poll(() => api.to(`${BASE}/s1`, 'PUT').length).toBe(1);
+    expect(api.to(`${BASE}/s1`, 'PUT')[0]!.body).toMatchObject({ lastName: 'Стојановски', version: 0 });
+
+    await user.type(await screen.findByLabelText('Нова белешка'), 'Тешкотии со дропки.');
+    await user.click(screen.getByRole('button', { name: 'Зачувај белешка' }));
+    expect(await screen.findByRole('list', { name: 'Приватни белешки' })).toHaveTextContent('Тешкотии со дропки.');
+
+    await user.click(screen.getByRole('button', { name: 'Архивирај ученик' }));
+    expect(await screen.findByRole('button', { name: 'Врати ученик' })).toBeInTheDocument();
+    expect(api.to(`${BASE}/s1/archive`)[0]!.body).toEqual({ version: 1 });
+  });
+
+  it('turns a request into a student from the lead page', async () => {
+    const user = userEvent.setup();
+    const { api } = studentsApi();
+    api.state.leads = [LEAD()];
+    const { router } = await renderRoute(`/app/w/${WORKSPACE_ID}/leads/lead-1`);
+
+    await user.click(await screen.findByRole('button', { name: 'Направи ученик' }));
+
+    await expect.poll(() => router.state.location.pathname).toBe(`/app/w/${WORKSPACE_ID}/students/s1`);
+    expect(api.to(`${BASE}/from-lead`)[0]).toMatchObject({ body: { leadId: 'lead-1' }, xsrf: 'xsrf' });
+  });
+});

@@ -135,7 +135,7 @@ internal sealed class LeadService(ClassHubDbContext db, LeadQueries queries, ITe
         return new LeadResponse(
             lead.Id, lead.Type.ToString(), lead.Status.ToString(), lead.Name, lead.Email, lead.Phone, lead.Message, lead.OfferId, lead.OfferTitle,
             lead.SubjectId, lead.ConsentVersion, lead.ConsentedAtUtc, lead.CreatedAtUtc, lead.UpdatedAtUtc, lead.ArchivedAtUtc is not null, notes, lead.Version,
-            result);
+            result, lead.StudentId);
     }
 
     private static T Parse<T>(string value, string field)

@@ -1165,6 +1165,9 @@ namespace ClassHub.Core.Infrastructure.Persistence.Migrations
                     b.Property<int>("Status")
                         .HasColumnType("int");
 
+                    b.Property<Guid?>("StudentId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<Guid?>("SubjectId")
                         .HasColumnType("uniqueidentifier");
 
@@ -1199,6 +1202,8 @@ namespace ClassHub.Core.Infrastructure.Persistence.Migrations
                     b.HasIndex("WorkspaceId", "OfferId");
 
                     b.HasIndex("WorkspaceId", "Status");
+
+                    b.HasIndex("WorkspaceId", "StudentId");
 
                     b.ToTable("Leads", null, t =>
                         {
@@ -1535,6 +1540,142 @@ namespace ClassHub.Core.Infrastructure.Persistence.Migrations
                         {
                             t.HasCheckConstraint("CK_SitePageViews_Views", "[Views] >= 0");
                         });
+                });
+
+            modelBuilder.Entity("ClassHub.Core.Modules.Students.Domain.Student", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("ArchivedAtUtc")
+                        .HasPrecision(3)
+                        .HasColumnType("datetime2(3)");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasPrecision(3)
+                        .HasColumnType("datetime2(3)");
+
+                    b.Property<string>("Email")
+                        .HasMaxLength(254)
+                        .HasColumnType("nvarchar(254)");
+
+                    b.Property<string>("FirstName")
+                        .IsRequired()
+                        .HasMaxLength(60)
+                        .HasColumnType("nvarchar(60)");
+
+                    b.Property<string>("GuardianEmail")
+                        .HasMaxLength(254)
+                        .HasColumnType("nvarchar(254)");
+
+                    b.Property<string>("GuardianName")
+                        .HasMaxLength(120)
+                        .HasColumnType("nvarchar(120)");
+
+                    b.Property<string>("GuardianPhone")
+                        .HasMaxLength(40)
+                        .HasColumnType("nvarchar(40)");
+
+                    b.Property<bool>("IsMinor")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("LastName")
+                        .HasMaxLength(60)
+                        .HasColumnType("nvarchar(60)");
+
+                    b.Property<string>("Phone")
+                        .HasMaxLength(40)
+                        .HasColumnType("nvarchar(40)");
+
+                    b.Property<Guid?>("SourceLeadId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("UpdatedAtUtc")
+                        .HasPrecision(3)
+                        .HasColumnType("datetime2(3)");
+
+                    b.Property<int>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("int");
+
+                    b.Property<Guid>("WorkspaceId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("WorkspaceId");
+
+                    b.HasIndex("WorkspaceId", "Email")
+                        .IsUnique()
+                        .HasFilter("[Email] IS NOT NULL");
+
+                    b.HasIndex("WorkspaceId", "ArchivedAtUtc", "LastName");
+
+                    b.ToTable("Students", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_Students_Email", "[Email] IS NULL OR ([Email] = LOWER([Email]) AND [Email] LIKE '%_@_%')");
+
+                            t.HasCheckConstraint("CK_Students_FirstName", "LEN([FirstName]) >= 1");
+                        });
+                });
+
+            modelBuilder.Entity("ClassHub.Core.Modules.Students.Domain.StudentNote", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("AuthorUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasPrecision(3)
+                        .HasColumnType("datetime2(3)");
+
+                    b.Property<Guid>("StudentId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Text")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<Guid>("WorkspaceId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("WorkspaceId");
+
+                    b.HasIndex("WorkspaceId", "StudentId", "CreatedAtUtc");
+
+                    b.ToTable("StudentNotes", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_StudentNotes_Text", "LEN([Text]) >= 1");
+                        });
+                });
+
+            modelBuilder.Entity("ClassHub.Core.Modules.Students.Domain.StudentSubject", b =>
+                {
+                    b.Property<Guid>("StudentId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("SubjectId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("WorkspaceId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("StudentId", "SubjectId");
+
+                    b.HasIndex("SubjectId");
+
+                    b.HasIndex("WorkspaceId");
+
+                    b.HasIndex("WorkspaceId", "StudentId");
+
+                    b.ToTable("StudentSubjects", (string)null);
                 });
 
             modelBuilder.Entity("ClassHub.Core.Modules.Subscriptions.Domain.Plan", b =>
@@ -2228,6 +2369,12 @@ namespace ClassHub.Core.Infrastructure.Persistence.Migrations
                         .HasForeignKey("WorkspaceId", "OfferId")
                         .HasPrincipalKey("WorkspaceId", "Id")
                         .OnDelete(DeleteBehavior.NoAction);
+
+                    b.HasOne("ClassHub.Core.Modules.Students.Domain.Student", null)
+                        .WithMany()
+                        .HasForeignKey("WorkspaceId", "StudentId")
+                        .HasPrincipalKey("WorkspaceId", "Id")
+                        .OnDelete(DeleteBehavior.NoAction);
                 });
 
             modelBuilder.Entity("ClassHub.Core.Modules.Leads.Domain.LeadNote", b =>
@@ -2278,6 +2425,41 @@ namespace ClassHub.Core.Infrastructure.Persistence.Migrations
                     b.HasOne("ClassHub.Core.Modules.Sites.Domain.Site", null)
                         .WithMany()
                         .HasForeignKey("WorkspaceId", "SiteId")
+                        .HasPrincipalKey("WorkspaceId", "Id")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("ClassHub.Core.Modules.Students.Domain.Student", b =>
+                {
+                    b.HasOne("ClassHub.Core.Modules.Workspaces.Domain.Workspace", null)
+                        .WithMany()
+                        .HasForeignKey("WorkspaceId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("ClassHub.Core.Modules.Students.Domain.StudentNote", b =>
+                {
+                    b.HasOne("ClassHub.Core.Modules.Students.Domain.Student", null)
+                        .WithMany()
+                        .HasForeignKey("WorkspaceId", "StudentId")
+                        .HasPrincipalKey("WorkspaceId", "Id")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("ClassHub.Core.Modules.Students.Domain.StudentSubject", b =>
+                {
+                    b.HasOne("ClassHub.Core.Modules.Catalog.Domain.Subject", null)
+                        .WithMany()
+                        .HasForeignKey("SubjectId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.HasOne("ClassHub.Core.Modules.Students.Domain.Student", null)
+                        .WithMany()
+                        .HasForeignKey("WorkspaceId", "StudentId")
                         .HasPrincipalKey("WorkspaceId", "Id")
                         .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();

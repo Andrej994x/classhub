@@ -54,6 +54,9 @@ public static class ErrorCodes
     // Plans (R1-P10)
     public const string PlanLimitReached = "PLAN_LIMIT_REACHED";
 
+    // Students (R2-P1)
+    public const string StudentEmailTaken = "STUDENT_EMAIL_TAKEN";
+
     /// <summary>Default code for an HTTP status when no specific code was set.</summary>
     public static string ForStatus(int statusCode) => statusCode switch
     {

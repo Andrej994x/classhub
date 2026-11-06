@@ -41,6 +41,13 @@ npm run e2e                                # builds the SPA and the API, then ru
 
 Flows (each in **mk and en**, on **desktop and mobile**): register → dev mailbox → confirm → sign in → the dashboard shows the workspace → sign out; forgot password → reset link → the old password fails, the new one works; a second teacher opening the first teacher's workspace URL sees "not found". Texts come from the app's locale files, so wording changes do not break tests. CI job `e2e` uploads the HTML report and traces on failure.
 
+## Student tests (R2-P1)
+
+- Integration: `StudentTests` (add/edit/archive/restore a minor with guardian and subjects, version conflicts, search; isolation; unique email among a teacher's students incl. archived, separate per teacher; conversion creates once, is idempotent and links later requests by email; **five parallel conversions of one request create exactly one student**; Free limit of 10 active students with three parallel adds for the last place → exactly one, conversion blocked at the limit, archived students do not count, restore blocked at the limit; private notes not in student responses; validation).
+- Unit: `StudentNamesTests` (name split, length cuts, email normalization); redaction cases for student fields.
+- Architecture: `StudentPrivacyTests` (no Students contract except the notes ones carries a note).
+- Vitest: `StudentsPages.test.tsx` (list and search, add a minor with guardian and the duplicate-email message, edit with the loaded version, archive, notes, conversion from the request page). E2E: `leads.spec.ts` now ends with the conversion into a student.
+
 ## Release 1 hardening (R1-P12)
 
 - Integration: `IsolationSweepTests` discovers every `/api/w/{workspaceId}/…` and `/api/admin/…` route from the endpoint table (new endpoints are covered automatically) and checks: another teacher gets 404 `NOT_FOUND` on every workspace route, anonymous callers get 401, teachers get 403 on every admin route. Requests carry a body in the declared format (JSON or multipart), so authorization is what answers.
