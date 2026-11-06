@@ -150,6 +150,19 @@ describe('groups', () => {
     expect(api.to(`${BASE}/g1/members/s1`, 'DELETE')).toHaveLength(1);
   });
 
+  it('keeps showing a saved subject that is no longer in the catalog', async () => {
+    const user = userEvent.setup();
+    const { api, state } = groupsApi();
+    state.groups[0] = group({ subjectId: '33333333-0000-4000-8000-0000000000ff' });
+    await renderRoute(`/app/w/${WORKSPACE_ID}/groups/g1`);
+
+    const subject = await screen.findByLabelText('Предмет');
+    await expect.poll(() => (subject as HTMLSelectElement).selectedOptions[0]?.textContent).toBe('Тековен предмет (повеќе не се нуди)');
+    await user.click(screen.getByRole('button', { name: 'Зачувај' }));
+    await expect.poll(() => api.to(`${BASE}/g1`, 'PUT').length).toBe(1);
+    expect(api.to(`${BASE}/g1`, 'PUT')[0]!.body).toMatchObject({ subjectId: '33333333-0000-4000-8000-0000000000ff' });
+  });
+
   it('searches students for the picker', async () => {
     const user = userEvent.setup();
     const { api } = groupsApi();

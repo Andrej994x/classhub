@@ -949,7 +949,8 @@
       "name": "Group name",
       "subject": "Subject",
       "noSubject": "No subject",
-      "description": "Description (e.g. schedule)"
+      "description": "Description (e.g. schedule)",
+      "retiredSubject": "Current subject (no longer offered)"
     },
     "validation": {
       "name": "Enter the group name."

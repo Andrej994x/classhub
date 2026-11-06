@@ -132,6 +132,10 @@ function GroupEditor({ workspaceId, group }: { workspaceId: string; group: Group
               <Label htmlFor="group-subject">{t('groups.fields.subject')}</Label>
               <select id="group-subject" className={select} value={values.subjectId} onChange={(e) => setValues({ ...values, subjectId: e.target.value })}>
                 <option value="">{t('groups.fields.noSubject')}</option>
+                {/* A saved subject the ClassHub team deactivated is not in the catalog but stays valid on this group. */}
+                {values.subjectId && !catalog.data?.subjects.some((s) => s.id === values.subjectId) && (
+                  <option value={values.subjectId}>{catalog.data ? t('groups.fields.retiredSubject') : t('common.loading')}</option>
+                )}
                 {catalog.data?.subjects.map((s) => (
                   <option key={s.id} value={s.id}>
                     {i18n.resolvedLanguage === 'en' ? s.nameEn : s.nameMk}
