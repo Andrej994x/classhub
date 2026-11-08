@@ -32,6 +32,9 @@ public interface IWorkspaceSettings
 
     /// <summary>The current workspace's content language (mk/en).</summary>
     Task<string> GetLocaleAsync(CancellationToken cancellationToken);
+
+    /// <summary>The current workspace's IANA time zone (the schedule is shown and entered in it).</summary>
+    Task<string> GetTimeZoneAsync(CancellationToken cancellationToken);
 }
 
 /// <summary>

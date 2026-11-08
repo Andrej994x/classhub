@@ -88,6 +88,12 @@ ASP.NET Core Identity with cookie sessions. See [ARCHITECTURE.md](ARCHITECTURE.m
 - Names, phones and guardian contacts are redacted in logs.
 - No duplicates by email within a workspace (unique index) and no limit overrun under parallel requests (intake lock; tested).
 
+## Lessons (R2-P4)
+
+- Lessons, participants and groups are tied to the workspace by composite tenant FKs; other teachers get 404. Only `lessons.manage` changes lessons (D-22 final states cannot be rewritten).
+- The cross-workspace overlap check reads only the signed-in teacher's own lessons and returns a yes/no, never another workspace's data.
+- Meeting links must be absolute `https://` URLs (no `javascript:` or other schemes reach the UI).
+
 ## Student accounts (R2-P3)
 
 - Invitation tokens: 256-bit random, only the SHA-256 hash stored, 7 days, single use, revoked by a new invitation, archive or unlink; sent in the URL fragment and cleared from the address bar. Invalid, used, revoked and expired links all answer `INVALID_TOKEN`. The accept endpoints are rate limited (`auth` policy); invitations are capped at 5 per student per day.

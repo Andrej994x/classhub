@@ -837,6 +837,72 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/w/{workspaceId}/lessons": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Lessons starting on the local days from..to (inclusive, workspace time zone, at most 62 days). */
+        get: operations["ListLessons"];
+        put?: never;
+        /** Schedule a lesson; 409 LESSON_OVERLAP when the teacher already has a lesson at that time. */
+        post: operations["CreateLesson"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/w/{workspaceId}/lessons/{lessonId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetLesson"];
+        put: operations["UpdateLesson"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/w/{workspaceId}/lessons/{lessonId}/complete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["CompleteLesson"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/w/{workspaceId}/lessons/{lessonId}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["CancelLesson"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/public/sites/{slug}/reports": {
         parameters: {
             query?: never;
@@ -1670,6 +1736,11 @@ export interface components {
             sharedKey: string;
             authenticatorUri: string;
         };
+        CancelLessonRequest: {
+            /** Format: int32 */
+            version: null | number | string;
+            reason: null | string;
+        };
         CatalogEntryRequest: {
             code: null | string;
             nameMk: null | string;
@@ -2031,6 +2102,49 @@ export interface components {
             /** Format: int32 */
             version: null | number | string;
         };
+        LessonParticipantResponse: {
+            /** Format: uuid */
+            studentId: string;
+            firstName: string;
+            lastName: null | string;
+        };
+        LessonResponse: {
+            /** Format: uuid */
+            id: string;
+            kind: string;
+            /** Format: uuid */
+            groupId: null | string;
+            groupName: null | string;
+            participants: components["schemas"]["LessonParticipantResponse"][];
+            /** Format: uuid */
+            subjectId: null | string;
+            title: string;
+            topic: null | string;
+            /** Format: date-time */
+            startUtc: string;
+            /** Format: date-time */
+            endUtc: string;
+            /** Format: date-time */
+            startLocal: string;
+            /** Format: date-time */
+            endLocal: string;
+            timeZone: string;
+            mode: string;
+            meetingUrl: null | string;
+            location: null | string;
+            status: string;
+            cancellationReason: null | string;
+            /** Format: date-time */
+            createdAtUtc: string;
+            /** Format: date-time */
+            updatedAtUtc: string;
+            /** Format: int32 */
+            version: number | string;
+        };
+        LessonVersionRequest: {
+            /** Format: int32 */
+            version: null | number | string;
+        };
         LoginRequest: {
             email: null | string;
             password: null | string;
@@ -2203,6 +2317,26 @@ export interface components {
             /** Format: uuid */
             subjectId: null | string;
             description: null | string;
+            /** Format: int32 */
+            version: null | number | string;
+        };
+        SaveLessonRequest: {
+            kind: null | string;
+            /** Format: uuid */
+            studentId: null | string;
+            /** Format: uuid */
+            groupId: null | string;
+            /** Format: uuid */
+            subjectId: null | string;
+            title: null | string;
+            topic: null | string;
+            /** Format: date-time */
+            startLocal: null | string;
+            /** Format: int32 */
+            durationMinutes: null | number | string;
+            mode: null | string;
+            meetingUrl: null | string;
+            location: null | string;
             /** Format: int32 */
             version: null | number | string;
         };
@@ -4185,6 +4319,190 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["LeadResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["HttpValidationProblemDetails"];
+                };
+            };
+        };
+    };
+    ListLessons: {
+        parameters: {
+            query: {
+                from: string;
+                to: string;
+                studentId?: string;
+                groupId?: string;
+            };
+            header?: never;
+            path: {
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LessonResponse"][];
+                };
+            };
+        };
+    };
+    CreateLesson: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SaveLessonRequest"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LessonResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["HttpValidationProblemDetails"];
+                };
+            };
+        };
+    };
+    GetLesson: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                lessonId: string;
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LessonResponse"];
+                };
+            };
+        };
+    };
+    UpdateLesson: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                lessonId: string;
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SaveLessonRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LessonResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["HttpValidationProblemDetails"];
+                };
+            };
+        };
+    };
+    CompleteLesson: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                lessonId: string;
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LessonVersionRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LessonResponse"];
+                };
+            };
+        };
+    };
+    CancelLesson: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                lessonId: string;
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CancelLessonRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LessonResponse"];
                 };
             };
             /** @description Bad Request */

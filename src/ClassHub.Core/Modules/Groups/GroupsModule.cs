@@ -21,6 +21,7 @@ public sealed class GroupsModule : IModule
     {
         services.AddScoped<GroupQueries>();
         services.AddScoped<GroupService>();
+        services.AddScoped<IGroupLookup, GroupLookup>();
     }
 
     public void MapEndpoints(IEndpointRouteBuilder endpoints)

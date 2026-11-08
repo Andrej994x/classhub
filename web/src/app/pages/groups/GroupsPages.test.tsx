@@ -120,6 +120,7 @@ describe('groups', () => {
     await user.click(screen.getByRole('button', { name: 'Создај група' }));
 
     await expect.poll(() => router.state.location.pathname).toBe(`/app/w/${WORKSPACE_ID}/groups/g2`);
+    expect(await screen.findByRole('heading', { level: 1, name: 'Физика 8' })).toBeInTheDocument(); // the new group opens for editing
     expect(api.to(BASE, 'POST')[0]).toMatchObject({ body: { name: 'Физика 8', subjectId: null, description: null, version: null }, xsrf: 'xsrf' });
   });
 

@@ -28,3 +28,12 @@ public sealed record GroupVersionRequest(int? Version);
 
 /// <summary>Add a student of this workspace (not archived) to the group.</summary>
 public sealed record AddGroupMemberRequest(Guid? StudentId);
+
+/// <summary>A group for other modules (lessons): its name, state and the students currently in it who are not archived.</summary>
+public sealed record GroupSummary(Guid Id, string Name, bool Archived, IReadOnlyList<Guid> ActiveStudentIds);
+
+/// <summary>Groups of the current workspace (archived ones included).</summary>
+public interface IGroupLookup
+{
+    Task<IReadOnlyDictionary<Guid, GroupSummary>> FindAsync(IReadOnlyCollection<Guid> ids, CancellationToken cancellationToken);
+}

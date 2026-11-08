@@ -1,0 +1,123 @@
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { api } from '../api/client.ts';
+import type { components } from '../api/schema';
+
+export type Lesson = components['schemas']['LessonResponse'];
+
+export interface LessonInput {
+  kind: 'Individual' | 'Group';
+  studentId: string | null;
+  groupId: string | null;
+  subjectId: string | null;
+  title: string;
+  topic: string | null;
+  /** Wall-clock start in the workspace time zone, `YYYY-MM-DDTHH:mm:00`. */
+  startLocal: string;
+  durationMinutes: number;
+  mode: 'Online' | 'InPerson';
+  meetingUrl: string | null;
+  location: string | null;
+}
+
+const keys = {
+  all: (workspaceId: string) => ['w', workspaceId, 'lessons'] as const,
+  range: (workspaceId: string, from: string, to: string) => ['w', workspaceId, 'lessons', 'range', from, to] as const,
+  one: (workspaceId: string, lessonId: string) => ['w', workspaceId, 'lessons', lessonId] as const,
+};
+
+/** Lessons starting on the local days from..to (inclusive, `YYYY-MM-DD`, workspace time zone). */
+export function useLessons(workspaceId: string, from: string, to: string) {
+  return useQuery({
+    queryKey: keys.range(workspaceId, from, to),
+    placeholderData: keepPreviousData,
+    queryFn: async () => (await api.client.GET('/api/w/{workspaceId}/lessons', { params: { path: { workspaceId }, query: { from, to } } })).data!,
+  });
+}
+
+export function useLesson(workspaceId: string, lessonId: string | undefined) {
+  return useQuery({
+    queryKey: keys.one(workspaceId, lessonId ?? 'new'),
+    enabled: lessonId !== undefined,
+    refetchOnMount: 'always',
+    queryFn: async () => (await api.client.GET('/api/w/{workspaceId}/lessons/{lessonId}', { params: { path: { workspaceId, lessonId: lessonId! } } })).data!,
+  });
+}
+
+function useLessonMutation<TInput>(workspaceId: string, run: (input: TInput) => Promise<Lesson>) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: run,
+    onSuccess: async (lesson) => {
+      queryClient.setQueryData(keys.one(workspaceId, lesson.id), lesson);
+      await queryClient.invalidateQueries({ queryKey: [...keys.all(workspaceId), 'range'] });
+    },
+  });
+}
+
+export function useSaveLesson(workspaceId: string, lessonId?: string) {
+  return useLessonMutation(workspaceId, async ({ input, version }: { input: LessonInput; version: number | null }) =>
+    lessonId
+      ? (await api.client.PUT('/api/w/{workspaceId}/lessons/{lessonId}', { params: { path: { workspaceId, lessonId } }, body: { ...input, version } })).data!
+      : (await api.client.POST('/api/w/{workspaceId}/lessons', { params: { path: { workspaceId } }, body: { ...input, version: null } })).data!,
+  );
+}
+
+export function useCompleteLesson(workspaceId: string, lessonId: string) {
+  return useLessonMutation(workspaceId, async (version: number) =>
+    (await api.client.POST('/api/w/{workspaceId}/lessons/{lessonId}/complete', { params: { path: { workspaceId, lessonId } }, body: { version } })).data!,
+  );
+}
+
+export function useCancelLesson(workspaceId: string, lessonId: string) {
+  return useLessonMutation(workspaceId, async ({ version, reason }: { version: number; reason: string }) =>
+    (await api.client.POST('/api/w/{workspaceId}/lessons/{lessonId}/cancel', { params: { path: { workspaceId, lessonId } }, body: { version, reason } })).data!,
+  );
+}
+
+// --- Plain local dates (`YYYY-MM-DD`): calendar arithmetic without time zones (UTC noon avoids any DST edge). ---
+
+const parse = (date: string) => new Date(`${date}T12:00:00Z`);
+const format = (d: Date) => d.toISOString().slice(0, 10);
+
+export const isDate = (value: string | null | undefined): value is string => !!value && /^\d{4}-\d{2}-\d{2}$/.test(value) && !Number.isNaN(parse(value).getTime());
+
+export function addDays(date: string, days: number): string {
+  const d = parse(date);
+  d.setUTCDate(d.getUTCDate() + days);
+  return format(d);
+}
+
+export function addMonths(date: string, months: number): string {
+  const d = parse(date);
+  const day = d.getUTCDate();
+  d.setUTCDate(1);
+  d.setUTCMonth(d.getUTCMonth() + months);
+  const last = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 0, 12)).getUTCDate();
+  d.setUTCDate(Math.min(day, last));
+  return format(d);
+}
+
+/** Monday of the week (ISO weeks, as in North Macedonia). */
+export function startOfWeek(date: string): string {
+  const weekday = (parse(date).getUTCDay() + 6) % 7;
+  return addDays(date, -weekday);
+}
+
+export const startOfMonth = (date: string) => `${date.slice(0, 8)}01`;
+
+/** The 6 × 7 grid of a month view, Monday first. */
+export function monthGrid(date: string): string[] {
+  const first = startOfWeek(startOfMonth(date));
+  return Array.from({ length: 42 }, (_, i) => addDays(first, i));
+}
+
+/** Today in a time zone (the workspace's), as `YYYY-MM-DD`. */
+export function today(timeZone: string, now = new Date()): string {
+  const parts = new Intl.DateTimeFormat('en-CA', { timeZone, year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(now);
+  const get = (type: string) => parts.find((p) => p.type === type)!.value;
+  return `${get('year')}-${get('month')}-${get('day')}`;
+}
+
+/** The local day and time of a server wall-clock value (`2030-11-12T17:00:00` → `2030-11-12`, `17:00`). */
+export const localDay = (value: string) => value.slice(0, 10);
+export const localTime = (value: string) => value.slice(11, 16);

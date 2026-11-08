@@ -117,6 +117,7 @@ describe('students', () => {
     await user.clear(screen.getByLabelText('Е-пошта (по желба)'));
     await user.click(screen.getByRole('button', { name: 'Додај ученик' }));
     await expect.poll(() => router.state.location.pathname).toBe(`/app/w/${WORKSPACE_ID}/students/s2`);
+    expect(await screen.findByRole('heading', { level: 1, name: /Лена/ })).toBeInTheDocument(); // the new student opens for editing
     expect(api.to(BASE, 'POST').at(-1)!.body).toEqual({
       firstName: 'Лена',
       lastName: null,
