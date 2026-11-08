@@ -60,6 +60,9 @@ public static class ErrorCodes
     public const string AccountAlreadyLinked = "ACCOUNT_ALREADY_LINKED";
     public const string EmailRegistered = "EMAIL_REGISTERED";
 
+    // Lessons (R2-P4)
+    public const string LessonOverlap = "LESSON_OVERLAP";
+
     /// <summary>Default code for an HTTP status when no specific code was set.</summary>
     public static string ForStatus(int statusCode) => statusCode switch
     {

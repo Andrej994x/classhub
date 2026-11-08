@@ -74,7 +74,16 @@ export function GroupsPage() {
   );
 }
 
+/**
+ * Keyed by the route's id: opening another entity (also right after creating one, which replaces `/new`) is a fresh
+ * mount, so the editor again waits for this visit's refetch instead of staying on "loading".
+ */
 export function GroupEditPage() {
+  const { groupId } = useParams();
+  return <GroupEditLoader key={groupId ?? 'new'} />;
+}
+
+function GroupEditLoader() {
   const { t } = useTranslation();
   const { workspaceId = '', groupId } = useParams();
   const group = useGroup(workspaceId, groupId);

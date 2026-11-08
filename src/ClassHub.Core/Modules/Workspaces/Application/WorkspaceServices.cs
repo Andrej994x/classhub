@@ -49,6 +49,9 @@ internal sealed class WorkspaceService(ClassHubDbContext db, ITenantContext tena
     public async Task<string> GetLocaleAsync(CancellationToken cancellationToken) =>
         (await LoadCurrentAsync(cancellationToken)).Locale;
 
+    public async Task<string> GetTimeZoneAsync(CancellationToken cancellationToken) =>
+        (await LoadCurrentAsync(cancellationToken)).TimeZone;
+
     public async Task ApplyAsync(string? timeZone, string? currency, CancellationToken cancellationToken)
     {
         if (timeZone is null && currency is null)

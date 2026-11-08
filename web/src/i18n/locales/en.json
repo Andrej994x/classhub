@@ -39,7 +39,8 @@
     "adminCatalog": "Catalog",
     "students": "Students",
     "groups": "Groups",
-    "studentSettings": "Settings"
+    "studentSettings": "Settings",
+    "calendar": "Calendar"
   },
   "layout": {
     "teacherArea": "Teacher workspace",
@@ -378,7 +379,8 @@
       "STUDENT_EMAIL_TAKEN": "Another student in your records already uses this email.",
       "STUDENT_ALREADY_LINKED": "This student already has an account.",
       "ACCOUNT_ALREADY_LINKED": "Your account is already linked to a student of this teacher.",
-      "EMAIL_REGISTERED": "An account with this email already exists. Sign in to accept the invitation."
+      "EMAIL_REGISTERED": "An account with this email already exists. Sign in to accept the invitation.",
+      "LESSON_OVERLAP": "You already have a lesson at this time."
     }
   },
   "auth": {
@@ -950,6 +952,11 @@
       "invite": "Send invitation",
       "resend": "Send a new invitation",
       "sent": "Invitation sent."
+    },
+    "picker": {
+      "search": "Find a student",
+      "choose": "Choose a student",
+      "pages": "Pages of students"
     }
   },
   "groups": {
@@ -1026,6 +1033,84 @@
       "languageLead": "Used in the app and in emails from ClassHub.",
       "notifications": "Notifications",
       "notificationsLater": "Lesson reminders and notification choices arrive in a later version."
+    }
+  },
+  "lessons": {
+    "add": "New lesson",
+    "back": "Back to the calendar",
+    "newTitle": "New lesson",
+    "details": "Lesson",
+    "finalLead": "Held and cancelled lessons stay as they are, so the history is reliable.",
+    "save": "Save",
+    "create": "Schedule lesson",
+    "saved": "Saved.",
+    "changedElsewhere": "The lesson was changed elsewhere. Reload the page and apply your changes again.",
+    "participants": "Students: {{names}}",
+    "minutes_one": "{{count}} minute",
+    "minutes_other": "{{count}} minutes",
+    "statusTitle": "Held or cancelled?",
+    "statusLead": "Mark the lesson as held once it took place, or cancel it with a reason. A cancelled lesson frees the time and never counts as held.",
+    "complete": "Mark as held",
+    "completeLater": "You can mark the lesson as held once it has started.",
+    "cancel": "Cancel lesson",
+    "cancelReason": "Reason for cancelling",
+    "cancelConfirm": "Cancel the lesson",
+    "kinds": {
+      "Individual": "One student",
+      "Group": "Group"
+    },
+    "modes": {
+      "Online": "Online",
+      "InPerson": "In person"
+    },
+    "statuses": {
+      "Scheduled": "Scheduled",
+      "Completed": "Held",
+      "Cancelled": "Cancelled"
+    },
+    "fields": {
+      "kind": "Who",
+      "student": "Student",
+      "group": "Group",
+      "chooseGroup": "Choose a group",
+      "title": "Title",
+      "subject": "Subject",
+      "noSubject": "No subject",
+      "date": "Date",
+      "time": "Start time",
+      "duration": "Duration",
+      "mode": "Where",
+      "meetingUrl": "Online meeting link",
+      "location": "Location",
+      "topic": "Topic (optional)"
+    },
+    "validation": {
+      "student": "Choose the student.",
+      "group": "Choose the group.",
+      "title": "Enter a title.",
+      "date": "Choose the date.",
+      "time": "Choose the start time.",
+      "timeSkipped": "This time does not exist on that day: the clocks move forward. Choose another time.",
+      "meetingUrl": "Enter a link that starts with https://."
+    },
+    "calendar": {
+      "title": "Calendar",
+      "timeZone": "Times in {{zone}}",
+      "view": "View",
+      "views": {
+        "day": "Day",
+        "week": "Week",
+        "month": "Month"
+      },
+      "previous": "Previous",
+      "next": "Next",
+      "today": "Today",
+      "days": "Days",
+      "free": "No lessons",
+      "count_one": "{{count}} lesson",
+      "count_other": "{{count}} lessons",
+      "more_one": "+{{count}} more",
+      "more_other": "+{{count}} more"
     }
   }
 }

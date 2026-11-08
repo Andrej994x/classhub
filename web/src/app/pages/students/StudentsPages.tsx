@@ -130,7 +130,16 @@ export function StudentsPage() {
 }
 
 /** Add (`/students/new`) or edit a student; archive/restore and private notes for existing ones. */
+/**
+ * Keyed by the route's id: opening another entity (also right after creating one, which replaces `/new`) is a fresh
+ * mount, so the editor again waits for this visit's refetch instead of staying on "loading".
+ */
 export function StudentEditPage() {
+  const { studentId } = useParams();
+  return <StudentEditLoader key={studentId ?? 'new'} />;
+}
+
+function StudentEditLoader() {
   const { t } = useTranslation();
   const { workspaceId = '', studentId } = useParams();
   const student = useStudent(workspaceId, studentId);

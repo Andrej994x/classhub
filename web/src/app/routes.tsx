@@ -18,6 +18,8 @@ import { OfferEditPage } from './pages/offers/OfferEditPage.tsx';
 import { OffersPage } from './pages/offers/OffersPage.tsx';
 import { PlanPage } from './pages/plan/PlanPage.tsx';
 import { GroupEditPage, GroupsPage } from './pages/groups/GroupsPages.tsx';
+import { CalendarPage } from './pages/lessons/CalendarPage.tsx';
+import { LessonEditPage } from './pages/lessons/LessonEditPage.tsx';
 import { StudentEditPage, StudentsPage } from './pages/students/StudentsPages.tsx';
 import { InvitationPage, StudentHomePage, StudentSettingsPage, StudentTeacherPage } from './pages/student/StudentPortalPages.tsx';
 import { ProfilePage } from './pages/profile/ProfilePage.tsx';
@@ -62,6 +64,9 @@ export const routes: RouteObject[] = [
       { path: 'w/:workspaceId/students', element: <StudentsPage /> },
       { path: 'w/:workspaceId/students/new', element: <StudentEditPage /> },
       { path: 'w/:workspaceId/students/:studentId', element: <StudentEditPage /> },
+      { path: 'w/:workspaceId/calendar', element: <CalendarPage /> },
+      { path: 'w/:workspaceId/lessons/new', element: <LessonEditPage /> },
+      { path: 'w/:workspaceId/lessons/:lessonId', element: <LessonEditPage /> },
       { path: 'w/:workspaceId/groups', element: <GroupsPage /> },
       { path: 'w/:workspaceId/groups/new', element: <GroupEditPage /> },
       { path: 'w/:workspaceId/groups/:groupId', element: <GroupEditPage /> },
