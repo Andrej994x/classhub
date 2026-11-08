@@ -1091,7 +1091,9 @@
       "date": "Choose the date.",
       "time": "Choose the start time.",
       "timeSkipped": "This time does not exist on that day: the clocks move forward. Choose another time.",
-      "meetingUrl": "Enter a link that starts with https://."
+      "meetingUrl": "Enter a link that starts with https://.",
+      "seriesStart": "Recurring lessons start today or later.",
+      "seriesEnd": "Choose how many lessons (1–200) or an end date on or after the first lesson."
     },
     "calendar": {
       "title": "Calendar",
@@ -1111,6 +1113,56 @@
       "count_other": "{{count}} lessons",
       "more_one": "+{{count}} more",
       "more_other": "+{{count}} more"
+    },
+    "series": {
+      "partOf": "This lesson repeats.",
+      "exception": "This lesson repeats, but was changed on its own.",
+      "open": "View the series",
+      "repeat": "Repeat",
+      "never": "Does not repeat",
+      "weekly": "Every week",
+      "biweekly": "Every two weeks",
+      "ends": "Ends",
+      "afterCount": "After",
+      "countLabel": "Number of lessons",
+      "onDate": "On",
+      "endDateLabel": "End date",
+      "noEnd": "No end date",
+      "create": "Schedule recurring lessons",
+      "scope": "Apply the changes to",
+      "scopes": {
+        "this": "Only this lesson",
+        "following": "This and the following lessons"
+      },
+      "summaryWeekly": "Every week on {{weekday}} at {{time}}, {{minutes}} min",
+      "summaryBiweekly": "Every two weeks on {{weekday}} at {{time}}, {{minutes}} min",
+      "endsAfter_one": "{{count}} lesson in total",
+      "endsAfter_other": "{{count}} lessons in total",
+      "endsOn": "until {{date}}",
+      "created_one": "{{count}} lesson was scheduled (up to 12 weeks ahead; more follow automatically).",
+      "created_other": "{{count}} lessons were scheduled (up to 12 weeks ahead; more follow automatically).",
+      "replaced": "These lessons were changed from a later date on, and a new series continues them.",
+      "openNew": "Open the new series",
+      "skippedTitle": "Not scheduled",
+      "skippedLead": "Dates where a lesson of this series could not be scheduled. You can add one by hand.",
+      "noSkips": "Every date so far was scheduled.",
+      "reasons": {
+        "Overlap": "another lesson at that time",
+        "TimeDoesNotExist": "that time does not exist that day (clocks move forward)",
+        "Unavailable": "the student or group is archived or the group is empty"
+      },
+      "editTitle": "Change all future lessons",
+      "editLead": "Upcoming lessons are replaced from the first date below. Held, cancelled and individually changed lessons stay as they are.",
+      "firstDate": "From",
+      "invalid": "Check the title, a first date from today on, and the end.",
+      "applyFuture": "Apply to all future lessons",
+      "endTitle": "End the series",
+      "endLead": "No lessons of this series from the chosen date on. Held and cancelled lessons stay.",
+      "endFrom": "No lessons from",
+      "end": "End the series",
+      "endConfirm": "Upcoming lessons of this series from that date are removed. Continue?",
+      "endYes": "Yes, end it",
+      "ended": "The series ends."
     }
   }
 }

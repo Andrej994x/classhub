@@ -7,10 +7,10 @@ This is the live status of the autonomous implementation loop ([ROADMAP.md](ROAD
 | Field | Value |
 |---|---|
 | Release | R2 — Teaching operations (R0 and R1 complete) |
-| Current phase | R2-P4 — Lessons core & calendar |
-| Branch | `feature/r2-p4-lessons-calendar` (from `main` @ `29dd0ff`) |
+| Current phase | R2-P5 — Recurring lessons |
+| Branch | `feature/r2-p5-recurring-lessons` (from `main` @ `c01eae0`) |
 | Workflow step | 5 — signed Codex review, then PR |
-| Next action | R2-P4 PR; then R2-P5 (recurring lessons) |
+| Next action | R2-P5 PR; then R2-P6 (availability & booking) |
 | Open blockers | None. User actions (optional): direct-push probe (R0-P8); remove the now redundant required `pr-gate` check (see Decisions) |
 
 ## Phase status
@@ -45,8 +45,8 @@ Status values: `not started`, `in progress`, `in review` (PR open), `merged`, `b
 | R2-P1 | Students | merged | `feature/r2-p1-students` | [#25](https://github.com/Andrej994x/classhub/pull/25) | `550667c` | 6 rounds: 5 × P2 fixed (source-lead FK, editor remount on refetch, stale cache on reopen, phone format, conversion of closed requests); final round clean | green | Migration applied to local `ClassHubDb` |
 | R2-P2 | Groups | merged | `feature/r2-p2-groups` | [#26](https://github.com/Andrej994x/classhub/pull/26) | `0873148` | 4 rounds: 3 × P2 fixed (cap on re-added members, deactivated subject shown, paged member picker); round 4 clean | green | Migration applied to local `ClassHubDb` |
 | R2-P3 | Student accounts & invitations | merged | `feature/r2-p3-student-accounts` | [#27](https://github.com/Andrej994x/classhub/pull/27) | `29dd0ff` | 1 round: no actionable defects | green | Migration applied to local `ClassHubDb` |
-| R2-P4 | Lessons core & calendar | in progress | `feature/r2-p4-lessons-calendar` | | | | | Plan: lessons for a student or a group, Scheduled → Completed/Cancelled (D-22), no overlaps per teacher under a schedule lock, local times with explicit DST rules, day/week/month calendar; also fixes the editors that stayed on "loading" after creating a student or group |
-| R2-P5 | Recurring lessons | not started | | | | | | |
+| R2-P4 | Lessons core & calendar | merged | `feature/r2-p4-lessons-calendar` | [#28](https://github.com/Andrej994x/classhub/pull/28) | `c01eae0` | 5 rounds: 5 × P2 fixed (time zone change grouping, held timer, picker label, repeated-hour instant, timer after reschedule); round 5 clean | green | Migration applied to local `ClassHubDb` |
+| R2-P5 | Recurring lessons | in progress | `feature/r2-p5-recurring-lessons` | | | | | Plan: weekly/bi-weekly series ending by date, count or never; occurrences 12 weeks ahead plus a horizon job; conflicts skipped and reported per occurrence; D-24 scopes (only this / this and following / all future) as series splits; final and individually changed lessons never touched |
 | R2-P6 | Availability & booking | not started | | | | | | |
 | R2-P7 | Attendance, notes & history | not started | | | | | | |
 | R2-P8 | Materials | not started | | | | | | |

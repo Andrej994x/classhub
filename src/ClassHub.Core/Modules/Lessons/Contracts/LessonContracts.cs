@@ -12,6 +12,19 @@ public enum LessonMode
     InPerson = 2,
 }
 
+/// <summary>Why an occurrence of a series was not created.</summary>
+public enum SeriesSkipReason
+{
+    /// <summary>Another lesson of the teacher overlaps it.</summary>
+    Overlap = 1,
+
+    /// <summary>The local time does not exist that day (the clocks move forward).</summary>
+    TimeDoesNotExist = 2,
+
+    /// <summary>The student or group is archived, or the group has no students.</summary>
+    Unavailable = 3,
+}
+
 /// <summary>D-22: Scheduled → Completed or Cancelled. Both end states are final; a cancelled lesson never counts as held.</summary>
 public enum LessonStatus
 {
@@ -53,7 +66,10 @@ public sealed record LessonResponse(
     string? CancellationReason,
     DateTime CreatedAtUtc,
     DateTime UpdatedAtUtc,
-    int Version);
+    int Version,
+    Guid? SeriesId,
+    int? SeriesIndex,
+    bool SeriesException);
 
 /// <summary>
 /// Schedule (no version) or change a scheduled lesson (the version that was loaded). The start is a wall-clock time in
@@ -76,3 +92,62 @@ public sealed record SaveLessonRequest(
 public sealed record LessonVersionRequest(int? Version);
 
 public sealed record CancelLessonRequest(int? Version, string? Reason);
+
+/// <summary>
+/// Set up recurring lessons: every <c>IntervalWeeks</c> (1 or 2) from <c>StartDate</c> at <c>StartTime</c> (workspace
+/// time zone), ending on <c>EndDate</c>, after <c>Count</c> lessons, or not at all (at most one of the two).
+/// </summary>
+public sealed record SaveSeriesRequest(
+    string? Kind,
+    Guid? StudentId,
+    Guid? GroupId,
+    Guid? SubjectId,
+    string? Title,
+    string? Topic,
+    DateOnly? StartDate,
+    TimeOnly? StartTime,
+    int? DurationMinutes,
+    int? IntervalWeeks,
+    DateOnly? EndDate,
+    int? Count,
+    string? Mode,
+    string? MeetingUrl,
+    string? Location);
+
+/// <summary>
+/// D-24 edits. <c>ThisAndFollowing</c> starts at <c>FromLessonId</c>; <c>AllFuture</c> at the next scheduled occurrence.
+/// The series ends there and a new one with <c>Series</c> continues; held, cancelled and individually changed lessons stay.
+/// </summary>
+public sealed record UpdateSeriesRequest(string? Scope, Guid? FromLessonId, SaveSeriesRequest? Series, int? Version);
+
+/// <summary>End the series: no occurrences on or after <c>FromDate</c> (scheduled ones are removed).</summary>
+public sealed record EndSeriesRequest(DateOnly? FromDate, int? Version);
+
+public sealed record SeriesSkipResponse(DateOnly Date, string Reason);
+
+public sealed record SeriesResponse(
+    Guid Id,
+    string Kind,
+    Guid? StudentId,
+    Guid? GroupId,
+    Guid? SubjectId,
+    string Title,
+    string? Topic,
+    DateOnly StartDate,
+    TimeOnly StartTime,
+    int DurationMinutes,
+    int IntervalWeeks,
+    DateOnly? EndDate,
+    int? Count,
+    string Mode,
+    string? MeetingUrl,
+    string? Location,
+    string TimeZone,
+    Guid? ReplacedBySeriesId,
+    IReadOnlyList<SeriesSkipResponse> Skips,
+    DateTime CreatedAtUtc,
+    DateTime UpdatedAtUtc,
+    int Version);
+
+/// <summary>The series after a create or edit, how many lessons were created now, and the occurrences that were skipped now.</summary>
+public sealed record SeriesResultResponse(SeriesResponse Series, int Created, IReadOnlyList<SeriesSkipResponse> Conflicts);

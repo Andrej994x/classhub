@@ -41,6 +41,13 @@ npm run e2e                                # builds the SPA and the API, then ru
 
 Flows (each in **mk and en**, on **desktop and mobile**): register → dev mailbox → confirm → sign in → the dashboard shows the workspace → sign out; forgot password → reset link → the old password fails, the new one works; a second teacher opening the first teacher's workspace URL sees "not found". Texts come from the app's locale files, so wording changes do not break tests. CI job `e2e` uploads the HTML report and traces on failure.
 
+## Recurring lesson tests (R2-P5)
+
+- Unit: `SeriesPatternTests` (weekly/bi-weekly weekdays, end by count and date, same local time across the autumn change, the skipped spring hour has no instant, first index on or after a date).
+- Integration: `LessonSeriesTests` (12 weeks created, the horizon job extends idempotently and stops at the count; an overlapping occurrence skipped and reported; this-and-following keeps earlier, held, cancelled and individually changed lessons and splits the series; all future replaces upcoming lessons, and a refused edit (archived student) changes nothing; ending removes upcoming lessons and the job respects it; replaced series and stale versions refused; **two series for the same slot created in parallel never double-book** (fails without the lock); validation and isolation).
+- Vitest: `Series.test.tsx` (weekly series from the editor; this and following keeps the lessons left of a counted series; series page with skipped dates, all-future change, ending after confirming; a replaced series links to its continuation).
+- E2E: `lessons.spec.ts` also schedules four weekly lessons, sees them in the month, and ends the series.
+
 ## Lesson tests (R2-P4)
 
 - Unit: `LessonRulesTests` (state machine, half-open overlap incl. touching and containment, cancelled lessons free time, CET/CEST conversion, the skipped spring hour refused, the repeated autumn hour = first occurrence, 23/25-hour days).

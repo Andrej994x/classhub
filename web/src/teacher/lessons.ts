@@ -121,3 +121,65 @@ export function today(timeZone: string, now = new Date()): string {
 /** The local day and time of a server wall-clock value (`2030-11-12T17:00:00` → `2030-11-12`, `17:00`). */
 export const localDay = (value: string) => value.slice(0, 10);
 export const localTime = (value: string) => value.slice(11, 16);
+
+// --- Recurring lessons (R2-P5) ---
+
+export type Series = components['schemas']['SeriesResponse'];
+export type SeriesResult = components['schemas']['SeriesResultResponse'];
+
+export interface SeriesInput {
+  kind: 'Individual' | 'Group';
+  studentId: string | null;
+  groupId: string | null;
+  subjectId: string | null;
+  title: string;
+  topic: string | null;
+  /** `YYYY-MM-DD` and `HH:mm:00`, workspace time zone. */
+  startDate: string;
+  startTime: string;
+  durationMinutes: number;
+  intervalWeeks: 1 | 2;
+  endDate: string | null;
+  count: number | null;
+  mode: 'Online' | 'InPerson';
+  meetingUrl: string | null;
+  location: string | null;
+}
+
+const seriesKey = (workspaceId: string, seriesId: string) => ['w', workspaceId, 'lesson-series', seriesId] as const;
+
+export function useSeries(workspaceId: string, seriesId: string | undefined) {
+  return useQuery({
+    queryKey: seriesKey(workspaceId, seriesId ?? 'none'),
+    enabled: seriesId !== undefined,
+    refetchOnMount: 'always',
+    queryFn: async () => (await api.client.GET('/api/w/{workspaceId}/lesson-series/{seriesId}', { params: { path: { workspaceId, seriesId: seriesId! } } })).data!,
+  });
+}
+
+function useSeriesMutation<TInput, TResult>(workspaceId: string, run: (input: TInput) => Promise<TResult>) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: run,
+    // A series changes many lessons at once: every lesson view reloads.
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['w', workspaceId] }),
+  });
+}
+
+export function useCreateSeries(workspaceId: string) {
+  return useSeriesMutation(workspaceId, async (input: SeriesInput) =>
+    (await api.client.POST('/api/w/{workspaceId}/lesson-series', { params: { path: { workspaceId } }, body: input })).data!,
+  );
+}
+
+export function useUpdateSeries(workspaceId: string, seriesId: string) {
+  return useSeriesMutation(workspaceId, async ({ scope, fromLessonId, series, version }: { scope: 'ThisAndFollowing' | 'AllFuture'; fromLessonId: string | null; series: SeriesInput; version: number }) =>
+    (await api.client.PUT('/api/w/{workspaceId}/lesson-series/{seriesId}', { params: { path: { workspaceId, seriesId } }, body: { scope, fromLessonId, series, version } })).data!,
+  );
+}
+
+export function useEndSeries(workspaceId: string, seriesId: string) {
+  return useSeriesMutation(workspaceId, async ({ fromDate, version }: { fromDate: string; version: number }) =>
+    (await api.client.POST('/api/w/{workspaceId}/lesson-series/{seriesId}/end', { params: { path: { workspaceId, seriesId } }, body: { fromDate, version } })).data!,
+  );
+}

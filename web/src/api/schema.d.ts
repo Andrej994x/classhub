@@ -903,6 +903,56 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/w/{workspaceId}/lesson-series": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Set up weekly or bi-weekly lessons; occurrences are created 12 weeks ahead and conflicts are reported per occurrence. */
+        post: operations["CreateLessonSeries"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/w/{workspaceId}/lesson-series/{seriesId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetLessonSeries"];
+        /** Change this and the following lessons, or all future ones (D-24); a new series continues. */
+        put: operations["UpdateLessonSeries"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/w/{workspaceId}/lesson-series/{seriesId}/end": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["EndLessonSeries"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/public/sites/{slug}/reports": {
         parameters: {
             query?: never;
@@ -1925,6 +1975,12 @@ export interface components {
         EmailRequest: {
             email: null | string;
         };
+        EndSeriesRequest: {
+            /** Format: date */
+            fromDate: null | string;
+            /** Format: int32 */
+            version: null | number | string;
+        };
         GroupListItem: {
             /** Format: uuid */
             id: string;
@@ -2140,6 +2196,11 @@ export interface components {
             updatedAtUtc: string;
             /** Format: int32 */
             version: number | string;
+            /** Format: uuid */
+            seriesId: null | string;
+            /** Format: int32 */
+            seriesIndex: null | number | string;
+            seriesException: boolean;
         };
         LessonVersionRequest: {
             /** Format: int32 */
@@ -2361,6 +2422,32 @@ export interface components {
             /** Format: int32 */
             version?: null | number | string;
         };
+        SaveSeriesRequest: {
+            kind: null | string;
+            /** Format: uuid */
+            studentId: null | string;
+            /** Format: uuid */
+            groupId: null | string;
+            /** Format: uuid */
+            subjectId: null | string;
+            title: null | string;
+            topic: null | string;
+            /** Format: date */
+            startDate: null | string;
+            /** Format: time */
+            startTime: null | string;
+            /** Format: int32 */
+            durationMinutes: null | number | string;
+            /** Format: int32 */
+            intervalWeeks: null | number | string;
+            /** Format: date */
+            endDate: null | string;
+            /** Format: int32 */
+            count: null | number | string;
+            mode: null | string;
+            meetingUrl: null | string;
+            location: null | string;
+        };
         SaveSiteRequest: {
             slug: null | string;
             template: null | string;
@@ -2396,6 +2483,55 @@ export interface components {
             /** Format: int32 */
             points: number | string;
             options: null | components["schemas"]["SaveTestOption"][];
+        };
+        SeriesResponse: {
+            /** Format: uuid */
+            id: string;
+            kind: string;
+            /** Format: uuid */
+            studentId: null | string;
+            /** Format: uuid */
+            groupId: null | string;
+            /** Format: uuid */
+            subjectId: null | string;
+            title: string;
+            topic: null | string;
+            /** Format: date */
+            startDate: string;
+            /** Format: time */
+            startTime: string;
+            /** Format: int32 */
+            durationMinutes: number | string;
+            /** Format: int32 */
+            intervalWeeks: number | string;
+            /** Format: date */
+            endDate: null | string;
+            /** Format: int32 */
+            count: null | number | string;
+            mode: string;
+            meetingUrl: null | string;
+            location: null | string;
+            timeZone: string;
+            /** Format: uuid */
+            replacedBySeriesId: null | string;
+            skips: components["schemas"]["SeriesSkipResponse"][];
+            /** Format: date-time */
+            createdAtUtc: string;
+            /** Format: date-time */
+            updatedAtUtc: string;
+            /** Format: int32 */
+            version: number | string;
+        };
+        SeriesResultResponse: {
+            series: components["schemas"]["SeriesResponse"];
+            /** Format: int32 */
+            created: number | string;
+            conflicts: components["schemas"]["SeriesSkipResponse"][];
+        };
+        SeriesSkipResponse: {
+            /** Format: date */
+            date: string;
+            reason: string;
         };
         SharedAttemptResult: {
             /** Format: uuid */
@@ -2672,6 +2808,14 @@ export interface components {
         };
         UpdatePlanLimitsRequest: {
             limits: null | components["schemas"]["PlanLimitValue"][];
+            /** Format: int32 */
+            version: null | number | string;
+        };
+        UpdateSeriesRequest: {
+            scope: null | string;
+            /** Format: uuid */
+            fromLessonId: null | string;
+            series: null | components["schemas"]["SaveSeriesRequest"];
             /** Format: int32 */
             version: null | number | string;
         };
@@ -4503,6 +4647,136 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["LessonResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["HttpValidationProblemDetails"];
+                };
+            };
+        };
+    };
+    CreateLessonSeries: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SaveSeriesRequest"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SeriesResultResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["HttpValidationProblemDetails"];
+                };
+            };
+        };
+    };
+    GetLessonSeries: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                seriesId: string;
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SeriesResponse"];
+                };
+            };
+        };
+    };
+    UpdateLessonSeries: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                seriesId: string;
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateSeriesRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SeriesResultResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["HttpValidationProblemDetails"];
+                };
+            };
+        };
+    };
+    EndLessonSeries: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                seriesId: string;
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EndSeriesRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SeriesResponse"];
                 };
             };
             /** @description Bad Request */

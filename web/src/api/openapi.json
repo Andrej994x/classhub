@@ -2814,6 +2814,217 @@
         }
       }
     },
+    "/api/w/{workspaceId}/lesson-series": {
+      "post": {
+        "tags": [
+          "Lessons"
+        ],
+        "summary": "Set up weekly or bi-weekly lessons; occurrences are created 12 weeks ahead and conflicts are reported per occurrence.",
+        "operationId": "CreateLessonSeries",
+        "parameters": [
+          {
+            "name": "workspaceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SaveSeriesRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SeriesResultResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpValidationProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/w/{workspaceId}/lesson-series/{seriesId}": {
+      "get": {
+        "tags": [
+          "Lessons"
+        ],
+        "operationId": "GetLessonSeries",
+        "parameters": [
+          {
+            "name": "seriesId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "workspaceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SeriesResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Lessons"
+        ],
+        "summary": "Change this and the following lessons, or all future ones (D-24); a new series continues.",
+        "operationId": "UpdateLessonSeries",
+        "parameters": [
+          {
+            "name": "seriesId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "workspaceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateSeriesRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SeriesResultResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpValidationProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/w/{workspaceId}/lesson-series/{seriesId}/end": {
+      "post": {
+        "tags": [
+          "Lessons"
+        ],
+        "operationId": "EndLessonSeries",
+        "parameters": [
+          {
+            "name": "seriesId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "workspaceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EndSeriesRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SeriesResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpValidationProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/public/sites/{slug}/reports": {
       "post": {
         "tags": [
@@ -6523,6 +6734,31 @@
           }
         }
       },
+      "EndSeriesRequest": {
+        "required": [
+          "fromDate",
+          "version"
+        ],
+        "type": "object",
+        "properties": {
+          "fromDate": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date"
+          },
+          "version": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
       "GroupListItem": {
         "required": [
           "id",
@@ -7273,7 +7509,10 @@
           "cancellationReason",
           "createdAtUtc",
           "updatedAtUtc",
-          "version"
+          "version",
+          "seriesId",
+          "seriesIndex",
+          "seriesException"
         ],
         "type": "object",
         "properties": {
@@ -7377,6 +7616,25 @@
               "string"
             ],
             "format": "int32"
+          },
+          "seriesId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "seriesIndex": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "seriesException": {
+            "type": "boolean"
           }
         }
       },
@@ -8383,6 +8641,133 @@
           }
         }
       },
+      "SaveSeriesRequest": {
+        "required": [
+          "kind",
+          "studentId",
+          "groupId",
+          "subjectId",
+          "title",
+          "topic",
+          "startDate",
+          "startTime",
+          "durationMinutes",
+          "intervalWeeks",
+          "endDate",
+          "count",
+          "mode",
+          "meetingUrl",
+          "location"
+        ],
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "studentId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "groupId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "subjectId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "title": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "topic": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "startDate": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date"
+          },
+          "startTime": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "time"
+          },
+          "durationMinutes": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "intervalWeeks": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "endDate": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date"
+          },
+          "count": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "mode": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "meetingUrl": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "location": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
       "SaveSiteRequest": {
         "required": [
           "slug",
@@ -8583,6 +8968,202 @@
             "items": {
               "$ref": "#/components/schemas/SaveTestOption"
             }
+          }
+        }
+      },
+      "SeriesResponse": {
+        "required": [
+          "id",
+          "kind",
+          "studentId",
+          "groupId",
+          "subjectId",
+          "title",
+          "topic",
+          "startDate",
+          "startTime",
+          "durationMinutes",
+          "intervalWeeks",
+          "endDate",
+          "count",
+          "mode",
+          "meetingUrl",
+          "location",
+          "timeZone",
+          "replacedBySeriesId",
+          "skips",
+          "createdAtUtc",
+          "updatedAtUtc",
+          "version"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "kind": {
+            "type": "string"
+          },
+          "studentId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "groupId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "subjectId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "title": {
+            "type": "string"
+          },
+          "topic": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "startDate": {
+            "type": "string",
+            "format": "date"
+          },
+          "startTime": {
+            "type": "string",
+            "format": "time"
+          },
+          "durationMinutes": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "intervalWeeks": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "endDate": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date"
+          },
+          "count": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "mode": {
+            "type": "string"
+          },
+          "meetingUrl": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "location": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "timeZone": {
+            "type": "string"
+          },
+          "replacedBySeriesId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "skips": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SeriesSkipResponse"
+            }
+          },
+          "createdAtUtc": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAtUtc": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "version": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
+      "SeriesResultResponse": {
+        "required": [
+          "series",
+          "created",
+          "conflicts"
+        ],
+        "type": "object",
+        "properties": {
+          "series": {
+            "$ref": "#/components/schemas/SeriesResponse"
+          },
+          "created": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "conflicts": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SeriesSkipResponse"
+            }
+          }
+        }
+      },
+      "SeriesSkipResponse": {
+        "required": [
+          "date",
+          "reason"
+        ],
+        "type": "object",
+        "properties": {
+          "date": {
+            "type": "string",
+            "format": "date"
+          },
+          "reason": {
+            "type": "string"
           }
         }
       },
@@ -9831,6 +10412,49 @@
             "items": {
               "$ref": "#/components/schemas/PlanLimitValue"
             }
+          },
+          "version": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
+      "UpdateSeriesRequest": {
+        "required": [
+          "scope",
+          "fromLessonId",
+          "series",
+          "version"
+        ],
+        "type": "object",
+        "properties": {
+          "scope": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "fromLessonId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "series": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/SaveSeriesRequest"
+              }
+            ]
           },
           "version": {
             "pattern": "^-?(?:0|[1-9]\\d*)$",
