@@ -11,7 +11,7 @@ import { Label } from '../../../components/ui/label.tsx';
 import { formatDateTime } from '../../../lib/format.ts';
 import { num } from '../../../teacher/offers.ts';
 import { useCatalog } from '../../../teacher/queries.ts';
-import { useAddStudentNote, useArchiveStudent, useSaveStudent, useStudent, useStudentNotes, useStudents, type Student, type StudentInput } from '../../../teacher/students.ts';
+import { useAddStudentNote, useArchiveStudent, useSaveStudent, useStudent, useStudentAccount, useStudentNotes, useStudents, type Student, type StudentInput } from '../../../teacher/students.ts';
 import { StudentGroups } from '../groups/GroupsPages.tsx';
 import { NotFoundContent } from '../Pages.tsx';
 
@@ -260,6 +260,7 @@ function StudentEditor({ workspaceId, student }: { workspaceId: string; student:
       </form>
 
       {student && version !== null && <ArchiveCard workspaceId={workspaceId} student={student} version={version} onChanged={(changed) => setVersion(num(changed.version) ?? 0)} />}
+      {student && <AccountCard workspaceId={workspaceId} student={student} />}
       {student && <StudentGroups workspaceId={workspaceId} studentId={student.id} />}
       {student && <NotesCard workspaceId={workspaceId} studentId={student.id} />}
     </section>
@@ -282,6 +283,89 @@ function ArchiveCard({ workspaceId, student, version, onChanged }: { workspaceId
         <Button type="button" variant="outline" className="self-start" disabled={archive.isPending} onClick={() => archive.mutate({ archived: !student.archived, version }, { onSuccess: onChanged })}>
           {student.archived ? t('students.restore') : t('students.archive')}
         </Button>
+      </CardContent>
+    </Card>
+  );
+}
+
+/**
+ * The student's own account (R2-P3): invite by email, take back a pending invitation, or end the access. The teacher
+ * sees only whether an account is linked, never its credentials. Follows the cache (independent of the details form).
+ */
+function AccountCard({ workspaceId, student }: { workspaceId: string; student: Student }) {
+  const { t, i18n } = useTranslation();
+  const current = useStudent(workspaceId, student.id).data ?? student;
+  const account = useStudentAccount(workspaceId, student.id);
+  const [email, setEmail] = useState(student.email ?? '');
+  const [confirmUnlink, setConfirmUnlink] = useState(false);
+  const error = account.invite.error ?? account.revoke.error ?? account.unlink.error;
+  const date = (value: string) => new Date(value).toLocaleDateString(i18n.resolvedLanguage === 'en' ? 'en-GB' : 'mk-MK');
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-lg">{t('students.account.title')}</CardTitle>
+        <CardDescription>{t('students.account.lead')}</CardDescription>
+      </CardHeader>
+      <CardContent className="flex flex-col gap-3">
+        {current.accountLinked ? (
+          <>
+            <p className="text-sm font-medium">{t('students.account.linked')}</p>
+            {confirmUnlink ? (
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-sm">{t('students.account.unlinkConfirm')}</span>
+                <Button type="button" variant="outline" disabled={account.unlink.isPending} onClick={() => account.unlink.mutate(undefined, { onSuccess: () => setConfirmUnlink(false) })}>
+                  {t('students.account.unlinkYes')}
+                </Button>
+                <Button type="button" variant="ghost" onClick={() => setConfirmUnlink(false)}>
+                  {t('common.cancel')}
+                </Button>
+              </div>
+            ) : (
+              <Button type="button" variant="outline" className="self-start" onClick={() => setConfirmUnlink(true)}>
+                {t('students.account.unlink')}
+              </Button>
+            )}
+          </>
+        ) : current.archived ? (
+          <p className="text-sm text-muted-foreground">{t('students.account.archived')}</p>
+        ) : (
+          <>
+            {current.invitation && (
+              <div className="flex flex-wrap items-center gap-2">
+                <p className="text-sm">{t('students.account.pending', { email: current.invitation.email, date: date(current.invitation.expiresAtUtc) })}</p>
+                <Button type="button" size="sm" variant="ghost" disabled={account.revoke.isPending} onClick={() => account.revoke.mutate()}>
+                  {t('students.account.revoke')}
+                </Button>
+              </div>
+            )}
+            <form
+              noValidate
+              className="flex flex-col gap-2 sm:flex-row sm:items-end"
+              onSubmit={(e) => {
+                e.preventDefault();
+                account.invite.mutate(email.trim() || null);
+              }}
+            >
+              <div className="flex flex-1 flex-col gap-1">
+                <Label htmlFor="student-invite-email">{t('students.account.email')}</Label>
+                <input
+                  id="student-invite-email"
+                  type="email"
+                  autoComplete="off"
+                  className="h-11 w-full rounded-md border border-input bg-background px-3 text-base sm:h-10 sm:text-sm"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                />
+              </div>
+              <Button type="submit" disabled={account.invite.isPending}>
+                {current.invitation ? t('students.account.resend') : t('students.account.invite')}
+              </Button>
+            </form>
+            {account.invite.isSuccess && !account.invite.isPending && <Alert variant="success">{t('students.account.sent')}</Alert>}
+          </>
+        )}
+        {error && <Alert variant="error">{errorMessage(error, t)}</Alert>}
       </CardContent>
     </Card>
   );

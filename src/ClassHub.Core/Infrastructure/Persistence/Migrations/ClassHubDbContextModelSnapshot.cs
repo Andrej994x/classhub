@@ -1679,6 +1679,9 @@ namespace ClassHub.Core.Infrastructure.Persistence.Migrations
                         .HasPrecision(3)
                         .HasColumnType("datetime2(3)");
 
+                    b.Property<Guid?>("UserId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<int>("Version")
                         .IsConcurrencyToken()
                         .HasColumnType("int");
@@ -1688,6 +1691,9 @@ namespace ClassHub.Core.Infrastructure.Persistence.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("UserId")
+                        .HasFilter("[UserId] IS NOT NULL");
+
                     b.HasIndex("WorkspaceId");
 
                     b.HasIndex("WorkspaceId", "Email")
@@ -1696,6 +1702,10 @@ namespace ClassHub.Core.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("WorkspaceId", "SourceLeadId");
 
+                    b.HasIndex("WorkspaceId", "UserId")
+                        .IsUnique()
+                        .HasFilter("[UserId] IS NOT NULL");
+
                     b.HasIndex("WorkspaceId", "ArchivedAtUtc", "LastName");
 
                     b.ToTable("Students", null, t =>
@@ -1703,6 +1713,74 @@ namespace ClassHub.Core.Infrastructure.Persistence.Migrations
                             t.HasCheckConstraint("CK_Students_Email", "[Email] IS NULL OR ([Email] = LOWER([Email]) AND [Email] LIKE '%_@_%')");
 
                             t.HasCheckConstraint("CK_Students_FirstName", "LEN([FirstName]) >= 1");
+                        });
+                });
+
+            modelBuilder.Entity("ClassHub.Core.Modules.Students.Domain.StudentInvitation", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("AcceptedAtUtc")
+                        .HasPrecision(3)
+                        .HasColumnType("datetime2(3)");
+
+                    b.Property<Guid?>("AcceptedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasPrecision(3)
+                        .HasColumnType("datetime2(3)");
+
+                    b.Property<Guid>("CreatedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Email")
+                        .IsRequired()
+                        .HasMaxLength(254)
+                        .HasColumnType("nvarchar(254)");
+
+                    b.Property<DateTime>("ExpiresAtUtc")
+                        .HasPrecision(3)
+                        .HasColumnType("datetime2(3)");
+
+                    b.Property<DateTime?>("GuardianConsentAtUtc")
+                        .HasPrecision(3)
+                        .HasColumnType("datetime2(3)");
+
+                    b.Property<DateTime?>("RevokedAtUtc")
+                        .HasPrecision(3)
+                        .HasColumnType("datetime2(3)");
+
+                    b.Property<Guid>("StudentId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<byte[]>("TokenHash")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("binary(32)")
+                        .IsFixedLength();
+
+                    b.Property<Guid>("WorkspaceId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AcceptedByUserId");
+
+                    b.HasIndex("CreatedByUserId");
+
+                    b.HasIndex("TokenHash")
+                        .IsUnique();
+
+                    b.HasIndex("WorkspaceId");
+
+                    b.HasIndex("WorkspaceId", "StudentId", "CreatedAtUtc");
+
+                    b.ToTable("StudentInvitations", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_StudentInvitations_Email", "[Email] = LOWER([Email]) AND [Email] LIKE '%_@_%'");
                         });
                 });
 
@@ -2549,6 +2627,11 @@ namespace ClassHub.Core.Infrastructure.Persistence.Migrations
 
             modelBuilder.Entity("ClassHub.Core.Modules.Students.Domain.Student", b =>
                 {
+                    b.HasOne("ClassHub.Core.Modules.Identity.Contracts.AppUser", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.NoAction);
+
                     b.HasOne("ClassHub.Core.Modules.Workspaces.Domain.Workspace", null)
                         .WithMany()
                         .HasForeignKey("WorkspaceId")
@@ -2560,6 +2643,27 @@ namespace ClassHub.Core.Infrastructure.Persistence.Migrations
                         .HasForeignKey("WorkspaceId", "SourceLeadId")
                         .HasPrincipalKey("WorkspaceId", "Id")
                         .OnDelete(DeleteBehavior.NoAction);
+                });
+
+            modelBuilder.Entity("ClassHub.Core.Modules.Students.Domain.StudentInvitation", b =>
+                {
+                    b.HasOne("ClassHub.Core.Modules.Identity.Contracts.AppUser", null)
+                        .WithMany()
+                        .HasForeignKey("AcceptedByUserId")
+                        .OnDelete(DeleteBehavior.NoAction);
+
+                    b.HasOne("ClassHub.Core.Modules.Identity.Contracts.AppUser", null)
+                        .WithMany()
+                        .HasForeignKey("CreatedByUserId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.HasOne("ClassHub.Core.Modules.Students.Domain.Student", null)
+                        .WithMany()
+                        .HasForeignKey("WorkspaceId", "StudentId")
+                        .HasPrincipalKey("WorkspaceId", "Id")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("ClassHub.Core.Modules.Students.Domain.StudentNote", b =>

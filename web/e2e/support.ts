@@ -35,7 +35,7 @@ export async function useLanguage(page: Page, language: Language) {
 }
 
 /** Opens the newest link to `path` that the dev mailbox received for `email`. */
-export async function openEmailLink(page: Page, language: Language, email: string, path: '/verify-email' | '/reset-password') {
+export async function openEmailLink(page: Page, language: Language, email: string, path: '/verify-email' | '/reset-password' | '/student/invitation') {
   await page.goto(`/dev/mailbox?to=${encodeURIComponent(email)}`);
   await expect(page.getByRole('heading', { level: 1, name: text(language, 'devMailbox.title') })).toBeVisible();
   const link = page.getByRole('list', { name: text(language, 'devMailbox.messages') }).getByRole('link', { name: new RegExp(`${path}#`) }).first();

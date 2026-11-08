@@ -13,6 +13,8 @@ public sealed class TenantContext : ITenantContext
 
     public bool IsReadOnly { get; private set; }
 
+    public Guid? StudentId { get; private set; }
+
     /// <summary>Sets the verified workspace. A request can never switch to another workspace.</summary>
     public void Set(Guid workspaceId, Guid userId, WorkspaceRole role)
     {
@@ -21,14 +23,27 @@ public sealed class TenantContext : ITenantContext
             throw new InvalidOperationException("The request is already bound to another workspace.");
         }
 
-        if (IsReadOnly)
+        if (IsReadOnly || StudentId is not null)
         {
-            throw new InvalidOperationException("A public read-only request cannot become a member request.");
+            throw new InvalidOperationException("A public or student request cannot become a member request.");
         }
 
         WorkspaceId = workspaceId;
         UserId = userId;
         Role = role;
+    }
+
+    /// <summary>Binds a student portal request to the workspace of the user's own (active) student record.</summary>
+    public void SetStudent(Guid workspaceId, Guid userId, Guid studentId)
+    {
+        if (WorkspaceId is not null && (WorkspaceId != workspaceId || StudentId != studentId))
+        {
+            throw new InvalidOperationException("The request is already bound to a workspace.");
+        }
+
+        WorkspaceId = workspaceId;
+        UserId = userId;
+        StudentId = studentId;
     }
 
     /// <summary>

@@ -3729,6 +3729,303 @@
         }
       }
     },
+    "/api/w/{workspaceId}/students/{studentId}/invitation": {
+      "post": {
+        "tags": [
+          "Students"
+        ],
+        "summary": "Email the student a 7-day, single-use link to their own account; replaces a pending invitation.",
+        "operationId": "InviteStudent",
+        "parameters": [
+          {
+            "name": "studentId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "workspaceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InviteStudentRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StudentResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpValidationProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Students"
+        ],
+        "operationId": "RevokeStudentInvitation",
+        "parameters": [
+          {
+            "name": "studentId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "workspaceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StudentResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/w/{workspaceId}/students/{studentId}/account": {
+      "delete": {
+        "tags": [
+          "Students"
+        ],
+        "summary": "End the student's access with their account (the account itself stays).",
+        "operationId": "UnlinkStudentAccount",
+        "parameters": [
+          {
+            "name": "studentId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "workspaceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StudentResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/student-invitations/preview": {
+      "post": {
+        "tags": [
+          "Student accounts"
+        ],
+        "operationId": "PreviewStudentInvitation",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InvitationTokenRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvitationPreviewResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/student-invitations/accept": {
+      "post": {
+        "tags": [
+          "Student accounts"
+        ],
+        "summary": "Link the signed-in account to the invited student.",
+        "operationId": "AcceptStudentInvitation",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AcceptInvitationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StudentTeacherResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/student-invitations/accept-with-account": {
+      "post": {
+        "tags": [
+          "Student accounts"
+        ],
+        "summary": "Create an account for the invited email, link it and sign in.",
+        "operationId": "AcceptStudentInvitationWithAccount",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AcceptInvitationWithAccountRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StudentTeacherResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpValidationProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/student/teachers": {
+      "get": {
+        "tags": [
+          "Student portal"
+        ],
+        "summary": "The teachers the signed-in user is an active student of (D-16).",
+        "operationId": "ListMyTeachers",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/StudentTeacherResponse"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/student/w/{workspaceId}/profile": {
+      "get": {
+        "tags": [
+          "Student portal"
+        ],
+        "operationId": "GetMyStudentProfile",
+        "parameters": [
+          {
+            "name": "workspaceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StudentSelfResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/w/{workspaceId}/plan": {
       "get": {
         "tags": [
@@ -4207,6 +4504,56 @@
         "properties": {
           "message": {
             "type": "string"
+          }
+        }
+      },
+      "AcceptInvitationRequest": {
+        "required": [
+          "token",
+          "guardianConsent"
+        ],
+        "type": "object",
+        "properties": {
+          "token": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "guardianConsent": {
+            "type": "boolean"
+          }
+        }
+      },
+      "AcceptInvitationWithAccountRequest": {
+        "required": [
+          "token",
+          "password",
+          "locale",
+          "guardianConsent"
+        ],
+        "type": "object",
+        "properties": {
+          "token": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "password": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "locale": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "guardianConsent": {
+            "type": "boolean"
           }
         }
       },
@@ -6116,6 +6463,62 @@
         "type": "string",
         "format": "binary"
       },
+      "InvitationPreviewResponse": {
+        "required": [
+          "teacherName",
+          "studentFirstName",
+          "email",
+          "isMinor",
+          "expiresAtUtc"
+        ],
+        "type": "object",
+        "properties": {
+          "teacherName": {
+            "type": "string"
+          },
+          "studentFirstName": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "isMinor": {
+            "type": "boolean"
+          },
+          "expiresAtUtc": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "InvitationTokenRequest": {
+        "required": [
+          "token"
+        ],
+        "type": "object",
+        "properties": {
+          "token": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "InviteStudentRequest": {
+        "required": [
+          "email"
+        ],
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
       "LeadFormOption": {
         "required": [
           "id",
@@ -7868,6 +8271,27 @@
           }
         }
       },
+      "StudentInvitationInfo": {
+        "required": [
+          "email",
+          "sentAtUtc",
+          "expiresAtUtc"
+        ],
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string"
+          },
+          "sentAtUtc": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "expiresAtUtc": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
       "StudentListItem": {
         "required": [
           "id",
@@ -8013,7 +8437,9 @@
           "archived",
           "createdAtUtc",
           "updatedAtUtc",
-          "version"
+          "version",
+          "accountLinked",
+          "invitation"
         ],
         "type": "object",
         "properties": {
@@ -8095,6 +8521,91 @@
               "string"
             ],
             "format": "int32"
+          },
+          "accountLinked": {
+            "type": "boolean"
+          },
+          "invitation": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/StudentInvitationInfo"
+              }
+            ]
+          }
+        }
+      },
+      "StudentSelfResponse": {
+        "required": [
+          "workspaceId",
+          "teacherName",
+          "studentId",
+          "firstName",
+          "lastName",
+          "subjectIds"
+        ],
+        "type": "object",
+        "properties": {
+          "workspaceId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "teacherName": {
+            "type": "string"
+          },
+          "studentId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "firstName": {
+            "type": "string"
+          },
+          "lastName": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "subjectIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        }
+      },
+      "StudentTeacherResponse": {
+        "required": [
+          "workspaceId",
+          "teacherName",
+          "studentId",
+          "firstName",
+          "lastName"
+        ],
+        "type": "object",
+        "properties": {
+          "workspaceId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "teacherName": {
+            "type": "string"
+          },
+          "studentId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "firstName": {
+            "type": "string"
+          },
+          "lastName": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
@@ -8922,6 +9433,12 @@
     },
     {
       "name": "Students"
+    },
+    {
+      "name": "Student accounts"
+    },
+    {
+      "name": "Student portal"
     },
     {
       "name": "Plan"

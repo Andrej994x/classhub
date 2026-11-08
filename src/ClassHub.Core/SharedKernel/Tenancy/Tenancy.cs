@@ -46,6 +46,12 @@ public interface ITenantContext
     WorkspaceRole? Role { get; }
 
     /// <summary>
+    /// Set for student portal requests (<c>student:self</c>): the signed-in user's own student record in this
+    /// workspace. Such requests have no workspace role.
+    /// </summary>
+    Guid? StudentId => null;
+
+    /// <summary>
     /// True for anonymous public reads (public site pages): the request sees one workspace's rows through the
     /// normal tenant filters, but may not write any tenant-owned data.
     /// </summary>

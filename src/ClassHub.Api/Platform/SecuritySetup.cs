@@ -1,5 +1,6 @@
 using ClassHub.Core.Infrastructure.Persistence;
 using ClassHub.Core.Infrastructure.Web;
+using ClassHub.Core.Infrastructure.Tenancy;
 using ClassHub.Core.Modules.Identity;
 using Microsoft.AspNetCore.DataProtection;
 using ClassHub.Core.SharedKernel.Security;
@@ -97,6 +98,7 @@ internal static class SecuritySetup
         services.AddAuthorizationBuilder()
             .SetFallbackPolicy(new AuthorizationPolicyBuilder().RequireAuthenticatedUser().Build())
             .AddPolicy(ClassHubPolicies.Authenticated, policy => policy.RequireAuthenticatedUser())
+            .AddPolicy(ClassHubPolicies.StudentSelf, policy => policy.RequireAuthenticatedUser().AddRequirements(new StudentSelfRequirement()))
             .AddPlatformPolicies();
         services.AddSingleton<IAuthorizationHandler, PlatformStaffHandler>();
 

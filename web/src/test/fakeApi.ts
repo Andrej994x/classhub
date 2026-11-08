@@ -277,6 +277,8 @@ export function fakeApi({ me = null as FakeMe | null, extra = [] as Handler[] } 
       state.me = null;
       return new Response(null, { status: 204 });
     }
+    // The student portal (R2-P3): by default the account is nobody's student.
+    if (route === 'GET /api/student/teachers') return state.me ? json(200, []) : problem(401, 'UNAUTHORIZED');
     if (route === 'GET /api/me/workspaces') return state.me ? json(200, [{ id: WORKSPACE_ID, name: 'Мој работен простор', role: 'Owner' }]) : problem(401, 'UNAUTHORIZED');
     if (route === `GET /api/w/${WORKSPACE_ID}`) {
       return state.me

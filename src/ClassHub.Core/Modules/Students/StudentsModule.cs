@@ -1,4 +1,6 @@
+using System.Security.Claims;
 using System.Text.RegularExpressions;
+using ClassHub.Core.Infrastructure.Tenancy;
 using ClassHub.Core.Infrastructure.Web;
 using ClassHub.Core.Modules.Students.Application;
 using ClassHub.Core.Modules.Students.Contracts;
@@ -23,6 +25,9 @@ public sealed class StudentsModule : IModule
         services.AddScoped<StudentQueries>();
         services.AddScoped<StudentService>();
         services.AddScoped<IStudentLookup, StudentLookup>();
+        services.AddScoped<StudentAccountQueries>();
+        services.AddScoped<IStudentSelfLookup>(sp => sp.GetRequiredService<StudentAccountQueries>());
+        services.AddScoped<StudentAccountService>();
     }
 
     public void MapEndpoints(IEndpointRouteBuilder endpoints)
@@ -81,7 +86,65 @@ public sealed class StudentsModule : IModule
             .WithValidation<AddStudentNoteRequest>()
             .RequireAuthorization(manage)
             .WithName("AddStudentNote");
+
+        // Student accounts (R2-P3): the teacher's side.
+        students.MapPost("/{studentId:guid}/invitation", async (Guid studentId, InviteStudentRequest request, StudentAccountService service, CancellationToken ct) =>
+                TypedResults.Ok(await service.InviteAsync(studentId, request, ct)))
+            .WithValidation<InviteStudentRequest>()
+            .RequireAuthorization(manage)
+            .WithName("InviteStudent")
+            .WithSummary("Email the student a 7-day, single-use link to their own account; replaces a pending invitation.");
+
+        students.MapDelete("/{studentId:guid}/invitation", async (Guid studentId, StudentAccountService service, CancellationToken ct) =>
+                TypedResults.Ok(await service.RevokeInvitationAsync(studentId, ct)))
+            .RequireAuthorization(manage)
+            .WithName("RevokeStudentInvitation");
+
+        students.MapDelete("/{studentId:guid}/account", async (Guid studentId, StudentAccountService service, CancellationToken ct) =>
+                TypedResults.Ok(await service.UnlinkAsync(studentId, ct)))
+            .RequireAuthorization(manage)
+            .WithName("UnlinkStudentAccount")
+            .WithSummary("End the student's access with their account (the account itself stays).");
+
+        // The invitation link (anonymous or signed in; the token is the capability).
+        var invitations = endpoints.MapGroup("/student-invitations").WithTags("Student accounts").RequireAntiforgeryHeader();
+        invitations.MapPost("/preview", async (InvitationTokenRequest request, StudentAccountService service, CancellationToken ct) =>
+                TypedResults.Ok(await service.PreviewAsync(request, ct)))
+            .AllowAnonymous()
+            .RequireRateLimiting(RateLimitPolicies.Auth)
+            .WithName("PreviewStudentInvitation");
+
+        invitations.MapPost("/accept", async (AcceptInvitationRequest request, ClaimsPrincipal user, StudentAccountService service, CancellationToken ct) =>
+                TypedResults.Ok(await service.AcceptAsync(UserId(user), request, ct)))
+            .RequireAuthorization(ClassHubPolicies.Authenticated)
+            .RequireRateLimiting(RateLimitPolicies.Auth)
+            .WithName("AcceptStudentInvitation")
+            .WithSummary("Link the signed-in account to the invited student.");
+
+        invitations.MapPost("/accept-with-account", async (AcceptInvitationWithAccountRequest request, HttpContext http, StudentAccountService service, CancellationToken ct) =>
+                TypedResults.Ok(await service.AcceptWithAccountAsync(http, request, ct)))
+            .WithValidation<AcceptInvitationWithAccountRequest>()
+            .AllowAnonymous()
+            .RequireRateLimiting(RateLimitPolicies.Auth)
+            .WithName("AcceptStudentInvitationWithAccount")
+            .WithSummary("Create an account for the invited email, link it and sign in.");
+
+        // The student portal (R2-P3 shell): only the signed-in user's own records.
+        var portal = endpoints.MapGroup("/student").WithTags("Student portal").RequireAntiforgeryHeader();
+        portal.MapGet("/teachers", async (ClaimsPrincipal user, StudentAccountService service, CancellationToken ct) =>
+                TypedResults.Ok(await service.TeachersAsync(UserId(user), ct)))
+            .RequireAuthorization(ClassHubPolicies.Authenticated)
+            .WithName("ListMyTeachers")
+            .WithSummary("The teachers the signed-in user is an active student of (D-16).");
+
+        portal.MapGet("/w/{workspaceId:guid}/profile", async (StudentAccountService service, CancellationToken ct) =>
+                TypedResults.Ok(await service.SelfAsync(ct)))
+            .RequireAuthorization(ClassHubPolicies.StudentSelf)
+            .WithName("GetMyStudentProfile");
     }
+
+    private static Guid UserId(ClaimsPrincipal user) =>
+        Guid.Parse(user.FindFirstValue(ClaimTypes.NameIdentifier) ?? throw new InvalidOperationException("No user id claim."));
 }
 
 internal sealed partial class SaveStudentRequestValidator : AbstractValidator<SaveStudentRequest>
@@ -114,4 +177,19 @@ internal sealed class AddStudentNoteRequestValidator : AbstractValidator<AddStud
 internal sealed class ConvertLeadRequestValidator : AbstractValidator<ConvertLeadRequest>
 {
     public ConvertLeadRequestValidator() => RuleFor(x => x.LeadId).NotNull();
+}
+
+internal sealed class InviteStudentRequestValidator : AbstractValidator<InviteStudentRequest>
+{
+    public InviteStudentRequestValidator() =>
+        RuleFor(x => x.Email).MaximumLength(Student.EmailMaxLength).EmailAddress().When(x => !string.IsNullOrWhiteSpace(x.Email));
+}
+
+internal sealed class AcceptInvitationWithAccountRequestValidator : AbstractValidator<AcceptInvitationWithAccountRequest>
+{
+    public AcceptInvitationWithAccountRequestValidator()
+    {
+        RuleFor(x => x.Password).NotEmpty().MaximumLength(128);
+        RuleFor(x => x.Locale).MaximumLength(10);
+    }
 }

@@ -21,20 +21,6 @@ export function HomePage() {
   return null;
 }
 
-function AreaHome({ titleKey, emptyKey }: { titleKey: string; emptyKey: string }) {
-  const { t } = useTranslation();
-  return (
-    <section className="flex flex-col gap-6">
-      <h1 className="text-2xl font-semibold tracking-tight">{t(titleKey)}</h1>
-      <Card>
-        <CardHeader>
-          <CardDescription>{t(emptyKey)}</CardDescription>
-        </CardHeader>
-      </Card>
-    </section>
-  );
-}
-
 /** `/app`: opens the teacher's workspace (one per teacher in the MVP). */
 export function TeacherHomePage() {
   const { t } = useTranslation();
@@ -42,7 +28,8 @@ export function TeacherHomePage() {
   if (workspaces.isPending) return <output className="block">{t('common.loading')}</output>;
   if (workspaces.isError) return <Alert variant="error">{errorMessage(workspaces.error, t)}</Alert>;
   const first = workspaces.data[0];
-  return first ? <Navigate to={`/app/w/${first.id}`} replace /> : <AreaHome titleKey="dashboard.title" emptyKey="dashboard.noWorkspace" />;
+  // A student account (R2-P3) has no workspace: its home is the student portal.
+  return first ? <Navigate to={`/app/w/${first.id}`} replace /> : <Navigate to="/student" replace />;
 }
 
 /** `/app/w/:workspaceId`: the workspace dashboard. Other teachers' workspaces answer 404 ("not found"). */
@@ -73,8 +60,6 @@ export function WorkspaceDashboardPage() {
     </section>
   );
 }
-export const StudentHomePage = () => <AreaHome titleKey="student.title" emptyKey="student.empty" />;
-
 /** "Not found" inside an area layout (unknown route, or a workspace the user is not a member of). */
 export function NotFoundContent() {
   const { t } = useTranslation();

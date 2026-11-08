@@ -41,6 +41,12 @@ npm run e2e                                # builds the SPA and the API, then ru
 
 Flows (each in **mk and en**, on **desktop and mobile**): register → dev mailbox → confirm → sign in → the dashboard shows the workspace → sign out; forgot password → reset link → the old password fails, the new one works; a second teacher opening the first teacher's workspace URL sees "not found". Texts come from the app's locale files, so wording changes do not break tests. CI job `e2e` uploads the HTML report and traces on failure.
 
+## Student account tests (R2-P3)
+
+- Integration: `StudentAccountTests` (invite → preview → create an account → portal; the student is invisible to teacher endpoints (404); the link works once; an existing account linked to students of two teachers (D-16); one account cannot be two students of one teacher (409); `student:self` gives 404 to other workspaces, to teachers without a student record, and 401 anonymously; unlink and archive end access and void pending links; a new invitation revokes the old one; expired links; a minor needs the guardian agreement (recorded); an existing email must sign in (409); **three accounts accepting one invitation at once → exactly one linked** (fails without the lock); cross-tenant invite/unlink → 404; email required and 5 invitations per day).
+- Vitest: `StudentPortalPages.test.tsx` (create an account from the link, fragment cleared; guardian agreement; existing email → sign in with the token kept; accept while signed in; invalid link; teachers list, own page, 404 for another workspace; `/app` without a workspace → portal); `StudentsPages.test.tsx` account card (invite, withdraw, remove access after confirming).
+- E2E: `student-accounts.spec.ts` (teacher invites → student opens the email link on a phone, creates the account, sees the portal; the teacher sees the linked account).
+
 ## Group tests (R2-P2)
 
 - Integration: `GroupTests` (build a group and put a student in several groups; adding twice is a no-op and leaves the version; version conflicts; remove/re-add/archive keep the rows; archived groups take no members; a student of another workspace is rejected by the API (400) and by the composite FK (547); archived students are blocked; isolation; **three parallel adds for the last of 100 places → exactly one**; re-adding a former member to a full group is refused). The isolation sweep covers the new routes automatically.

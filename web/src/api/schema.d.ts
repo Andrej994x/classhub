@@ -1187,6 +1187,123 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/w/{workspaceId}/students/{studentId}/invitation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Email the student a 7-day, single-use link to their own account; replaces a pending invitation. */
+        post: operations["InviteStudent"];
+        delete: operations["RevokeStudentInvitation"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/w/{workspaceId}/students/{studentId}/account": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** End the student's access with their account (the account itself stays). */
+        delete: operations["UnlinkStudentAccount"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/student-invitations/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["PreviewStudentInvitation"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/student-invitations/accept": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Link the signed-in account to the invited student. */
+        post: operations["AcceptStudentInvitation"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/student-invitations/accept-with-account": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Create an account for the invited email, link it and sign in. */
+        post: operations["AcceptStudentInvitationWithAccount"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/student/teachers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The teachers the signed-in user is an active student of (D-16). */
+        get: operations["ListMyTeachers"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/student/w/{workspaceId}/profile": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetMyStudentProfile"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/w/{workspaceId}/plan": {
         parameters: {
             query?: never;
@@ -1342,6 +1459,16 @@ export interface components {
     schemas: {
         AcceptedResponse: {
             message: string;
+        };
+        AcceptInvitationRequest: {
+            token: null | string;
+            guardianConsent: boolean;
+        };
+        AcceptInvitationWithAccountRequest: {
+            token: null | string;
+            password: null | string;
+            locale: null | string;
+            guardianConsent: boolean;
         };
         ActivateProRequest: {
             /** Format: int32 */
@@ -1803,6 +1930,20 @@ export interface components {
         };
         /** Format: binary */
         IFormFile: string;
+        InvitationPreviewResponse: {
+            teacherName: string;
+            studentFirstName: string;
+            email: string;
+            isMinor: boolean;
+            /** Format: date-time */
+            expiresAtUtc: string;
+        };
+        InvitationTokenRequest: {
+            token: null | string;
+        };
+        InviteStudentRequest: {
+            email: null | string;
+        };
         LeadFormOption: {
             /** Format: uuid */
             id: string;
@@ -2191,6 +2332,13 @@ export interface components {
             available: boolean;
             reason: null | string;
         };
+        StudentInvitationInfo: {
+            email: string;
+            /** Format: date-time */
+            sentAtUtc: string;
+            /** Format: date-time */
+            expiresAtUtc: string;
+        };
         StudentListItem: {
             /** Format: uuid */
             id: string;
@@ -2243,6 +2391,27 @@ export interface components {
             updatedAtUtc: string;
             /** Format: int32 */
             version: number | string;
+            accountLinked: boolean;
+            invitation: null | components["schemas"]["StudentInvitationInfo"];
+        };
+        StudentSelfResponse: {
+            /** Format: uuid */
+            workspaceId: string;
+            teacherName: string;
+            /** Format: uuid */
+            studentId: string;
+            firstName: string;
+            lastName: null | string;
+            subjectIds: string[];
+        };
+        StudentTeacherResponse: {
+            /** Format: uuid */
+            workspaceId: string;
+            teacherName: string;
+            /** Format: uuid */
+            studentId: string;
+            firstName: string;
+            lastName: null | string;
         };
         StudentVersionRequest: {
             /** Format: int32 */
@@ -4811,6 +4980,211 @@ export interface operations {
                 };
                 content: {
                     "application/problem+json": components["schemas"]["HttpValidationProblemDetails"];
+                };
+            };
+        };
+    };
+    InviteStudent: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                studentId: string;
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["InviteStudentRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StudentResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["HttpValidationProblemDetails"];
+                };
+            };
+        };
+    };
+    RevokeStudentInvitation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                studentId: string;
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StudentResponse"];
+                };
+            };
+        };
+    };
+    UnlinkStudentAccount: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                studentId: string;
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StudentResponse"];
+                };
+            };
+        };
+    };
+    PreviewStudentInvitation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["InvitationTokenRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvitationPreviewResponse"];
+                };
+            };
+        };
+    };
+    AcceptStudentInvitation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AcceptInvitationRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StudentTeacherResponse"];
+                };
+            };
+        };
+    };
+    AcceptStudentInvitationWithAccount: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AcceptInvitationWithAccountRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StudentTeacherResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["HttpValidationProblemDetails"];
+                };
+            };
+        };
+    };
+    ListMyTeachers: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StudentTeacherResponse"][];
+                };
+            };
+        };
+    };
+    GetMyStudentProfile: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StudentSelfResponse"];
                 };
             };
         };

@@ -34,7 +34,36 @@ public sealed record StudentResponse(
     bool Archived,
     DateTime CreatedAtUtc,
     DateTime UpdatedAtUtc,
-    int Version);
+    int Version,
+    bool AccountLinked,
+    StudentInvitationInfo? Invitation);
+
+/// <summary>The pending invitation of a student (the teacher never sees the link or the account's credentials).</summary>
+public sealed record StudentInvitationInfo(string Email, DateTime SentAtUtc, DateTime ExpiresAtUtc);
+
+/// <summary>Invite the student to their own account; the email defaults to the student's email.</summary>
+public sealed record InviteStudentRequest(string? Email);
+
+/// <summary>The token from an invitation link (<c>/student/invitation#token=…</c>).</summary>
+public sealed record InvitationTokenRequest(string? Token);
+
+/// <summary>What the invitation page shows before accepting.</summary>
+public sealed record InvitationPreviewResponse(string TeacherName, string StudentFirstName, string Email, bool IsMinor, DateTime ExpiresAtUtc);
+
+/// <summary>
+/// Accept with the signed-in account. For a minor, <c>GuardianConsent</c> confirms that a parent or guardian agreed
+/// (D-18, provisional wording).
+/// </summary>
+public sealed record AcceptInvitationRequest(string? Token, bool GuardianConsent);
+
+/// <summary>Accept by creating an account for the invited email (signed in afterwards).</summary>
+public sealed record AcceptInvitationWithAccountRequest(string? Token, string? Password, string? Locale, bool GuardianConsent);
+
+/// <summary>A teacher the signed-in user is a student of (D-16: the portal groups data per teacher).</summary>
+public sealed record StudentTeacherResponse(Guid WorkspaceId, string TeacherName, Guid StudentId, string FirstName, string? LastName);
+
+/// <summary>The student's own record with one teacher (student portal). Never notes or the teacher's other students.</summary>
+public sealed record StudentSelfResponse(Guid WorkspaceId, string TeacherName, Guid StudentId, string FirstName, string? LastName, IReadOnlyList<Guid> SubjectIds);
 
 public sealed record StudentListItem(
     Guid Id,

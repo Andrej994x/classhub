@@ -36,6 +36,12 @@ public sealed class Student : ITenantOwned, IArchivable
 
     public string? GuardianPhone { get; set; }
 
+    /// <summary>
+    /// The student's own ClassHub account, once they accepted an invitation (R2-P3). One account can be a student of
+    /// several teachers (D-16), but only once per workspace.
+    /// </summary>
+    public Guid? UserId { get; set; }
+
     /// <summary>The request the student was created from, when converted from a lead.</summary>
     public Guid? SourceLeadId { get; set; }
 

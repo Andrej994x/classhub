@@ -30,7 +30,7 @@ internal sealed partial class AccountService(
     ClassHubDbContext db,
     IOptions<AppLinkOptions> links,
     TimeProvider clock,
-    ILogger<AccountService> logger)
+    ILogger<AccountService> logger) : IInvitedAccounts
 {
     public const string AcceptedMessage = "If the address can receive email, a message is on its way.";
 
@@ -103,6 +103,54 @@ internal sealed partial class AccountService(
         await transaction.CommitAsync(cancellationToken);
         LogRegistered(logger, user.Id);
     }
+
+    public async Task<Guid> CreateConfirmedAsync(string email, string password, string? locale, CancellationToken cancellationToken)
+    {
+        email = NormalizeEmail(email);
+        var user = new AppUser
+        {
+            Email = email,
+            UserName = email,
+            EmailConfirmed = true,
+            Locale = SupportedLocales.OrDefault(locale),
+            TimeZone = AppUser.DefaultTimeZone,
+            Status = UserStatus.Active,
+            CreatedAtUtc = clock.GetUtcNow().UtcDateTime,
+        };
+        await ThrowIfPasswordInvalidAsync(user, password, "password");
+        if (await users.FindByEmailAsync(email) is not null)
+        {
+            throw EmailRegistered();
+        }
+
+        IdentityResult created;
+        try
+        {
+            created = await users.CreateAsync(user, password);
+        }
+        catch (DbUpdateException ex) when (IsUniqueViolation(ex))
+        {
+            throw EmailRegistered();
+        }
+
+        if (!created.Succeeded)
+        {
+            throw created.Errors.Any(e => e.Code is "DuplicateEmail" or "DuplicateUserName") ? EmailRegistered() : ToValidationException(created, "password");
+        }
+
+        LogRegistered(logger, user.Id);
+        return user.Id;
+    }
+
+    public async Task<MeResponse> SignInAsync(HttpContext http, Guid userId)
+    {
+        var user = await users.FindByIdAsync(userId.ToString()) ?? throw new NotFoundException();
+        await signIn.SignInAsync(user, new AuthenticationProperties { IsPersistent = false }, AuthenticationMethods.Password);
+        return await CompleteSignInAsync(http, user);
+    }
+
+    private static ConflictException EmailRegistered() =>
+        new("An account with this email already exists. Sign in to accept the invitation.", ErrorCodes.EmailRegistered);
 
     public async Task ConfirmEmailAsync(ConfirmEmailRequest request)
     {

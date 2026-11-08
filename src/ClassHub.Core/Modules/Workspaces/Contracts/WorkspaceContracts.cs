@@ -68,3 +68,12 @@ public interface IWorkspaceOwnerContact
     /// <summary>The active owner of the workspace, or null when there is none.</summary>
     Task<WorkspaceOwnerContact?> GetOwnerAsync(Guid workspaceId, CancellationToken cancellationToken);
 }
+
+/// <summary>A workspace's display name and content language, for messages and pages shown to its students.</summary>
+public sealed record WorkspaceName(Guid WorkspaceId, string Name, string Locale);
+
+/// <summary>Names of workspaces (any tenant): only the name and language, never the workspace's content.</summary>
+public interface IWorkspaceNames
+{
+    Task<IReadOnlyDictionary<Guid, WorkspaceName>> FindAsync(IReadOnlyCollection<Guid> workspaceIds, CancellationToken cancellationToken);
+}

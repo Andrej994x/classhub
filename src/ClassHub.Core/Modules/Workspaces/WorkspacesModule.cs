@@ -27,6 +27,7 @@ public sealed class WorkspacesModule : IModule
         services.AddScoped<IWorkspaceOwnerContact>(sp => sp.GetRequiredService<WorkspaceAccessQueries>());
         services.AddScoped<IWorkspaceProvisioning, WorkspaceProvisioning>();
         services.AddScoped<IWorkspaceDirectory, WorkspaceDirectoryQueries>();
+        services.AddScoped<IWorkspaceNames, WorkspaceNameQueries>();
         services.AddScoped<WorkspaceService>();
         services.AddScoped<IWorkspaceSettings>(sp => sp.GetRequiredService<WorkspaceService>());
     }

@@ -19,13 +19,13 @@ import { OffersPage } from './pages/offers/OffersPage.tsx';
 import { PlanPage } from './pages/plan/PlanPage.tsx';
 import { GroupEditPage, GroupsPage } from './pages/groups/GroupsPages.tsx';
 import { StudentEditPage, StudentsPage } from './pages/students/StudentsPages.tsx';
+import { InvitationPage, StudentHomePage, StudentSettingsPage, StudentTeacherPage } from './pages/student/StudentPortalPages.tsx';
 import { ProfilePage } from './pages/profile/ProfilePage.tsx';
 import { SiteEditorPage } from './pages/site/SiteEditorPage.tsx';
 import {
   HomePage,
   NotFoundContent,
   NotFoundPage,
-  StudentHomePage,
   TeacherHomePage,
   WorkspaceDashboardPage,
 } from './pages/Pages.tsx';
@@ -45,6 +45,8 @@ export const routes: RouteObject[] = [
       { path: '/verify-email', element: <VerifyEmailPage /> },
       { path: '/forgot-password', element: <ForgotPasswordPage /> },
       { path: '/reset-password', element: <ResetPasswordPage /> },
+      // The student invitation link: works signed in (link the account) or not (create one).
+      { path: '/student/invitation', element: <InvitationPage /> },
       // Development and E2E only (the API and the server route do not exist elsewhere).
       { path: '/dev/mailbox', element: <DevMailboxPage /> },
     ],
@@ -75,7 +77,15 @@ export const routes: RouteObject[] = [
       { path: '*', element: <NotFoundContent /> },
     ],
   },
-  { path: '/student', element: <StudentLayout />, children: [{ index: true, element: <StudentHomePage /> }] },
+  {
+    path: '/student',
+    element: <StudentLayout />,
+    children: [
+      { index: true, element: <StudentHomePage /> },
+      { path: 'w/:workspaceId', element: <StudentTeacherPage /> },
+      { path: 'settings', element: <StudentSettingsPage /> },
+    ],
+  },
   {
     path: '/admin',
     element: <AdminLayout />,

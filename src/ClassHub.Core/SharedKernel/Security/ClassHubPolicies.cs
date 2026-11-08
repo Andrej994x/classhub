@@ -14,6 +14,12 @@ public static class ClassHubPolicies
 
     /// <summary>Platform Owner, signed in with the authenticator (<c>amr=mfa</c>).</summary>
     public const string PlatformOwner = "platform:owner";
+
+    /// <summary>
+    /// Student portal routes <c>/api/student/w/{workspaceId}</c>: the signed-in user has an active student record in
+    /// that workspace. Everyone else gets 404. The request is bound to that record (<c>ITenantContext.StudentId</c>).
+    /// </summary>
+    public const string StudentSelf = "student:self";
 }
 
 /// <summary>Authentication-method claims (RFC 8176 <c>amr</c>) that ASP.NET Core Identity issues at sign-in.</summary>

@@ -22,6 +22,8 @@ const student = (overrides: Record<string, unknown> = {}) => ({
   createdAtUtc: '2026-11-05T09:00:00Z',
   updatedAtUtc: '2026-11-05T09:00:00Z',
   version: 0,
+  accountLinked: false,
+  invitation: null as { email: string; sentAtUtc: string; expiresAtUtc: string } | null,
   ...overrides,
 });
 
@@ -56,6 +58,20 @@ function studentsApi() {
       const note = { id: `n${state.notes.length}`, text: (call.body as { text: string }).text, createdAtUtc: '2026-11-05T10:00:00Z' };
       state.notes.unshift(note);
       return json(201, note);
+    }
+    if (call.path === `${BASE}/s1/invitation` && call.method === 'POST') {
+      if (state.students[0]!.accountLinked) return problem(409, 'STUDENT_ALREADY_LINKED');
+      const email = (call.body as { email: string | null }).email ?? state.students[0]!.email!;
+      state.students[0] = student({ ...state.students[0], invitation: { email, sentAtUtc: '2026-11-05T10:00:00Z', expiresAtUtc: '2026-11-12T10:00:00Z' } });
+      return json(200, state.students[0]);
+    }
+    if (call.path === `${BASE}/s1/invitation` && call.method === 'DELETE') {
+      state.students[0] = student({ ...state.students[0], invitation: null });
+      return json(200, state.students[0]);
+    }
+    if (call.path === `${BASE}/s1/account` && call.method === 'DELETE') {
+      state.students[0] = student({ ...state.students[0], accountLinked: false, invitation: null });
+      return json(200, state.students[0]);
     }
     if (call.path === `${BASE}/from-lead`) return json(200, { student: state.students[0], created: true });
     if (call.path === `/api/w/${WORKSPACE_ID}/groups` && call.method === 'GET') return json(200, []); // the student page's groups card
@@ -175,6 +191,35 @@ describe('students', () => {
     await expect.poll(() => api.to(`${BASE}/s1`, 'PUT').length).toBe(1);
     expect(api.to(`${BASE}/s1`, 'PUT')[0]!.body).toMatchObject({ lastName: 'Ново презиме', version: 3 });
     expect(await screen.findByText('Зачувано.')).toBeInTheDocument();
+  });
+
+  it('invites the student to an account, withdraws it, and removes a linked account after confirming', async () => {
+    const user = userEvent.setup();
+    const { api, state } = studentsApi();
+    const { queryClient } = await renderRoute(`/app/w/${WORKSPACE_ID}/students/s1`);
+
+    const email = await screen.findByLabelText('Испрати ја поканата на');
+    expect(email).toHaveValue('marko@example.test');
+    await user.clear(email);
+    await user.type(email, 'parent@example.test');
+    await user.click(screen.getByRole('button', { name: 'Испрати покана' }));
+    expect(await screen.findByText(/Поканата е испратена на parent@example\.test/)).toBeInTheDocument();
+    expect(api.to(`${BASE}/s1/invitation`, 'POST')[0]).toMatchObject({ body: { email: 'parent@example.test' }, xsrf: 'xsrf' });
+    expect(screen.getByRole('button', { name: 'Испрати нова покана' })).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Повлечи' }));
+    await expect.poll(() => api.to(`${BASE}/s1/invitation`, 'DELETE').length).toBe(1);
+    expect(await screen.findByRole('button', { name: 'Испрати покана' })).toBeInTheDocument();
+
+    // The student accepted a new invitation (seen on the next refetch): the card offers to remove the access, after a confirmation.
+    state.students[0] = student({ ...state.students[0], accountLinked: true });
+    await act(() => queryClient.invalidateQueries());
+    expect(await screen.findByText('Ученикот има сметка.')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Отстрани пристап' }));
+    expect(api.to(`${BASE}/s1/account`, 'DELETE')).toHaveLength(0);
+    await user.click(screen.getByRole('button', { name: 'Да, отстрани пристап' }));
+    await expect.poll(() => api.to(`${BASE}/s1/account`, 'DELETE').length).toBe(1);
+    expect(await screen.findByRole('button', { name: 'Испрати покана' })).toBeInTheDocument();
   });
 
   it('turns a request into a student from the lead page', async () => {

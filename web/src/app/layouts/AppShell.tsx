@@ -116,7 +116,13 @@ export const TeacherLayout = () => (
 
 export const StudentLayout = () => (
   <RequireAuth>
-    <AppShell areaKey="layout.studentArea" nav={[{ to: '/student', labelKey: 'nav.studentHome', end: true }]} />
+    <AppShell
+      areaKey="layout.studentArea"
+      nav={[
+        { to: '/student', labelKey: 'nav.studentHome', end: true },
+        { to: '/student/settings', labelKey: 'nav.studentSettings' },
+      ]}
+    />
   </RequireAuth>
 );
 
