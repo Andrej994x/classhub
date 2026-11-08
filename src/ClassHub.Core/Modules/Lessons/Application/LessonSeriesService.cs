@@ -73,8 +73,8 @@ internal sealed class LessonSeriesService(
             throw Invalid("timeZone", "Use the series' time zone or the workspace's.");
         }
 
-        var today = Today(TimeZoneInfo.FindSystemTimeZoneById(zoneId), now);
-        ThrowIfStartsInThePast(settings, today);
+        var zone = TimeZoneInfo.FindSystemTimeZoneById(zoneId);
+        ThrowIfStartsInThePast(settings, Today(zone, now));
         await ThrowIfUnknownSubjectAsync(settings.SubjectId, saved.SubjectId, cancellationToken);
 
         await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
@@ -82,22 +82,19 @@ internal sealed class LessonSeriesService(
         await queries.LockScheduleAsync(teacher, cancellationToken);
         var old = await LoadForChangeAsync(seriesId, request.Version, cancellationToken);
 
-        DateOnly from;
+        // The cut is an instant, so the series' and the form's calendars never mix: from the selected lesson (or, for all
+        // future lessons, from now), earlier if the new series starts on an earlier day, and never before now.
+        var from = now;
         if (request.Scope == ThisAndFollowing)
         {
             var lesson = await db.Set<Lesson>().AsNoTracking().SingleOrDefaultAsync(l => l.Id == request.FromLessonId && l.SeriesId == old.Id, cancellationToken)
                 ?? throw Invalid("fromLessonId", "The lesson is not part of this series.");
-            from = DateOnly.FromDateTime(LessonTime.ToLocal(lesson.StartUtc, TimeZoneInfo.FindSystemTimeZoneById(old.TimeZone)));
-        }
-        else
-        {
-            from = today;
+            from = lesson.StartUtc;
         }
 
-        // Moving the following lessons earlier also takes the old ones from that day; the past is never rewritten.
-        from = Max(Min(from, settings.StartDate!.Value), today);
+        from = Latest(Earliest(from, LessonTime.StartOfDayUtc(settings.StartDate!.Value, zone)), now);
         await participants.RequireAsync(Enum.Parse<LessonKind>(settings.Kind!), settings.StudentId, settings.GroupId, cancellationToken);
-        await RemoveFromAsync(old, from, now, cancellationToken);
+        await RemoveFromAsync(old, from, cancellationToken);
 
         var next = NewSeries(settings, teacher, zoneId, now);
         db.Set<LessonSeries>().Add(next);
@@ -116,8 +113,9 @@ internal sealed class LessonSeriesService(
         await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
         await queries.LockScheduleAsync((await FindAsync(seriesId, cancellationToken)).TeacherUserId, cancellationToken);
         var series = await LoadForChangeAsync(seriesId, request.Version, cancellationToken);
-        var today = Today(TimeZoneInfo.FindSystemTimeZoneById(series.TimeZone), now);
-        await RemoveFromAsync(series, Max(request.FromDate!.Value, today), now, cancellationToken);
+        // The date is in the series' own calendar; a lesson that already started stays.
+        var from = Latest(LessonTime.StartOfDayUtc(request.FromDate!.Value, TimeZoneInfo.FindSystemTimeZoneById(series.TimeZone)), now);
+        await RemoveFromAsync(series, from, cancellationToken);
         Touch(series, now);
         await SaveAsync(cancellationToken);
         await transaction.CommitAsync(cancellationToken);
@@ -204,20 +202,22 @@ internal sealed class LessonSeriesService(
         return (created, conflicts);
     }
 
-    /// <summary>Ends a series before <paramref name="from"/>: its scheduled, unchanged occurrences and skips from then on go.</summary>
-    private async Task RemoveFromAsync(LessonSeries series, DateOnly from, DateTime nowUtc, CancellationToken cancellationToken)
+    /// <summary>
+    /// Ends a series at the instant <paramref name="fromUtc"/>: its scheduled, unchanged lessons starting then or later and
+    /// its skips from that local day on go; the end date becomes the local day of the last moment before the cut.
+    /// </summary>
+    private async Task RemoveFromAsync(LessonSeries series, DateTime fromUtc, CancellationToken cancellationToken)
     {
-        // Never a lesson that already started (today's may still need to be marked as held).
-        var dayStart = LessonTime.StartOfDayUtc(from, TimeZoneInfo.FindSystemTimeZoneById(series.TimeZone));
-        var fromUtc = dayStart > nowUtc ? dayStart : nowUtc;
+        var zone = TimeZoneInfo.FindSystemTimeZoneById(series.TimeZone);
         var lessons = await db.Set<Lesson>()
             .Where(l => l.SeriesId == series.Id && l.Status == LessonStatus.Scheduled && !l.SeriesException && l.StartUtc >= fromUtc)
             .ToListAsync(cancellationToken);
         var ids = lessons.Select(l => l.Id).ToList();
         db.Set<LessonParticipant>().RemoveRange(await db.Set<LessonParticipant>().Where(p => ids.Contains(p.LessonId)).ToListAsync(cancellationToken));
         db.Set<Lesson>().RemoveRange(lessons);
-        db.Set<LessonSeriesSkip>().RemoveRange(await db.Set<LessonSeriesSkip>().Where(s => s.SeriesId == series.Id && s.Date >= from).ToListAsync(cancellationToken));
-        var end = from.AddDays(-1);
+        var fromDay = DateOnly.FromDateTime(LessonTime.ToLocal(fromUtc, zone));
+        db.Set<LessonSeriesSkip>().RemoveRange(await db.Set<LessonSeriesSkip>().Where(s => s.SeriesId == series.Id && s.Date >= fromDay).ToListAsync(cancellationToken));
+        var end = DateOnly.FromDateTime(LessonTime.ToLocal(fromUtc.AddTicks(-1), zone));
         if (series.EndDate is null || series.EndDate > end)
         {
             series.EndDate = end;
@@ -308,9 +308,9 @@ internal sealed class LessonSeriesService(
 
     private static DateOnly Today(TimeZoneInfo zone, DateTime nowUtc) => DateOnly.FromDateTime(LessonTime.ToLocal(nowUtc, zone));
 
-    private static DateOnly Min(DateOnly a, DateOnly b) => a < b ? a : b;
+    private static DateTime Earliest(DateTime a, DateTime b) => a < b ? a : b;
 
-    private static DateOnly Max(DateOnly a, DateOnly b) => a > b ? a : b;
+    private static DateTime Latest(DateTime a, DateTime b) => a > b ? a : b;
 
     private static ConflictException Conflict() =>
         new("The series was changed elsewhere. Reload and apply your changes again.", ErrorCodes.ConcurrencyConflict);

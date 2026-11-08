@@ -147,6 +147,34 @@ public sealed class LessonSeriesTests(ClassHubApiFixture fixture)
     }
 
     [Fact]
+    public async Task This_and_following_cuts_at_the_lesson_itself_whatever_the_calendars_say()
+    {
+        var pagoPago = TimeZoneInfo.FindSystemTimeZoneById("Pacific/Pago_Pago"); // UTC-11
+        var localNow = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, pagoPago);
+        Assert.SkipWhen(localNow.TimeOfDay > new TimeSpan(23, 40, 0), "Tonight's lesson must still be ahead.");
+        var todayThere = DateOnly.FromDateTime(localNow);
+        using var teacher = await fixture.CreateTeacherAsync();
+        var ana = await StudentAsync(teacher, "Ана");
+        (await teacher.Client.PatchAsync($"/api/w/{teacher.WorkspaceId}", new { timeZone = "Pacific/Pago_Pago" })).StatusCode.ShouldBe(HttpStatusCode.OK);
+        var created = await CreateAsync(teacher, Weekly(ana.Id, todayThere, "23:50", count: 3));
+        var tonight = (await LessonsAsync(teacher, todayThere, todayThere)).ShouldHaveSingleItem();
+
+        // The workspace moves to Kiritimati (UTC+14): there, tonight's lesson is already two calendar days later.
+        (await teacher.Client.PatchAsync($"/api/w/{teacher.WorkspaceId}", new { timeZone = "Pacific/Kiritimati" })).StatusCode.ShouldBe(HttpStatusCode.OK);
+        var shown = await teacher.Client.GetJsonAsync<LessonResponse>($"/api/w/{teacher.WorkspaceId}/lessons/{tonight.Id}");
+        var shownDate = DateOnly.FromDateTime(shown.StartLocal);
+        await ReadAsync<SeriesResultResponse>(await teacher.Client.PutAsync(Series(teacher, $"/{created.Series.Id}"), new
+        {
+            scope = "ThisAndFollowing", fromLessonId = tonight.Id, version = created.Series.Version, timeZone = "Pacific/Kiritimati",
+            series = Weekly(ana.Id, shownDate, $"{shown.StartLocal.AddHours(1):HH:mm}", count: 3),
+        }));
+
+        await using var db = fixture.CreateDbContext();
+        (await db.Database.SqlQuery<int>($"SELECT COUNT(*) AS [Value] FROM Lessons WHERE Id = {tonight.Id}").SingleAsync(Ct)).ShouldBe(0); // replaced
+        (await CountAsync(created.Series.Id)).ShouldBe(0);
+    }
+
+    [Fact]
     public async Task An_occurrence_that_overlaps_another_lesson_is_skipped_and_reported()
     {
         using var teacher = await fixture.CreateTeacherAsync();
