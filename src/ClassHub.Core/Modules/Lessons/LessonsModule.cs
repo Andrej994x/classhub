@@ -228,16 +228,21 @@ internal sealed class SaveBookingSettingsRequestValidator : AbstractValidator<Sa
 {
     public SaveBookingSettingsRequestValidator()
     {
-        RuleFor(x => x.SlotStepMinutes).NotNull().Must(s => BookingSettings.SlotSteps.Contains(s!.Value)).WithMessage("Choose 15, 30 or 60 minutes.");
-        RuleFor(x => x.MinNoticeHours).NotNull().InclusiveBetween(0, BookingSettings.MaxNoticeHours);
-        RuleFor(x => x.HorizonDays).NotNull().InclusiveBetween(BookingSettings.MinHorizonDays, BookingSettings.MaxHorizonDays);
+        // Null-safe throughout: a missing or null field is a validation error, never a server error.
+        RuleFor(x => x.SlotStepMinutes).Cascade(CascadeMode.Stop).NotNull().Must(s => BookingSettings.SlotSteps.Contains(s!.Value)).WithMessage("Choose 15, 30 or 60 minutes.");
+        RuleFor(x => x.MinNoticeHours).Cascade(CascadeMode.Stop).NotNull().InclusiveBetween(0, BookingSettings.MaxNoticeHours);
+        RuleFor(x => x.HorizonDays).Cascade(CascadeMode.Stop).NotNull().InclusiveBetween(BookingSettings.MinHorizonDays, BookingSettings.MaxHorizonDays);
         RuleFor(x => x.Version).NotNull();
-        RuleFor(x => x.WorkingHours).NotNull().Must(h => h!.Count <= 42).WithMessage("At most 42 intervals.");
-        RuleForEach(x => x.WorkingHours).Must(h => h.End > h.Start && Enum.IsDefined(h.DayOfWeek)).WithMessage("Each interval ends after it starts.");
-        RuleFor(x => x.WorkingHours).Must(h => h is null || !h.GroupBy(i => i.DayOfWeek).Any(day => day.OrderBy(i => i.Start).Zip(day.OrderBy(i => i.Start).Skip(1)).Any(p => p.Second.Start < p.First.End)))
+        RuleFor(x => x.WorkingHours).Cascade(CascadeMode.Stop)
+            .NotNull()
+            .Must(h => h!.Count <= 42).WithMessage("At most 42 intervals.")
+            .Must(h => h!.All(i => i is not null && i.End > i.Start && Enum.IsDefined(i.DayOfWeek))).WithMessage("Each interval ends after it starts.")
+            .Must(h => !h!.GroupBy(i => i.DayOfWeek).Any(day => day.OrderBy(i => i.Start).Zip(day.OrderBy(i => i.Start).Skip(1)).Any(p => p.Second.Start < p.First.End)))
             .WithMessage("Intervals of one day must not overlap.");
-        RuleFor(x => x.TimeOff).NotNull().Must(o => o!.Count <= 100).WithMessage("At most 100 periods.");
-        RuleForEach(x => x.TimeOff).Must(o => o.EndDate >= o.StartDate && (o.Note?.Length ?? 0) <= TimeOff.NoteMaxLength)
+        RuleFor(x => x.TimeOff).Cascade(CascadeMode.Stop)
+            .NotNull()
+            .Must(o => o!.Count <= 100).WithMessage("At most 100 periods.")
+            .Must(o => o!.All(p => p is not null && p.EndDate >= p.StartDate && (p.Note?.Length ?? 0) <= TimeOff.NoteMaxLength))
             .WithMessage("Each period ends on or after its start (note up to 120 characters).");
     }
 }

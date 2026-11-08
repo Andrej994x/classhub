@@ -16,7 +16,8 @@ namespace ClassHub.Core.Modules.Lessons.Application;
 
 /// <summary>
 /// The teacher's side of self-service booking (R2-P6): settings, and deciding on requests. Confirming re-checks for
-/// conflicts under the teacher's schedule lock and creates the lesson (D-23); the visitor is told by email.
+/// conflicts under the teacher's schedule lock, makes the request a student and creates the lesson in one transaction
+/// (D-23); the visitor is told by email.
 /// </summary>
 internal sealed class BookingService(
     ClassHubDbContext db,
@@ -112,9 +113,7 @@ internal sealed class BookingService(
     /// </summary>
     public async Task<BookingRequestResponse> ConfirmAsync(Guid bookingId, BookingDecisionRequest request, CancellationToken cancellationToken)
     {
-        var pending = await LoadAsync(bookingId, tracking: false, cancellationToken);
-        ThrowIfNot(pending, BookingStatus.Pending, request.Version);
-        var studentId = await leadStudents.EnsureStudentAsync(pending.LeadId, cancellationToken);
+        ThrowIfNot(await LoadAsync(bookingId, tracking: false, cancellationToken), BookingStatus.Pending, request.Version);
         var teacher = tenant.UserId!.Value;
         var now = clock.GetUtcNow().UtcDateTime;
 
@@ -127,6 +126,8 @@ internal sealed class BookingService(
             throw new ConflictException("Another lesson is already scheduled at this time.", ErrorCodes.LessonOverlap);
         }
 
+        // In this transaction: a failed confirmation (conflict, plan limit, a parallel decision) converts nothing.
+        var studentId = await leadStudents.EnsureStudentAsync(booking.LeadId, cancellationToken);
         var lesson = new Lesson
         {
             Id = Guid.CreateVersion7(),
@@ -211,6 +212,34 @@ internal sealed class BookingService(
         await NotifyAsync(booking, BookingEmails.Kind.Cancelled, cancellationToken);
         await SaveAsync(cancellationToken);
         return await GetAsync(booking.Id, cancellationToken);
+    }
+
+    /// <summary>
+    /// After a booked lesson was changed in the lesson editor (in the caller's unit of work): its confirmed booking takes
+    /// the new time or the cancellation, and the visitor is told, as if it had been done on the booking.
+    /// </summary>
+    public async Task OnLessonChangedAsync(Lesson lesson, CancellationToken cancellationToken)
+    {
+        var booking = await db.Set<BookingRequest>().SingleOrDefaultAsync(b => b.LessonId == lesson.Id && b.Status == BookingStatus.Confirmed, cancellationToken);
+        if (booking is null)
+        {
+            return;
+        }
+
+        var now = clock.GetUtcNow().UtcDateTime;
+        if (lesson.Status == LessonStatus.Cancelled)
+        {
+            booking.Status = BookingStatus.Cancelled;
+            Decide(booking, lesson.CancellationReason, now);
+            await NotifyAsync(booking, BookingEmails.Kind.Cancelled, cancellationToken);
+        }
+        else if (lesson.StartUtc != booking.StartUtc || lesson.EndUtc != booking.EndUtc)
+        {
+            booking.StartUtc = lesson.StartUtc;
+            booking.EndUtc = lesson.EndUtc;
+            Decide(booking, booking.Reason, now);
+            await NotifyAsync(booking, BookingEmails.Kind.Rescheduled, cancellationToken);
+        }
     }
 
     private async Task<Lesson> ScheduledLessonAsync(BookingRequest booking, CancellationToken cancellationToken)

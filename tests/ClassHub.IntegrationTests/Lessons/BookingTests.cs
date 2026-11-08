@@ -125,6 +125,63 @@ public sealed class BookingTests(ClassHubApiFixture fixture)
     }
 
     [Fact]
+    public async Task Changing_a_booked_lesson_in_the_lesson_editor_keeps_the_booking_in_step()
+    {
+        using var site = await BookableAsync();
+        using var visitor = fixture.Factory.CreateClient();
+        await RequestAsync(visitor, site, (await FirstSlotAsync(visitor, site)).StartUtc, "nina@example.test");
+        var request = (await site.Teacher.Client.GetJsonAsync<List<BookingRequestResponse>>(site.Path("/requests"))).ShouldHaveSingleItem();
+        var confirmed = await ReadAsync<BookingRequestResponse>(await site.Teacher.Client.PostAsync(site.Path($"/requests/{request.Id}/confirm"), new { version = request.Version }));
+        var lesson = await site.Teacher.Client.GetJsonAsync<LessonResponse>($"/api/w/{site.Teacher.WorkspaceId}/lessons/{confirmed.LessonId}");
+        var since = DateTime.UtcNow.AddSeconds(-1);
+
+        var moved = await ReadAsync<LessonResponse>(await site.Teacher.Client.PutAsync($"/api/w/{site.Teacher.WorkspaceId}/lessons/{lesson.Id}", new
+        {
+            kind = "Individual", studentId = lesson.Participants[0].StudentId, title = lesson.Title, startLocal = $"{Tomorrow:yyyy-MM-dd}T14:00:00", durationMinutes = 60, mode = "Online", version = lesson.Version,
+        }));
+        var booking = await site.Teacher.Client.GetJsonAsync<BookingRequestResponse>(site.Path($"/requests/{request.Id}"));
+        booking.StartLocal.ShouldBe(Tomorrow.ToDateTime(new TimeOnly(14, 0)));
+        await fixture.WaitForEmailAsync("nina@example.test", "booking.rescheduled", since);
+
+        await ReadAsync<LessonResponse>(await site.Teacher.Client.PostAsync($"/api/w/{site.Teacher.WorkspaceId}/lessons/{lesson.Id}/cancel", new { version = moved.Version, reason = "Патување" }));
+        booking = await site.Teacher.Client.GetJsonAsync<BookingRequestResponse>(site.Path($"/requests/{request.Id}"));
+        booking.Status.ShouldBe("Cancelled");
+        booking.Reason.ShouldBe("Патување");
+        await fixture.WaitForEmailAsync("nina@example.test", "booking.cancelled", since);
+    }
+
+    [Fact]
+    public async Task A_confirmation_that_fails_converts_nothing()
+    {
+        using var site = await BookableAsync();
+        using var visitor = fixture.Factory.CreateClient();
+        var slot = await FirstSlotAsync(visitor, site);
+        await RequestAsync(visitor, site, slot.StartUtc, "late@example.test");
+        // The teacher takes that time with another lesson before confirming.
+        Guid otherId;
+        using (var other = await site.Teacher.Client.PostAsync($"/api/w/{site.Teacher.WorkspaceId}/students", new { firstName = "Друг" }))
+        {
+            otherId = (await other.Content.ReadFromJsonAsync<ClassHub.Core.Modules.Students.Contracts.StudentResponse>(Ct))!.Id;
+        }
+
+        (await site.Teacher.Client.PostAsync($"/api/w/{site.Teacher.WorkspaceId}/lessons", new
+        {
+            kind = "Individual", studentId = otherId, title = "Друг час", startLocal = TimeZoneInfo.ConvertTimeFromUtc(slot.StartUtc, Skopje), durationMinutes = 60, mode = "Online",
+        })).StatusCode.ShouldBe(HttpStatusCode.Created);
+        var request = (await site.Teacher.Client.GetJsonAsync<List<BookingRequestResponse>>(site.Path("/requests"))).ShouldHaveSingleItem();
+
+        using (var clash = await site.Teacher.Client.PostAsync(site.Path($"/requests/{request.Id}/confirm"), new { version = request.Version }))
+        {
+            (await clash.ErrorCodeAsync()).ShouldBe(ErrorCodes.LessonOverlap);
+        }
+
+        const string email = "late@example.test";
+        await using var db = fixture.CreateDbContext();
+        (await db.Database.SqlQuery<int>($"SELECT COUNT(*) AS [Value] FROM Students WHERE WorkspaceId = {site.Teacher.WorkspaceId} AND Email = {email}").SingleAsync(Ct)).ShouldBe(0);
+        (await db.Database.SqlQuery<int>($"SELECT COUNT(*) AS [Value] FROM Leads WHERE Id = {request.LeadId} AND StudentId IS NULL").SingleAsync(Ct)).ShouldBe(1);
+    }
+
+    [Fact]
     public async Task Only_free_slots_of_bookable_offers_can_be_requested()
     {
         using var site = await BookableAsync();
@@ -186,6 +243,12 @@ public sealed class BookingTests(ClassHubApiFixture fixture)
         }
 
         (await site.Teacher.Client.PutAsync(site.Path("/settings"), Settings(settings.Version, step: 20))).StatusCode.ShouldBe(HttpStatusCode.BadRequest);
+        // Missing or null fields are validation errors, not server errors.
+        (await site.Teacher.Client.PutAsync(site.Path("/settings"), new { enabled = true, version = settings.Version })).StatusCode.ShouldBe(HttpStatusCode.BadRequest);
+        (await site.Teacher.Client.PutAsync(site.Path("/settings"), new
+        {
+            enabled = true, slotStepMinutes = (int?)null, minNoticeHours = 0, horizonDays = 30, workingHours = new object?[] { null }, timeOff = new object?[] { null }, version = settings.Version,
+        })).StatusCode.ShouldBe(HttpStatusCode.BadRequest);
         (await site.Teacher.Client.PutAsync(site.Path("/settings"), Settings(settings.Version - 1))).StatusCode.ShouldBe(HttpStatusCode.Conflict);
 
         using var visitor = fixture.Factory.CreateClient();

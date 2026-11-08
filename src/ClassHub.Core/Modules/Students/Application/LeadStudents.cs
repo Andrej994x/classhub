@@ -6,5 +6,5 @@ namespace ClassHub.Core.Modules.Students.Application;
 internal sealed class LeadStudents(StudentService students) : ILeadStudents
 {
     public async Task<Guid> EnsureStudentAsync(Guid leadId, CancellationToken cancellationToken) =>
-        (await students.ConvertAsync(new ConvertLeadRequest(leadId), cancellationToken)).Student.Id;
+        (await students.ConvertInTransactionAsync(leadId, cancellationToken)).StudentId;
 }
