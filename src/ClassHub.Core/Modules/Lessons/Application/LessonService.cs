@@ -93,7 +93,11 @@ internal sealed class LessonService(
         var current = await LoadAsync(lessonId, tracking: false, cancellationToken);
         // The editor shows and sends times in the workspace's current zone (it may have changed since scheduling).
         var zoneId = await workspace.GetTimeZoneAsync(cancellationToken);
-        var (startUtc, endUtc) = Times(request, TimeZoneInfo.FindSystemTimeZoneById(zoneId));
+        var zone = TimeZoneInfo.FindSystemTimeZoneById(zoneId);
+        // An unchanged start keeps its instant: in a repeated hour the wall-clock value alone cannot tell which one it was.
+        var (startUtc, endUtc) = request.StartLocal == LessonTime.ToLocal(current.StartUtc, zone)
+            ? (current.StartUtc, current.StartUtc.AddMinutes(request.DurationMinutes!.Value))
+            : Times(request, zone);
         await ThrowIfUnknownSubjectAsync(request.SubjectId, current.SubjectId, cancellationToken);
 
         await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);

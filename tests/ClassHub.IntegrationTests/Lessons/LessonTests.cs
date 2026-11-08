@@ -183,6 +183,25 @@ public sealed class LessonTests(ClassHubApiFixture fixture)
     }
 
     [Fact]
+    public async Task Saving_an_unchanged_start_in_a_repeated_hour_keeps_the_instant()
+    {
+        using var teacher = await fixture.CreateTeacherAsync();
+        var ana = await StudentAsync(teacher, "Ана");
+        (await teacher.Client.PatchAsync($"/api/w/{teacher.WorkspaceId}", new { timeZone = "Etc/UTC" })).StatusCode.ShouldBe(HttpStatusCode.OK);
+        var lesson = await CreateAsync(teacher, Individual(ana.Id, "2030-10-27T01:30:00", 60)); // 01:30 UTC
+        (await teacher.Client.PatchAsync($"/api/w/{teacher.WorkspaceId}", new { timeZone = "Europe/Skopje" })).StatusCode.ShouldBe(HttpStatusCode.OK);
+
+        // In Skopje that is 02:30 winter time: the second 02:30 of the night the clocks go back.
+        var shown = await teacher.Client.GetJsonAsync<LessonResponse>(Path(teacher, $"/{lesson.Id}"));
+        shown.StartLocal.ShouldBe(new DateTime(2030, 10, 27, 2, 30, 0));
+        var renamed = await ReadAsync<LessonResponse>(await teacher.Client.PutAsync(Path(teacher, $"/{lesson.Id}"),
+            new { kind = "Individual", studentId = ana.Id, title = "Ново име", startLocal = "2030-10-27T02:30:00", durationMinutes = 60, mode = "Online", version = shown.Version }));
+
+        renamed.StartUtc.ShouldBe(lesson.StartUtc);
+        renamed.EndUtc.ShouldBe(lesson.EndUtc);
+    }
+
+    [Fact]
     public async Task Requests_are_validated()
     {
         using var teacher = await fixture.CreateTeacherAsync();
