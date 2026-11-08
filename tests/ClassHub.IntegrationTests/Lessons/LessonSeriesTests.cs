@@ -50,6 +50,39 @@ public sealed class LessonSeriesTests(ClassHubApiFixture fixture)
     }
 
     [Fact]
+    public async Task Series_that_cannot_progress_never_starve_the_horizon_job()
+    {
+        // Blockers first (older ids): a series whose teacher left the workspace and one that ended on a date.
+        using var leaver = await fixture.CreateTeacherAsync();
+        var leaverStudent = await StudentAsync(leaver, "Ана");
+        var orphan = await CreateAsync(leaver, Weekly(leaverStudent.Id, Tomorrow, "17:00", count: null));
+        var ended = await CreateAsync(leaver, Weekly(leaverStudent.Id, Tomorrow, "19:00", count: null));
+        (await leaver.Client.PostAsync(Series(leaver, $"/{ended.Series.Id}/end"), new { fromDate = Tomorrow.AddDays(30), version = ended.Series.Version })).StatusCode.ShouldBe(HttpStatusCode.OK);
+        await using (var db = fixture.CreateDbContext())
+        {
+            // The teacher leaves: nobody may act for the orphan any more.
+            await db.Database.ExecuteSqlAsync($"UPDATE WorkspaceMembers SET RevokedAtUtc = SYSUTCDATETIME() WHERE UserId = {leaver.Me.Id} AND WorkspaceId = {leaver.WorkspaceId}", Ct);
+        }
+
+        using var teacher = await fixture.CreateTeacherAsync();
+        var ana = await StudentAsync(teacher, "Ана");
+        var active = await CreateAsync(teacher, Weekly(ana.Id, Tomorrow, "17:00", count: null));
+        (await CountAsync(active.Series.Id)).ShouldBe(12);
+
+        // One series per pass: every pass must still make progress for some series until this one is extended.
+        await using var factory = fixture.Factory.WithWebHostBuilder(b => b.UseSetting("Lessons:HorizonBatchSize", "1"));
+        var job = factory.Services.GetRequiredService<LessonSeriesHorizonJob>();
+        var later = DateTime.UtcNow.AddDays(70);
+        for (var pass = 0; pass < 60 && await CountAsync(active.Series.Id) == 12; pass++)
+        {
+            await job.RunAtAsync(later, Ct);
+        }
+
+        (await CountAsync(active.Series.Id)).ShouldBe(22);
+        (await CountAsync(orphan.Series.Id)).ShouldBe(12); // nobody acts for a teacher who left
+    }
+
+    [Fact]
     public async Task An_occurrence_that_overlaps_another_lesson_is_skipped_and_reported()
     {
         using var teacher = await fixture.CreateTeacherAsync();

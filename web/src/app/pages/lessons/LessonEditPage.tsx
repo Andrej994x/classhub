@@ -117,6 +117,7 @@ function LessonEditor({ workspaceId, lesson }: { workspaceId: string; lesson: Le
   const [current, setCurrent] = useState(lesson);
   const [submitted, setSubmitted] = useState(false);
   const set = (patch: Partial<Values>) => setValues({ ...values, ...patch });
+  const followingScope = !!current?.seriesId && !current.seriesException && values.scope === 'following';
   const editable = !current || current.status === 'Scheduled';
   const durationOptions = durations.includes(Number(values.duration)) ? durations : [...durations, Number(values.duration)].toSorted((a, b) => a - b);
 
@@ -171,7 +172,9 @@ function LessonEditor({ workspaceId, lesson }: { workspaceId: string; lesson: Le
         void navigate(`/app/w/${workspaceId}/series/${result.series.id}`, { replace: true, state: { created: result.created } });
         return;
       }
-      if (current?.seriesId && values.scope === 'following' && series.data) {
+      if (followingScope) {
+        // Never fall back to "only this lesson": without the series there is nothing to save yet.
+        if (!series.data) return;
         // The new series keeps the old one's rhythm and end; a count becomes the lessons left from this one.
         const left = series.data.count === null ? null : Math.max(1, (num(series.data.count) ?? 0) - (num(current.seriesIndex) ?? 0));
         const result = await updateSeries.mutateAsync({
@@ -211,6 +214,7 @@ function LessonEditor({ workspaceId, lesson }: { workspaceId: string; lesson: Le
               ? errorMessage(failure, t)
               : null;
   const saving = save.isPending || createSeries.isPending || updateSeries.isPending;
+  const waitingForSeries = followingScope && !series.data;
   const currentStudent = current?.kind === 'Individual' ? current.participants[0] : undefined;
 
   return (
@@ -404,9 +408,14 @@ function LessonEditor({ workspaceId, lesson }: { workspaceId: string; lesson: Le
                   ))}
                 </fieldset>
               )}
+              {waitingForSeries && series.isError && (
+                <Alert variant="error" className="sm:col-span-2">
+                  {errorMessage(series.error, t)}
+                </Alert>
+              )}
               {editable && (
-                <Button type="submit" className="self-start" disabled={saving}>
-                  {saving ? t('common.loading') : lesson ? t('lessons.save') : values.repeat === 'none' ? t('lessons.create') : t('lessons.series.create')}
+                <Button type="submit" className="self-start" disabled={saving || waitingForSeries}>
+                  {saving || (waitingForSeries && !series.isError) ? t('common.loading') : lesson ? t('lessons.save') : values.repeat === 'none' ? t('lessons.create') : t('lessons.series.create')}
                 </Button>
               )}
             </CardContent>

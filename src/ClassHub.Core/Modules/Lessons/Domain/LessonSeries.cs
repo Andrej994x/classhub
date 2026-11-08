@@ -14,6 +14,10 @@ public sealed class LessonSeries : ITenantOwned
     public const int MaxCount = 200;
     public const int MaxSpanDays = 2 * 366;
 
+    /// <summary>The first local day after the horizon: occurrences before it exist as lessons.</summary>
+    public static DateOnly HorizonEnd(TimeZoneInfo zone, DateTime nowUtc) =>
+        DateOnly.FromDateTime(LessonTime.ToLocal(nowUtc, zone)).AddDays(7 * HorizonWeeks);
+
     public Guid Id { get; set; }
 
     public Guid WorkspaceId { get; set; }

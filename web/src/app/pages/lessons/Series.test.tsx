@@ -61,6 +61,10 @@ const occurrence = {
 };
 
 function seriesApi(current = series()) {
+  return seriesApiWith(() => undefined, current);
+}
+
+function seriesApiWith(first: (call: FakeCall) => Response | Promise<Response> | undefined, current = series()) {
   const state = { series: { r1: current } as Record<string, ReturnType<typeof series>> };
   const handler = (call: FakeCall) => {
     if (call.path === `/api/w/${WORKSPACE_ID}/students` && call.method === 'GET') {
@@ -90,7 +94,7 @@ function seriesApi(current = series()) {
     state.series[match[1]!] = series({ ...state.series[match[1]!], endDate: (call.body as { fromDate: string }).fromDate, version: 3 });
     return json(200, state.series[match[1]!]);
   };
-  const api = fakeApi({ me: teacher(), extra: [handler] });
+  const api = fakeApi({ me: teacher(), extra: [first, handler] });
   return { api, state };
 }
 
@@ -135,6 +139,19 @@ describe('recurring lessons', () => {
     expect(api.to(`/api/w/${WORKSPACE_ID}/lessons/l5`, 'PUT')).toHaveLength(0);
   });
 
+  it('never falls back to changing only this lesson while the series is not loaded', async () => {
+    const user = userEvent.setup();
+    const { api } = fakeApiWithSlowSeries();
+    await renderRoute(`/app/w/${WORKSPACE_ID}/lessons/l5`);
+
+    await user.click(await screen.findByLabelText('Овој и следните часови'));
+    const save = screen.getByRole('button', { name: /Зачувај|Се вчитува/ });
+    expect(save).toBeDisabled();
+    await user.click(save);
+    expect(api.to(`/api/w/${WORKSPACE_ID}/lessons/l5`, 'PUT')).toHaveLength(0);
+    expect(api.to(`${SERIES}/r1`, 'PUT')).toHaveLength(0);
+  });
+
   it('shows the series with its skipped dates, applies a change to all future lessons and ends it', async () => {
     const user = userEvent.setup();
     const { api } = seriesApi();
@@ -173,3 +190,8 @@ describe('recurring lessons', () => {
     expect(screen.queryByRole('button', { name: 'Примени на сите идни часови' })).toBeNull();
   });
 });
+
+/** The series request never answers (still loading), everything else as usual. */
+function fakeApiWithSlowSeries() {
+  return seriesApiWith((call) => (call.path === `${SERIES}/r1` && call.method === 'GET' ? new Promise<Response>(() => undefined) : undefined));
+}

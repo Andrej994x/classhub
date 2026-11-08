@@ -17,6 +17,9 @@ public sealed class LessonOptions
 
     /// <summary>How often recurring lessons are extended to the 12-week horizon.</summary>
     public int HorizonCheckSeconds { get; set; } = 3600;
+
+    /// <summary>At most this many series are extended per pass (the rest follow in the next one).</summary>
+    public int HorizonBatchSize { get; set; } = 200;
 }
 
 /// <summary>
@@ -27,8 +30,6 @@ public sealed class LessonOptions
 internal sealed partial class LessonSeriesHorizonJob(IServiceScopeFactory scopes, IOptions<LessonOptions> options, TimeProvider clock, ILogger<LessonSeriesHorizonJob> logger)
     : BackgroundService
 {
-    public const int BatchSize = 200;
-
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         var interval = TimeSpan.FromSeconds(Math.Max(30, options.Value.HorizonCheckSeconds));
@@ -57,29 +58,39 @@ internal sealed partial class LessonSeriesHorizonJob(IServiceScopeFactory scopes
         {
             var db = scope.ServiceProvider.GetRequiredService<ClassHubDbContext>();
             // Every tenant (system scope): only identifiers leave this query. A series still needs work when it was not
-            // replaced, has not ended before today (in any time zone) and its next occurrence is before the horizon.
+            // replaced, has not ended before today (in any time zone) and its next occurrence is before its horizon.
             var yesterday = DateOnly.FromDateTime(nowUtc).AddDays(-1);
-            var horizon = DateOnly.FromDateTime(nowUtc).AddDays(7 * LessonSeries.HorizonWeeks + 1);
             var open = await db.Set<LessonSeries>().IgnoreQueryFilters().AsNoTracking()
                 .Where(s => s.ReplacedBySeriesId == null && (s.EndDate == null || s.EndDate >= yesterday) && (s.Count == null || s.NextIndex < s.Count))
-                .Select(s => new { s.Id, s.WorkspaceId, s.TeacherUserId, s.StartDate, s.IntervalWeeks, s.NextIndex })
+                .OrderBy(s => s.Id)
+                .Select(s => new { s.Id, s.WorkspaceId, s.TeacherUserId, s.TimeZone, s.StartDate, s.IntervalWeeks, s.EndDate, s.Count, s.NextIndex })
                 .ToListAsync(cancellationToken);
-            candidates = [.. open.Where(s => SeriesPattern.DateOf(s.StartDate, s.IntervalWeeks, s.NextIndex) < horizon)
-                .Take(BatchSize).Select(s => (s.Id, s.WorkspaceId, s.TeacherUserId))];
+            // Only series whose next occurrence exists and is within the horizon the service uses (in the series' own time
+            // zone): every candidate makes progress, so one with nothing to do never takes a turn from another.
+            candidates = [.. open.Where(s => SeriesPattern.Includes(s.StartDate, s.IntervalWeeks, s.EndDate, s.Count, s.NextIndex)
+                    && SeriesPattern.DateOf(s.StartDate, s.IntervalWeeks, s.NextIndex) < LessonSeries.HorizonEnd(TimeZoneInfo.FindSystemTimeZoneById(s.TimeZone), nowUtc))
+                .Select(s => (s.Id, s.WorkspaceId, s.TeacherUserId))];
         }
 
         var created = 0;
+        var worked = 0;
         foreach (var (id, workspaceId, teacher) in candidates)
         {
+            if (worked >= options.Value.HorizonBatchSize)
+            {
+                break; // the rest follow in the next pass
+            }
+
             try
             {
                 await using var scope = scopes.CreateAsyncScope();
                 var services = scope.ServiceProvider;
                 if (await services.GetRequiredService<IWorkspaceMembershipLookup>().GetActiveRoleAsync(workspaceId, teacher, cancellationToken) is not { } role)
                 {
-                    continue; // the teacher left the workspace: nothing is scheduled on their behalf
+                    continue; // the teacher left the workspace: nothing is scheduled on their behalf (and it takes no turn)
                 }
 
+                worked++;
                 services.GetRequiredService<TenantContext>().Set(workspaceId, teacher, role);
                 created += await services.GetRequiredService<LessonSeriesService>().ExtendAsync(id, nowUtc, cancellationToken);
             }

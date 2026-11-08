@@ -140,7 +140,7 @@ internal sealed class LessonSeriesService(
     private async Task<(int Created, IReadOnlyList<SeriesSkipResponse> Conflicts)> MaterializeAsync(LessonSeries series, DateTime nowUtc, CancellationToken cancellationToken)
     {
         var zone = TimeZoneInfo.FindSystemTimeZoneById(series.TimeZone);
-        var until = Today(zone, nowUtc).AddDays(7 * LessonSeries.HorizonWeeks);
+        var until = LessonSeries.HorizonEnd(zone, nowUtc);
         var occurrences = SeriesPattern.Occurrences(series.StartDate, series.StartTime, series.IntervalWeeks, series.EndDate, series.Count, series.NextIndex, until, zone).ToList();
         if (occurrences.Count == 0)
         {
