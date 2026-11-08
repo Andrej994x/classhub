@@ -88,6 +88,11 @@ ASP.NET Core Identity with cookie sessions. See [ARCHITECTURE.md](ARCHITECTURE.m
 - Names, phones and guardian contacts are redacted in logs.
 - No duplicates by email within a workspace (unique index) and no limit overrun under parallel requests (intake lock; tested).
 
+## Recurring lessons (R2-P5)
+
+- The horizon job reads series across workspaces only for identifiers, then works on each in a scope bound to its workspace as its teacher, and only while the teacher is still an active member: no write crosses a workspace boundary and the normal tenant filters apply.
+- Series, skips and occurrences are tied to their workspace by composite tenant FKs; other teachers get 404.
+
 ## Lessons (R2-P4)
 
 - Lessons, participants and groups are tied to the workspace by composite tenant FKs; other teachers get 404. Only `lessons.manage` changes lessons (D-22 final states cannot be rewritten).

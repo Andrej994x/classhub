@@ -125,6 +125,7 @@ describe('lesson editor', () => {
     expect(await screen.findByText('Изберете ученик.')).toBeInTheDocument();
     expect(api.to(BASE, 'POST')).toHaveLength(0);
 
+    await screen.findByRole('option', { name: /Ана Илиева/ });
     await user.selectOptions(screen.getByLabelText('Ученик'), 's1');
     await user.type(screen.getByLabelText('Наслов'), 'Дропки');
     await user.selectOptions(screen.getByLabelText('Траење'), '90');

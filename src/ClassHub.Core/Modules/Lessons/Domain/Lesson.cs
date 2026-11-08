@@ -56,6 +56,14 @@ public sealed class Lesson : ITenantOwned
 
     public DateTime? CancelledAtUtc { get; set; }
 
+    /// <summary>The series this lesson was created by (R2-P5), and its occurrence number in it.</summary>
+    public Guid? SeriesId { get; set; }
+
+    public int? SeriesIndex { get; set; }
+
+    /// <summary>Changed on its own ("only this lesson"): later edits of the series leave it alone.</summary>
+    public bool SeriesException { get; set; }
+
     public DateTime CreatedAtUtc { get; set; }
 
     public DateTime UpdatedAtUtc { get; set; }

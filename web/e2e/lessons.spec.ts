@@ -38,3 +38,34 @@ test('a teacher schedules a lesson and the calendar refuses an overlap', async (
   await expect(page.getByRole('button', { name: new RegExp(text(language, 'lessons.calendar.count_one', { count: 1 })) })).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
 });
+
+// R2-P5 acceptance: weekly lessons are scheduled ahead from the editor, shown in the calendar, and the series can end.
+test('a teacher schedules weekly lessons and ends the series', async ({ page }) => {
+  const language = 'mk' as const;
+  await useLanguage(page, language);
+  const { workspaceId } = await signedInTeacher(page, uniqueEmail('series'));
+  expect((await page.request.post(`/api/w/${workspaceId}/students`, {
+    data: { firstName: 'Марко', lastName: 'Петров' },
+    headers: { 'X-XSRF-TOKEN': await xsrf(page.request) },
+  })).status()).toBe(201);
+  // Two days ahead, so the start is "today or later" in any time zone.
+  const start = new Date(Date.now() + 2 * 86_400_000).toISOString().slice(0, 10);
+
+  await page.goto(`/app/w/${workspaceId}/lessons/new?date=${start}`);
+  await page.getByLabel(text(language, 'lessons.fields.student'), { exact: true }).selectOption({ label: 'Марко Петров' });
+  await page.getByLabel(text(language, 'lessons.fields.title')).fill('Англиски');
+  await page.getByLabel(text(language, 'lessons.series.repeat')).selectOption('1');
+  await page.getByLabel(text(language, 'lessons.series.countLabel')).fill('4');
+  await page.getByRole('button', { name: text(language, 'lessons.series.create') }).click();
+
+  await expect(page).toHaveURL(new RegExp(`/app/w/${workspaceId}/series/[0-9a-f-]{36}$`));
+  await expect(page.getByText(text(language, 'lessons.series.created_other', { count: 4 }))).toBeVisible();
+  await page.goto(`/app/w/${workspaceId}/calendar?view=month&date=${start}`);
+  await expect(page.getByRole('button', { name: new RegExp(text(language, 'lessons.calendar.count_one', { count: 1 })) }).first()).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+
+  await page.goBack();
+  await page.getByRole('button', { name: text(language, 'lessons.series.end') }).click();
+  await page.getByRole('button', { name: text(language, 'lessons.series.endYes') }).click();
+  await expect(page.getByText(text(language, 'lessons.series.ended'))).toBeVisible();
+});

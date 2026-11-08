@@ -23,6 +23,7 @@ internal sealed class LessonService(
     IWorkspaceSettings workspace,
     IStudentLookup students,
     IGroupLookup groups,
+    LessonParticipants participantResolver,
     ICatalogLookup catalog,
     TimeProvider clock)
 {
@@ -123,6 +124,8 @@ internal sealed class LessonService(
         await ThrowIfOverlapAsync(lesson.TeacherUserId, startUtc, endUtc, lesson.Id, cancellationToken);
         lesson.Title = request.Title!.Trim();
         lesson.TimeZone = zoneId;
+        // "Only this lesson" (D-24): later edits of its series leave it alone.
+        lesson.SeriesException = lesson.SeriesId is not null;
         Apply(lesson, request, startUtc, endUtc);
         Touch(lesson);
         await SaveAsync(cancellationToken);
@@ -180,29 +183,8 @@ internal sealed class LessonService(
         lesson.Location = lesson.Mode == LessonMode.InPerson ? Clean(request.Location) : null;
     }
 
-    /// <summary>The student (active) or the group's current active members (at least one).</summary>
-    private async Task<IReadOnlyList<Guid>> ParticipantsAsync(SaveLessonRequest request, CancellationToken cancellationToken)
-    {
-        if (request.Kind == nameof(LessonKind.Group))
-        {
-            var group = (await groups.FindAsync([request.GroupId!.Value], cancellationToken)).GetValueOrDefault(request.GroupId!.Value)
-                ?? throw Invalid("groupId", "Unknown group.");
-            if (group.Archived)
-            {
-                throw new BusinessRuleException("Restore the group before scheduling lessons for it.", ErrorCodes.InvalidStatusTransition);
-            }
-
-            return group.ActiveStudentIds.Count > 0
-                ? group.ActiveStudentIds
-                : throw new BusinessRuleException("The group has no students yet.");
-        }
-
-        var studentId = request.StudentId!.Value;
-        var student = (await students.FindAsync([studentId], cancellationToken)).GetValueOrDefault(studentId) ?? throw Invalid("studentId", "Unknown student.");
-        return student.Archived
-            ? throw new BusinessRuleException("Restore the student before scheduling lessons.", ErrorCodes.InvalidStatusTransition)
-            : [studentId];
-    }
+    private Task<IReadOnlyList<Guid>> ParticipantsAsync(SaveLessonRequest request, CancellationToken cancellationToken) =>
+        participantResolver.RequireAsync(Enum.Parse<LessonKind>(request.Kind!), request.StudentId, request.GroupId, cancellationToken);
 
     private async Task ThrowIfOverlapAsync(Guid teacher, DateTime startUtc, DateTime endUtc, Guid? except, CancellationToken cancellationToken)
     {
@@ -278,7 +260,8 @@ internal sealed class LessonService(
                 [.. participants[l.Id].Where(names.ContainsKey).Select(id => new LessonParticipantResponse(id, names[id].FirstName, names[id].LastName))
                     .OrderBy(p => p.LastName ?? p.FirstName).ThenBy(p => p.FirstName)],
                 l.SubjectId, l.Title, l.Topic, l.StartUtc, l.EndUtc, LessonTime.ToLocal(l.StartUtc, zone), LessonTime.ToLocal(l.EndUtc, zone), zoneId,
-                l.Mode.ToString(), l.MeetingUrl, l.Location, l.Status.ToString(), l.CancellationReason, l.CreatedAtUtc, l.UpdatedAtUtc, l.Version))];
+                l.Mode.ToString(), l.MeetingUrl, l.Location, l.Status.ToString(), l.CancellationReason, l.CreatedAtUtc, l.UpdatedAtUtc, l.Version,
+                l.SeriesId, l.SeriesIndex, l.SeriesException))];
     }
 
     private static ConflictException Conflict() =>

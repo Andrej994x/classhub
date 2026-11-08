@@ -43,6 +43,63 @@ internal sealed class LessonConfiguration : IEntityTypeConfiguration<Lesson>
             .HasForeignKey(nameof(Lesson.WorkspaceId), nameof(Lesson.GroupId))
             .HasPrincipalKey("WorkspaceId", "Id")
             .OnDelete(DeleteBehavior.NoAction);
+        // An occurrence belongs to a series of the same workspace and is created once per index.
+        builder.HasOne<LessonSeries>().WithMany()
+            .HasForeignKey(nameof(Lesson.WorkspaceId), nameof(Lesson.SeriesId))
+            .HasPrincipalKey(nameof(LessonSeries.WorkspaceId), nameof(LessonSeries.Id))
+            .OnDelete(DeleteBehavior.NoAction);
+        builder.HasIndex(x => new { x.SeriesId, x.SeriesIndex }).IsUnique().HasFilter("[SeriesId] IS NOT NULL");
+    }
+}
+
+internal sealed class LessonSeriesConfiguration : IEntityTypeConfiguration<LessonSeries>
+{
+    public void Configure(EntityTypeBuilder<LessonSeries> builder)
+    {
+        builder.ToTable("LessonSeries", t =>
+        {
+            t.HasCheckConstraint("CK_LessonSeries_Kind", "([Kind] = 1 AND [StudentId] IS NOT NULL AND [GroupId] IS NULL) OR ([Kind] = 2 AND [GroupId] IS NOT NULL AND [StudentId] IS NULL)");
+            t.HasCheckConstraint("CK_LessonSeries_Mode", "[Mode] IN (1, 2)");
+            t.HasCheckConstraint("CK_LessonSeries_Interval", "[IntervalWeeks] IN (1, 2)");
+            t.HasCheckConstraint("CK_LessonSeries_Duration", "[DurationMinutes] BETWEEN 15 AND 480");
+            t.HasCheckConstraint("CK_LessonSeries_Count", "[Count] IS NULL OR [Count] BETWEEN 1 AND 200");
+            t.HasCheckConstraint("CK_LessonSeries_Title", "LEN([Title]) >= 1");
+        });
+        builder.HasKey(x => x.Id);
+        builder.HasAlternateKey(x => new { x.WorkspaceId, x.Id });
+        builder.Property(x => x.Title).HasMaxLength(Lesson.TitleMaxLength).IsRequired();
+        builder.Property(x => x.Topic).HasMaxLength(Lesson.TopicMaxLength);
+        builder.Property(x => x.TimeZone).HasMaxLength(64).IsRequired();
+        builder.Property(x => x.MeetingUrl).HasMaxLength(Lesson.MeetingUrlMaxLength);
+        builder.Property(x => x.Location).HasMaxLength(Lesson.LocationMaxLength);
+        builder.Property(x => x.Version).IsConcurrencyToken();
+        // The horizon job looks for series that may still need occurrences.
+        builder.HasIndex(x => new { x.ReplacedBySeriesId, x.EndDate });
+        builder.HasOne(WorkspaceForeignKeyTargets.Workspace, navigationName: null).WithMany().HasForeignKey(nameof(LessonSeries.WorkspaceId)).OnDelete(DeleteBehavior.NoAction);
+        builder.HasOne<AppUser>().WithMany().HasForeignKey(x => x.TeacherUserId).OnDelete(DeleteBehavior.NoAction);
+        builder.HasOne(CatalogForeignKeyTargets.Subject, navigationName: null).WithMany().HasForeignKey(nameof(LessonSeries.SubjectId)).OnDelete(DeleteBehavior.NoAction);
+        builder.HasOne(StudentForeignKeyTargets.Student, navigationName: null).WithMany()
+            .HasForeignKey(nameof(LessonSeries.WorkspaceId), nameof(LessonSeries.StudentId))
+            .HasPrincipalKey("WorkspaceId", "Id")
+            .OnDelete(DeleteBehavior.NoAction);
+        builder.HasOne(GroupForeignKeyTargets.Group, navigationName: null).WithMany()
+            .HasForeignKey(nameof(LessonSeries.WorkspaceId), nameof(LessonSeries.GroupId))
+            .HasPrincipalKey("WorkspaceId", "Id")
+            .OnDelete(DeleteBehavior.NoAction);
+        builder.HasOne<LessonSeries>().WithMany()
+            .HasForeignKey(nameof(LessonSeries.WorkspaceId), nameof(LessonSeries.ReplacedBySeriesId))
+            .HasPrincipalKey(nameof(LessonSeries.WorkspaceId), nameof(LessonSeries.Id))
+            .OnDelete(DeleteBehavior.NoAction);
+    }
+}
+
+internal sealed class LessonSeriesSkipConfiguration : IEntityTypeConfiguration<LessonSeriesSkip>
+{
+    public void Configure(EntityTypeBuilder<LessonSeriesSkip> builder)
+    {
+        builder.ToTable("LessonSeriesSkips", t => t.HasCheckConstraint("CK_LessonSeriesSkips_Reason", "[Reason] BETWEEN 1 AND 3"));
+        builder.HasKey(x => new { x.SeriesId, x.SeriesIndex });
+        builder.HasTenantReference<LessonSeriesSkip, LessonSeries>(nameof(LessonSeriesSkip.SeriesId));
     }
 }
 
