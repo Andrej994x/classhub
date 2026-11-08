@@ -58,10 +58,11 @@ internal sealed partial class LessonSeriesHorizonJob(IServiceScopeFactory scopes
         {
             var db = scope.ServiceProvider.GetRequiredService<ClassHubDbContext>();
             // Every tenant (system scope): only identifiers leave this query. A series still needs work when it was not
-            // replaced, has not ended before today (in any time zone) and its next occurrence is before its horizon.
-            var yesterday = DateOnly.FromDateTime(nowUtc).AddDays(-1);
+            // replaced and its next occurrence is within its count and end date, however long ago that end date is (a job
+            // that was down catches up).
             var open = await db.Set<LessonSeries>().IgnoreQueryFilters().AsNoTracking()
-                .Where(s => s.ReplacedBySeriesId == null && (s.EndDate == null || s.EndDate >= yesterday) && (s.Count == null || s.NextIndex < s.Count))
+                .Where(s => s.ReplacedBySeriesId == null && (s.Count == null || s.NextIndex < s.Count)
+                    && (s.EndDate == null || s.StartDate.AddDays(s.NextIndex * 7 * s.IntervalWeeks) <= s.EndDate))
                 .OrderBy(s => s.Id)
                 .Select(s => new { s.Id, s.WorkspaceId, s.TeacherUserId, s.TimeZone, s.StartDate, s.IntervalWeeks, s.EndDate, s.Count, s.NextIndex })
                 .ToListAsync(cancellationToken);

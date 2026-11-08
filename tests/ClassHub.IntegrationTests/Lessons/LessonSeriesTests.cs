@@ -83,6 +83,45 @@ public sealed class LessonSeriesTests(ClassHubApiFixture fixture)
     }
 
     [Fact]
+    public async Task A_date_ended_series_catches_up_after_the_job_was_down()
+    {
+        using var teacher = await fixture.CreateTeacherAsync();
+        var ana = await StudentAsync(teacher, "Ана");
+        var created = await CreateAsync(teacher, new
+        {
+            kind = "Individual", studentId = ana.Id, title = "x", startDate = Tomorrow, startTime = "17:00:00", durationMinutes = 60, intervalWeeks = 1,
+            endDate = Tomorrow.AddDays(120), mode = "Online",
+        });
+        (await CountAsync(created.Series.Id)).ShouldBe(12);
+
+        // The job first runs long after the end date: every occurrence up to it is still created.
+        await fixture.Factory.Services.GetRequiredService<LessonSeriesHorizonJob>().RunAtAsync(DateTime.UtcNow.AddDays(200), Ct);
+
+        (await CountAsync(created.Series.Id)).ShouldBe(18); // weeks 0..17 fall on or before the end date
+    }
+
+    [Fact]
+    public async Task Changing_or_ending_a_series_keeps_a_lesson_that_already_started_today()
+    {
+        using var teacher = await fixture.CreateTeacherAsync();
+        var ana = await StudentAsync(teacher, "Ана");
+        var created = await CreateAsync(teacher, Weekly(ana.Id, Tomorrow, "17:00", count: 4));
+        // The first lesson started a minute ago and is not marked as held yet.
+        await using (var db = fixture.CreateDbContext())
+        {
+            var started = DateTime.UtcNow.AddMinutes(-1);
+            await db.Database.ExecuteSqlAsync(
+                $"UPDATE Lessons SET StartUtc = {started}, EndUtc = {started.AddHours(1)} WHERE SeriesId = {created.Series.Id} AND SeriesIndex = 0", Ct);
+        }
+
+        await ReadAsync<SeriesResponse>(await teacher.Client.PostAsync(Series(teacher, $"/{created.Series.Id}/end"), new { fromDate = Tomorrow.AddDays(-1), version = created.Series.Version }));
+
+        await using var check = fixture.CreateDbContext();
+        (await check.Database.SqlQuery<int>($"SELECT COUNT(*) AS [Value] FROM Lessons WHERE SeriesId = {created.Series.Id} AND SeriesIndex = 0").SingleAsync(Ct)).ShouldBe(1);
+        (await CountAsync(created.Series.Id)).ShouldBe(1);
+    }
+
+    [Fact]
     public async Task An_occurrence_that_overlaps_another_lesson_is_skipped_and_reported()
     {
         using var teacher = await fixture.CreateTeacherAsync();

@@ -89,7 +89,7 @@ internal sealed class LessonSeriesService(
         // Moving the following lessons earlier also takes the old ones from that day; the past is never rewritten.
         from = Max(Min(from, settings.StartDate!.Value), today);
         await participants.RequireAsync(Enum.Parse<LessonKind>(settings.Kind!), settings.StudentId, settings.GroupId, cancellationToken);
-        await RemoveFromAsync(old, from, cancellationToken);
+        await RemoveFromAsync(old, from, now, cancellationToken);
 
         var next = NewSeries(settings, teacher, zoneId, now);
         db.Set<LessonSeries>().Add(next);
@@ -109,7 +109,7 @@ internal sealed class LessonSeriesService(
         await queries.LockScheduleAsync((await FindAsync(seriesId, cancellationToken)).TeacherUserId, cancellationToken);
         var series = await LoadForChangeAsync(seriesId, request.Version, cancellationToken);
         var today = Today(TimeZoneInfo.FindSystemTimeZoneById(series.TimeZone), now);
-        await RemoveFromAsync(series, Max(request.FromDate!.Value, today), cancellationToken);
+        await RemoveFromAsync(series, Max(request.FromDate!.Value, today), now, cancellationToken);
         Touch(series, now);
         await SaveAsync(cancellationToken);
         await transaction.CommitAsync(cancellationToken);
@@ -197,9 +197,11 @@ internal sealed class LessonSeriesService(
     }
 
     /// <summary>Ends a series before <paramref name="from"/>: its scheduled, unchanged occurrences and skips from then on go.</summary>
-    private async Task RemoveFromAsync(LessonSeries series, DateOnly from, CancellationToken cancellationToken)
+    private async Task RemoveFromAsync(LessonSeries series, DateOnly from, DateTime nowUtc, CancellationToken cancellationToken)
     {
-        var fromUtc = LessonTime.StartOfDayUtc(from, TimeZoneInfo.FindSystemTimeZoneById(series.TimeZone));
+        // Never a lesson that already started (today's may still need to be marked as held).
+        var dayStart = LessonTime.StartOfDayUtc(from, TimeZoneInfo.FindSystemTimeZoneById(series.TimeZone));
+        var fromUtc = dayStart > nowUtc ? dayStart : nowUtc;
         var lessons = await db.Set<Lesson>()
             .Where(l => l.SeriesId == series.Id && l.Status == LessonStatus.Scheduled && !l.SeriesException && l.StartUtc >= fromUtc)
             .ToListAsync(cancellationToken);
