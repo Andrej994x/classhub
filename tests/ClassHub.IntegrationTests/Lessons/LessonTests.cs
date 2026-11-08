@@ -164,6 +164,25 @@ public sealed class LessonTests(ClassHubApiFixture fixture)
     }
 
     [Fact]
+    public async Task After_the_workspace_time_zone_changes_lessons_show_and_group_in_the_new_zone()
+    {
+        using var teacher = await fixture.CreateTeacherAsync();
+        var ana = await StudentAsync(teacher, "Ана");
+        // 00:30 in Skopje on 12 November is 23:30 UTC on 11 November.
+        var lesson = await CreateAsync(teacher, Individual(ana.Id, "2030-11-12T00:30:00", 60));
+        (await teacher.Client.PatchAsync($"/api/w/{teacher.WorkspaceId}", new { timeZone = "Europe/London" })).StatusCode.ShouldBe(HttpStatusCode.OK);
+
+        var day = (await teacher.Client.GetJsonAsync<List<LessonResponse>>(Path(teacher, "?from=2030-11-11&to=2030-11-11"))).ShouldHaveSingleItem();
+        day.StartLocal.ShouldBe(new DateTime(2030, 11, 11, 23, 30, 0)); // grouped and shown on the day it is read for
+        day.TimeZone.ShouldBe("Europe/London");
+        (await teacher.Client.GetJsonAsync<List<LessonResponse>>(Path(teacher, "?from=2030-11-12&to=2030-11-12"))).ShouldBeEmpty();
+
+        // Saving what the editor shows keeps the same instant.
+        var saved = await ReadAsync<LessonResponse>(await teacher.Client.PutAsync(Path(teacher, $"/{lesson.Id}"), Individual(ana.Id, "2030-11-11T23:30:00", 60, lesson.Version)));
+        saved.StartUtc.ShouldBe(lesson.StartUtc);
+    }
+
+    [Fact]
     public async Task Requests_are_validated()
     {
         using var teacher = await fixture.CreateTeacherAsync();

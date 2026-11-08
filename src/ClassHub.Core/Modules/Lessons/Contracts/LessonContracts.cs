@@ -29,8 +29,8 @@ public static class LessonForeignKeyTargets
 public sealed record LessonParticipantResponse(Guid StudentId, string FirstName, string? LastName);
 
 /// <summary>
-/// A lesson (kind, mode and status are the enum names). <c>StartLocal</c>/<c>EndLocal</c> are wall-clock times in <c>TimeZone</c> (the workspace's when it was
-/// scheduled); <c>StartUtc</c>/<c>EndUtc</c> are the instants.
+/// A lesson (kind, mode and status are the enum names). <c>StartLocal</c>/<c>EndLocal</c> are wall-clock times in <c>TimeZone</c>, the
+/// workspace's current zone (the calendar reads days in it); <c>StartUtc</c>/<c>EndUtc</c> are the instants.
 /// </summary>
 public sealed record LessonResponse(
     Guid Id,

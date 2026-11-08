@@ -1,5 +1,5 @@
 import { ArrowLeft } from 'lucide-react';
-import { useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router';
 import { ApiError, errorMessage } from '../../../api/errors.ts';
@@ -291,6 +291,19 @@ function LessonEditor({ workspaceId, lesson }: { workspaceId: string; lesson: Le
   );
 }
 
+/** Whether the time has been reached; re-checks at that moment, so a page left open enables "held" when the lesson starts. */
+function useStarted(startUtc: string) {
+  const start = new Date(startUtc).getTime();
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    if (now >= start) return;
+    // Browsers cap timer delays at about 24.8 days; a longer wait simply re-arms.
+    const timer = setTimeout(() => setNow(Date.now()), Math.min(start - now + 50, 2_147_000_000));
+    return () => clearTimeout(timer);
+  }, [now, start]);
+  return now >= start;
+}
+
 /** Mark as held (once it has started) or cancel with a reason. Both are final. */
 function StatusCard({ workspaceId, lesson, version, onChanged }: { workspaceId: string; lesson: Lesson; version: number; onChanged: (changed: Lesson) => void }) {
   const { t } = useTranslation();
@@ -298,8 +311,7 @@ function StatusCard({ workspaceId, lesson, version, onChanged }: { workspaceId: 
   const cancel = useCancelLesson(workspaceId, lesson.id);
   const [reason, setReason] = useState('');
   const [cancelling, setCancelling] = useState(false);
-  const [openedAt] = useState(() => Date.now());
-  const started = new Date(lesson.startUtc).getTime() <= openedAt;
+  const started = useStarted(lesson.startUtc);
   const error = complete.error ?? cancel.error;
 
   return (

@@ -91,7 +91,9 @@ internal sealed class LessonService(
     public async Task<LessonResponse> UpdateAsync(Guid lessonId, SaveLessonRequest request, CancellationToken cancellationToken)
     {
         var current = await LoadAsync(lessonId, tracking: false, cancellationToken);
-        var (startUtc, endUtc) = Times(request, TimeZoneInfo.FindSystemTimeZoneById(current.TimeZone));
+        // The editor shows and sends times in the workspace's current zone (it may have changed since scheduling).
+        var zoneId = await workspace.GetTimeZoneAsync(cancellationToken);
+        var (startUtc, endUtc) = Times(request, TimeZoneInfo.FindSystemTimeZoneById(zoneId));
         await ThrowIfUnknownSubjectAsync(request.SubjectId, current.SubjectId, cancellationToken);
 
         await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
@@ -116,6 +118,7 @@ internal sealed class LessonService(
 
         await ThrowIfOverlapAsync(lesson.TeacherUserId, startUtc, endUtc, lesson.Id, cancellationToken);
         lesson.Title = request.Title!.Trim();
+        lesson.TimeZone = zoneId;
         Apply(lesson, request, startUtc, endUtc);
         Touch(lesson);
         await SaveAsync(cancellationToken);
@@ -262,21 +265,16 @@ internal sealed class LessonService(
             .ToLookup(p => p.LessonId, p => p.StudentId);
         var names = await students.FindAsync([.. participants.SelectMany(p => p).Distinct()], cancellationToken);
         var groupNames = await groups.FindAsync([.. lessons.Where(l => l.GroupId is not null).Select(l => l.GroupId!.Value).Distinct()], cancellationToken);
-        var zones = new Dictionary<string, TimeZoneInfo>(StringComparer.Ordinal);
+        // Local times are always in the workspace's current zone, the same one the calendar reads days in.
+        var zoneId = await workspace.GetTimeZoneAsync(cancellationToken);
+        var zone = TimeZoneInfo.FindSystemTimeZoneById(zoneId);
         return [.. lessons.Select(l =>
-        {
-            if (!zones.TryGetValue(l.TimeZone, out var zone))
-            {
-                zones[l.TimeZone] = zone = TimeZoneInfo.FindSystemTimeZoneById(l.TimeZone);
-            }
-
-            return new LessonResponse(
+            new LessonResponse(
                 l.Id, l.Kind.ToString(), l.GroupId, l.GroupId is { } g && groupNames.TryGetValue(g, out var group) ? group.Name : null,
                 [.. participants[l.Id].Where(names.ContainsKey).Select(id => new LessonParticipantResponse(id, names[id].FirstName, names[id].LastName))
                     .OrderBy(p => p.LastName ?? p.FirstName).ThenBy(p => p.FirstName)],
-                l.SubjectId, l.Title, l.Topic, l.StartUtc, l.EndUtc, LessonTime.ToLocal(l.StartUtc, zone), LessonTime.ToLocal(l.EndUtc, zone), l.TimeZone,
-                l.Mode.ToString(), l.MeetingUrl, l.Location, l.Status.ToString(), l.CancellationReason, l.CreatedAtUtc, l.UpdatedAtUtc, l.Version);
-        })];
+                l.SubjectId, l.Title, l.Topic, l.StartUtc, l.EndUtc, LessonTime.ToLocal(l.StartUtc, zone), LessonTime.ToLocal(l.EndUtc, zone), zoneId,
+                l.Mode.ToString(), l.MeetingUrl, l.Location, l.Status.ToString(), l.CancellationReason, l.CreatedAtUtc, l.UpdatedAtUtc, l.Version))];
     }
 
     private static ConflictException Conflict() =>

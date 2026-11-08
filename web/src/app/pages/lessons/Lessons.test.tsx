@@ -178,6 +178,17 @@ describe('lesson editor', () => {
     expect(api.to(`${BASE}/l1`, 'PUT')[0]!.body).toMatchObject({ title: 'Мое уредување', version: 0 });
   });
 
+  it('enables "held" when the lesson starts while the page is open', async () => {
+    const { state } = lessonsApi();
+    const start = new Date(Date.now() + 1500);
+    state.lessons[0] = lesson({ startUtc: start.toISOString(), endUtc: new Date(start.getTime() + 3_600_000).toISOString() });
+    await renderRoute(`/app/w/${WORKSPACE_ID}/lessons/l1`);
+
+    const held = await screen.findByRole('button', { name: 'Означи како одржан' });
+    expect(held).toBeDisabled();
+    await expect.poll(() => (held as HTMLButtonElement).disabled, { timeout: 4000 }).toBe(false);
+  });
+
   it('cancels a future lesson with a reason, after which it is read-only', async () => {
     const user = userEvent.setup();
     const { api } = lessonsApi();
