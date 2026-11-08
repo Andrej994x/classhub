@@ -20,6 +20,7 @@ import {
   useSaveLesson,
   useSeries,
   useUpdateSeries,
+  seriesEnd,
   type Lesson,
   type LessonInput,
   type SeriesInput,
@@ -176,11 +177,12 @@ function LessonEditor({ workspaceId, lesson }: { workspaceId: string; lesson: Le
         // Never fall back to "only this lesson": without the series there is nothing to save yet.
         if (!series.data) return;
         // The new series keeps the old one's rhythm and end; a count becomes the lessons left from this one.
-        const left = series.data.count === null ? null : Math.max(1, (num(series.data.count) ?? 0) - (num(current.seriesIndex) ?? 0));
+        const end = seriesEnd(series.data);
+        const left = end.count === null ? null : Math.max(1, end.count - (num(current.seriesIndex) ?? 0));
         const result = await updateSeries.mutateAsync({
           scope: 'ThisAndFollowing',
           fromLessonId: current.id,
-          series: seriesInput(input, (num(series.data.intervalWeeks) ?? 1) as 1 | 2, series.data.endDate, left),
+          series: seriesInput(input, (num(series.data.intervalWeeks) ?? 1) as 1 | 2, end.endDate, left),
           version: num(series.data.version) ?? 0,
         });
         void navigate(`/app/w/${workspaceId}/series/${result.series.id}`, { state: { created: result.created } });

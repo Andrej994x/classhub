@@ -10,7 +10,7 @@ import { Button } from '../../../components/ui/button.tsx';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../../components/ui/card.tsx';
 import { FormField } from '../../../components/ui/form-field.tsx';
 import { Label } from '../../../components/ui/label.tsx';
-import { addDays, isDate, today, useEndSeries, useSeries, useUpdateSeries, type Series } from '../../../teacher/lessons.ts';
+import { addDays, isDate, seriesEnd, today, useEndSeries, useSeries, useUpdateSeries, type Series } from '../../../teacher/lessons.ts';
 import { num } from '../../../teacher/offers.ts';
 import { NotFoundContent } from '../Pages.tsx';
 
@@ -118,16 +118,17 @@ function EditSeries({ workspaceId, series, todayDate }: { workspaceId: string; s
   const navigate = useNavigate();
   const update = useUpdateSeries(workspaceId, series.id);
   const next = nextOccurrence(series, todayDate);
-  const left = series.count === null ? null : Math.max(1, (num(series.count) ?? 0) - next.index);
+  const end = seriesEnd(series);
+  const left = end.count === null ? null : Math.max(1, end.count - next.index);
   const [values, setValues] = useState({
     title: series.title,
     startDate: next.date,
     time: series.startTime.slice(0, 5),
     duration: String(num(series.durationMinutes) ?? 60),
     interval: String(num(series.intervalWeeks) ?? 1),
-    endKind: series.count !== null ? 'count' : series.endDate ? 'date' : 'never',
+    endKind: end.count !== null ? 'count' : end.endDate ? 'date' : 'never',
     count: String(left ?? 10),
-    endDate: series.endDate ?? '',
+    endDate: end.endDate ?? '',
     meetingUrl: series.meetingUrl ?? '',
     location: series.location ?? '',
   });

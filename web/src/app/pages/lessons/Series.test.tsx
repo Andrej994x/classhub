@@ -139,6 +139,20 @@ describe('recurring lessons', () => {
     expect(api.to(`/api/w/${WORKSPACE_ID}/lessons/l5`, 'PUT')).toHaveLength(0);
   });
 
+  it('sends one end for a counted series that was ended early', async () => {
+    const user = userEvent.setup();
+    // 10 weekly lessons from 12 November would end on 14 January; the series was ended on 31 December.
+    const { api } = seriesApi(series({ endDate: '2030-12-31', count: 10 }));
+    await renderRoute(`/app/w/${WORKSPACE_ID}/lessons/l5`);
+
+    await user.click(await screen.findByLabelText('Овој и следните часови'));
+    await expect.poll(() => (screen.getByRole('button', { name: /Зачувај|Се вчитува/ }) as HTMLButtonElement).disabled).toBe(false);
+    await user.click(screen.getByRole('button', { name: 'Зачувај' }));
+
+    await expect.poll(() => api.to(`${SERIES}/r1`, 'PUT').length).toBe(1);
+    expect(api.to(`${SERIES}/r1`, 'PUT')[0]!.body).toMatchObject({ series: { endDate: '2030-12-31', count: null } });
+  });
+
   it('never falls back to changing only this lesson while the series is not loaded', async () => {
     const user = userEvent.setup();
     const { api } = fakeApiWithSlowSeries();
@@ -167,6 +181,14 @@ describe('recurring lessons', () => {
     await user.click(screen.getByRole('button', { name: 'Примени на сите идни часови' }));
     await expect.poll(() => api.to(`${SERIES}/r1`, 'PUT').length).toBe(1);
     expect(api.to(`${SERIES}/r1`, 'PUT')[0]!.body).toMatchObject({ scope: 'AllFuture', fromLessonId: null, series: { startDate: '2030-11-12', intervalWeeks: 2, count: 10 } });
+  });
+
+  it('offers the earlier end when a counted series was ended early', async () => {
+    seriesApi(series({ endDate: '2030-12-31', count: 10 }));
+    await renderRoute(`/app/w/${WORKSPACE_ID}/series/r1`);
+
+    expect(await screen.findByLabelText('Завршува')).toHaveValue('date');
+    expect(screen.getByLabelText('Краен датум')).toHaveValue('2030-12-31');
   });
 
   it('ends a series after confirming, from today by default', async () => {

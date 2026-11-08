@@ -183,3 +183,14 @@ export function useEndSeries(workspaceId: string, seriesId: string) {
     (await api.client.POST('/api/w/{workspaceId}/lesson-series/{seriesId}/end', { params: { path: { workspaceId, seriesId } }, body: { fromDate, version } })).data!,
   );
 }
+
+/**
+ * The one end condition of a series: a series set to a count that was later ended on a date has both, and the earlier
+ * boundary wins (an edit sends exactly one of them).
+ */
+export function seriesEnd(series: Series): { endDate: string | null; count: number | null } {
+  const count = series.count === null ? null : Number(series.count);
+  if (count === null || series.endDate === null) return { endDate: series.endDate, count };
+  const lastByCount = addDays(series.startDate, (count - 1) * 7 * Number(series.intervalWeeks));
+  return series.endDate < lastByCount ? { endDate: series.endDate, count: null } : { endDate: null, count };
+}
