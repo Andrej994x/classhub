@@ -117,8 +117,9 @@ public sealed record SaveSeriesRequest(
 /// <summary>
 /// D-24 edits. <c>ThisAndFollowing</c> starts at <c>FromLessonId</c>; <c>AllFuture</c> at the next scheduled occurrence.
 /// The series ends there and a new one with <c>Series</c> continues; held, cancelled and individually changed lessons stay.
+/// <c>TimeZone</c> is the zone the form showed the times in: the series' own or the workspace's current one (default).
 /// </summary>
-public sealed record UpdateSeriesRequest(string? Scope, Guid? FromLessonId, SaveSeriesRequest? Series, int? Version);
+public sealed record UpdateSeriesRequest(string? Scope, Guid? FromLessonId, SaveSeriesRequest? Series, int? Version, string? TimeZone);
 
 /// <summary>End the series: no occurrences on or after <c>FromDate</c> (scheduled ones are removed).</summary>
 public sealed record EndSeriesRequest(DateOnly? FromDate, int? Version);

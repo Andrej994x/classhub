@@ -2818,6 +2818,7 @@ export interface components {
             series: null | components["schemas"]["SaveSeriesRequest"];
             /** Format: int32 */
             version: null | number | string;
+            timeZone: null | string;
         };
         UpdateTeacherProfileRequest: {
             firstName: null | string;

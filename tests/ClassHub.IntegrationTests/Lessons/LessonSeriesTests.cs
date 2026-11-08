@@ -122,6 +122,31 @@ public sealed class LessonSeriesTests(ClassHubApiFixture fixture)
     }
 
     [Fact]
+    public async Task A_series_edit_reads_its_times_in_the_zone_the_form_showed()
+    {
+        using var teacher = await fixture.CreateTeacherAsync();
+        var ana = await StudentAsync(teacher, "Ана");
+        var created = await CreateAsync(teacher, Weekly(ana.Id, Tomorrow, "17:00", count: 3));
+        var before = (await LessonsAsync(teacher, Tomorrow, Tomorrow)).ShouldHaveSingleItem().StartUtc;
+        (await teacher.Client.PatchAsync($"/api/w/{teacher.WorkspaceId}", new { timeZone = "Europe/London" })).StatusCode.ShouldBe(HttpStatusCode.OK);
+
+        // The series page shows 17:00 in the series' zone (Skopje); renaming keeps the instants.
+        var renamed = await ReadAsync<SeriesResultResponse>(await teacher.Client.PutAsync(Series(teacher, $"/{created.Series.Id}"), new
+        {
+            scope = "AllFuture", version = created.Series.Version, timeZone = "Europe/Skopje", series = Weekly(ana.Id, Tomorrow, "17:00", count: 3),
+        }));
+        (await LessonsAsync(teacher, Tomorrow, Tomorrow)).ShouldHaveSingleItem().StartUtc.ShouldBe(before);
+
+        // Only the series' zone or the workspace's current one.
+        using var other = await teacher.Client.PutAsync(Series(teacher, $"/{renamed.Series.Id}"), new
+        {
+            scope = "AllFuture", version = renamed.Series.Version, timeZone = "America/New_York", series = Weekly(ana.Id, Tomorrow, "17:00", count: 3),
+        });
+        other.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
+        (await other.ReadJsonAsync()).GetProperty("errors").TryGetProperty("timeZone", out _).ShouldBeTrue();
+    }
+
+    [Fact]
     public async Task An_occurrence_that_overlaps_another_lesson_is_skipped_and_reported()
     {
         using var teacher = await fixture.CreateTeacherAsync();

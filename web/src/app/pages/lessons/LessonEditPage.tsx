@@ -184,6 +184,8 @@ function LessonEditor({ workspaceId, lesson }: { workspaceId: string; lesson: Le
           fromLessonId: current.id,
           series: seriesInput(input, (num(series.data.intervalWeeks) ?? 1) as 1 | 2, end.endDate, left),
           version: num(series.data.version) ?? 0,
+          // The form shows the lesson's times in the workspace's current zone.
+          timeZone: current.timeZone,
         });
         void navigate(`/app/w/${workspaceId}/series/${result.series.id}`, { state: { created: result.created } });
         return;

@@ -64,10 +64,18 @@ internal sealed class LessonSeriesService(
     {
         var settings = request.Series!;
         var now = clock.GetUtcNow().UtcDateTime;
-        var zoneId = await workspace.GetTimeZoneAsync(cancellationToken);
+        var saved = await FindAsync(seriesId, cancellationToken);
+        // The times are read in the zone the form showed them in, so an unchanged time keeps its instants.
+        var workspaceZone = await workspace.GetTimeZoneAsync(cancellationToken);
+        var zoneId = request.TimeZone ?? workspaceZone;
+        if (zoneId != workspaceZone && zoneId != saved.TimeZone)
+        {
+            throw Invalid("timeZone", "Use the series' time zone or the workspace's.");
+        }
+
         var today = Today(TimeZoneInfo.FindSystemTimeZoneById(zoneId), now);
         ThrowIfStartsInThePast(settings, today);
-        await ThrowIfUnknownSubjectAsync(settings.SubjectId, (await FindAsync(seriesId, cancellationToken)).SubjectId, cancellationToken);
+        await ThrowIfUnknownSubjectAsync(settings.SubjectId, saved.SubjectId, cancellationToken);
 
         await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
         var teacher = (await FindAsync(seriesId, cancellationToken)).TeacherUserId;

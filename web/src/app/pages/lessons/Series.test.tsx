@@ -134,6 +134,7 @@ describe('recurring lessons', () => {
       scope: 'ThisAndFollowing',
       fromLessonId: 'l5',
       version: 2,
+      timeZone: 'Europe/Skopje',
       series: { startDate: '2030-12-10', startTime: '18:00:00', intervalWeeks: 1, count: 6, endDate: null },
     });
     expect(api.to(`/api/w/${WORKSPACE_ID}/lessons/l5`, 'PUT')).toHaveLength(0);
@@ -180,7 +181,7 @@ describe('recurring lessons', () => {
     await user.selectOptions(screen.getByLabelText('Повторување'), '2');
     await user.click(screen.getByRole('button', { name: 'Примени на сите идни часови' }));
     await expect.poll(() => api.to(`${SERIES}/r1`, 'PUT').length).toBe(1);
-    expect(api.to(`${SERIES}/r1`, 'PUT')[0]!.body).toMatchObject({ scope: 'AllFuture', fromLessonId: null, series: { startDate: '2030-11-12', intervalWeeks: 2, count: 10 } });
+    expect(api.to(`${SERIES}/r1`, 'PUT')[0]!.body).toMatchObject({ scope: 'AllFuture', fromLessonId: null, timeZone: 'Europe/Skopje', series: { startDate: '2030-11-12', intervalWeeks: 2, count: 10 } });
   });
 
   it('offers the earlier end when a counted series was ended early', async () => {

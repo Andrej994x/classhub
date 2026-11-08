@@ -10429,7 +10429,8 @@
           "scope",
           "fromLessonId",
           "series",
-          "version"
+          "version",
+          "timeZone"
         ],
         "type": "object",
         "properties": {
@@ -10464,6 +10465,12 @@
               "string"
             ],
             "format": "int32"
+          },
+          "timeZone": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },

@@ -173,8 +173,10 @@ export function useCreateSeries(workspaceId: string) {
 }
 
 export function useUpdateSeries(workspaceId: string, seriesId: string) {
-  return useSeriesMutation(workspaceId, async ({ scope, fromLessonId, series, version }: { scope: 'ThisAndFollowing' | 'AllFuture'; fromLessonId: string | null; series: SeriesInput; version: number }) =>
-    (await api.client.PUT('/api/w/{workspaceId}/lesson-series/{seriesId}', { params: { path: { workspaceId, seriesId } }, body: { scope, fromLessonId, series, version } })).data!,
+  return useSeriesMutation(
+    workspaceId,
+    async ({ scope, fromLessonId, series, version, timeZone }: { scope: 'ThisAndFollowing' | 'AllFuture'; fromLessonId: string | null; series: SeriesInput; version: number; timeZone: string }) =>
+      (await api.client.PUT('/api/w/{workspaceId}/lesson-series/{seriesId}', { params: { path: { workspaceId, seriesId } }, body: { scope, fromLessonId, series, version, timeZone } })).data!,
   );
 }
 

@@ -150,6 +150,8 @@ function EditSeries({ workspaceId, series, todayDate }: { workspaceId: string; s
         scope: 'AllFuture',
         fromLessonId: null,
         version: num(series.version) ?? 0,
+        // The form shows the series' times in its own zone.
+        timeZone: series.timeZone,
         series: {
           kind: series.kind as 'Individual' | 'Group',
           studentId: series.studentId,
@@ -178,7 +180,9 @@ function EditSeries({ workspaceId, series, todayDate }: { workspaceId: string; s
     <Card>
       <CardHeader>
         <CardTitle className="text-lg">{t('lessons.series.editTitle')}</CardTitle>
-        <CardDescription>{t('lessons.series.editLead')}</CardDescription>
+        <CardDescription>
+          {t('lessons.series.editLead')} {t('lessons.calendar.timeZone', { zone: series.timeZone })}
+        </CardDescription>
       </CardHeader>
       <CardContent>
         <form noValidate className="grid gap-4 sm:grid-cols-2" onSubmit={(e) => void submit(e)}>
