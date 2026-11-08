@@ -71,6 +71,43 @@ public sealed class WorkspacePermissionHandler(IWorkspaceMembershipLookup member
     }
 }
 
+/// <summary>Finds the user's active (not archived) student record in a workspace (implemented by the Students module).</summary>
+public interface IStudentSelfLookup
+{
+    Task<Guid?> FindActiveStudentAsync(Guid workspaceId, Guid userId, CancellationToken cancellationToken);
+}
+
+/// <summary>The <c>student:self</c> requirement: an active student record of the user in the route's workspace.</summary>
+public sealed class StudentSelfRequirement : IAuthorizationRequirement;
+
+/// <summary>
+/// Verifies the user's own student record in the <c>{workspaceId}</c> route value and binds the request to it. Users
+/// without one fail with <see cref="WorkspacePermissionHandler.NotMemberReason"/> (404).
+/// </summary>
+public sealed class StudentSelfHandler(IStudentSelfLookup students, TenantContext tenant) : AuthorizationHandler<StudentSelfRequirement>
+{
+    protected override async Task HandleRequirementAsync(AuthorizationHandlerContext context, StudentSelfRequirement requirement)
+    {
+        ArgumentNullException.ThrowIfNull(context);
+        if (context.Resource is not HttpContext http ||
+            !Guid.TryParse(context.User.FindFirstValue(ClaimTypes.NameIdentifier), out var userId))
+        {
+            return;
+        }
+
+        if (!http.Request.RouteValues.TryGetValue(WorkspacePermissionHandler.RouteValueName, out var raw) ||
+            !Guid.TryParse(raw?.ToString(), out var workspaceId) ||
+            await students.FindActiveStudentAsync(workspaceId, userId, http.RequestAborted) is not { } studentId)
+        {
+            context.Fail(new AuthorizationFailureReason(this, WorkspacePermissionHandler.NotMemberReason));
+            return;
+        }
+
+        tenant.SetStudent(workspaceId, userId, studentId);
+        context.Succeed(requirement);
+    }
+}
+
 /// <summary>Builds <c>ws:&lt;permission&gt;</c> policies on demand; everything else uses the defaults.</summary>
 public sealed class WorkspacePolicyProvider(IOptions<AuthorizationOptions> options) : DefaultAuthorizationPolicyProvider(options)
 {
@@ -155,6 +192,7 @@ public static class TenancyServiceCollectionExtensions
         services.AddScoped<TenantContext>();
         services.AddScoped<ITenantContext>(sp => sp.GetRequiredService<TenantContext>());
         services.AddScoped<IAuthorizationHandler, WorkspacePermissionHandler>();
+        services.AddScoped<IAuthorizationHandler, StudentSelfHandler>();
         services.AddSingleton<IAuthorizationPolicyProvider, WorkspacePolicyProvider>();
         services.AddSingleton<IAuthorizationMiddlewareResultHandler, WorkspaceAuthorizationResultHandler>();
         return services;

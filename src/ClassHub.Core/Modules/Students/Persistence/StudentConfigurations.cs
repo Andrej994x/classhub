@@ -1,5 +1,6 @@
 using ClassHub.Core.Infrastructure.Tenancy;
 using ClassHub.Core.Modules.Catalog.Contracts;
+using ClassHub.Core.Modules.Identity.Contracts;
 using ClassHub.Core.Modules.Students.Domain;
 using ClassHub.Core.Modules.Workspaces.Contracts;
 using Microsoft.EntityFrameworkCore;
@@ -30,6 +31,10 @@ internal sealed class StudentConfiguration : IEntityTypeConfiguration<Student>
         // No duplicates by email within a workspace (archived students included): the dedupe key of conversions.
         builder.HasIndex(x => new { x.WorkspaceId, x.Email }).IsUnique().HasFilter("[Email] IS NOT NULL");
         builder.HasIndex(x => new { x.WorkspaceId, x.ArchivedAtUtc, x.LastName });
+        // One student record per account and workspace; the account may be a student of other teachers too (D-16).
+        builder.HasIndex(x => new { x.WorkspaceId, x.UserId }).IsUnique().HasFilter("[UserId] IS NOT NULL");
+        builder.HasIndex(x => x.UserId).HasFilter("[UserId] IS NOT NULL");
+        builder.HasOne<AppUser>().WithMany().HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.NoAction);
         builder.HasOne(WorkspaceForeignKeyTargets.Workspace, navigationName: null).WithMany().HasForeignKey(nameof(Student.WorkspaceId)).OnDelete(DeleteBehavior.NoAction);
         // The request a student came from belongs to the same workspace (composite tenant FK).
         builder.HasOne(ClassHub.Core.Modules.Leads.Contracts.LeadForeignKeyTargets.Lead, navigationName: null).WithMany()
@@ -59,5 +64,21 @@ internal sealed class StudentNoteConfiguration : IEntityTypeConfiguration<Studen
         builder.Property(x => x.Text).HasMaxLength(StudentNote.TextMaxLength).IsRequired();
         builder.HasIndex(x => new { x.WorkspaceId, x.StudentId, x.CreatedAtUtc });
         builder.HasTenantReference<StudentNote, Student>(nameof(StudentNote.StudentId));
+    }
+}
+
+internal sealed class StudentInvitationConfiguration : IEntityTypeConfiguration<StudentInvitation>
+{
+    public void Configure(EntityTypeBuilder<StudentInvitation> builder)
+    {
+        builder.ToTable("StudentInvitations", t => t.HasCheckConstraint("CK_StudentInvitations_Email", "[Email] = LOWER([Email]) AND [Email] LIKE '%_@_%'"));
+        builder.HasKey(x => x.Id);
+        builder.Property(x => x.Email).HasMaxLength(Student.EmailMaxLength).IsRequired();
+        builder.Property(x => x.TokenHash).HasMaxLength(32).IsFixedLength().IsRequired();
+        builder.HasIndex(x => x.TokenHash).IsUnique();
+        builder.HasIndex(x => new { x.WorkspaceId, x.StudentId, x.CreatedAtUtc });
+        builder.HasTenantReference<StudentInvitation, Student>(nameof(StudentInvitation.StudentId));
+        builder.HasOne<AppUser>().WithMany().HasForeignKey(x => x.CreatedByUserId).OnDelete(DeleteBehavior.NoAction);
+        builder.HasOne<AppUser>().WithMany().HasForeignKey(x => x.AcceptedByUserId).OnDelete(DeleteBehavior.NoAction);
     }
 }

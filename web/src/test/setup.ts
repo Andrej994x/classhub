@@ -8,5 +8,6 @@ afterEach(() => {
   vi.unstubAllGlobals();
   api.resetToken();
   window.localStorage.clear();
+  window.sessionStorage.clear();
   window.history.replaceState(null, '', '/');
 });

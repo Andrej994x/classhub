@@ -88,6 +88,13 @@ ASP.NET Core Identity with cookie sessions. See [ARCHITECTURE.md](ARCHITECTURE.m
 - Names, phones and guardian contacts are redacted in logs.
 - No duplicates by email within a workspace (unique index) and no limit overrun under parallel requests (intake lock; tested).
 
+## Student accounts (R2-P3)
+
+- Invitation tokens: 256-bit random, only the SHA-256 hash stored, 7 days, single use, revoked by a new invitation, archive or unlink; sent in the URL fragment and cleared from the address bar. Invalid, used, revoked and expired links all answer `INVALID_TOKEN`. The accept endpoints are rate limited (`auth` policy); invitations are capped at 5 per student per day.
+- The teacher never sees the student's password or account email (only "account linked"). An account created from an invitation has no workspace and no teacher permissions.
+- Student portal endpoints derive everything from the session (`student:self`); there is no student id in their routes, so one student cannot address another's data. Archived or unlinked students lose access immediately.
+- Minors: provisional guardian agreement recorded at acceptance (D-18; the final legal wording blocks Beta).
+
 ## Groups (R2-P2)
 
 - Group membership can only link a group and a student of the same workspace: checked in the service and enforced by composite tenant FKs (a raw insert across workspaces fails, tested). Other teachers get 404 (isolation kit and sweep).

@@ -103,3 +103,24 @@ export function useConvertLead(workspaceId: string) {
     },
   });
 }
+
+/** R2-P3: invite the student to their own account, take back a pending invitation, or end the account's access. */
+export function useStudentAccount(workspaceId: string, studentId: string) {
+  const queryClient = useQueryClient();
+  const onSuccess = (student: Student) => queryClient.setQueryData(keys.one(workspaceId, studentId), student);
+  const path = { params: { path: { workspaceId, studentId } } };
+  return {
+    invite: useMutation({
+      mutationFn: async (email: string | null) => (await api.client.POST('/api/w/{workspaceId}/students/{studentId}/invitation', { ...path, body: { email } })).data!,
+      onSuccess,
+    }),
+    revoke: useMutation({
+      mutationFn: async () => (await api.client.DELETE('/api/w/{workspaceId}/students/{studentId}/invitation', path)).data!,
+      onSuccess,
+    }),
+    unlink: useMutation({
+      mutationFn: async () => (await api.client.DELETE('/api/w/{workspaceId}/students/{studentId}/account', path)).data!,
+      onSuccess,
+    }),
+  };
+}

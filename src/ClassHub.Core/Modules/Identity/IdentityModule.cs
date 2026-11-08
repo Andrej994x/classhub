@@ -99,6 +99,7 @@ public sealed class IdentityModule : IModule
         services.Replace(ServiceDescriptor.Scoped<IUserStore<AppUser>, ProtectedUserStore>());
 
         services.AddScoped<AccountService>();
+        services.AddScoped<IInvitedAccounts>(sp => sp.GetRequiredService<AccountService>());
         services.AddScoped<MfaService>();
         services.AddScoped<IMfaStepUp>(sp => sp.GetRequiredService<MfaService>());
         services.AddScoped<IUserAccountStatus, UserAccountStatusService>();

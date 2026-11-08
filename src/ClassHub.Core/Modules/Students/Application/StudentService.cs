@@ -120,6 +120,12 @@ internal sealed class StudentService(
             student.ArchivedAtUtc = archived ? now : null;
             student.UpdatedAtUtc = now;
             student.Version++;
+            if (archived)
+            {
+                // An archived student cannot join through an old link (portal access ends with the archive too).
+                await StudentAccountService.RevokePendingAsync(db, student.Id, now, cancellationToken);
+            }
+
             await SaveAsync(cancellationToken);
         }
 
@@ -278,9 +284,15 @@ internal sealed class StudentService(
     private async Task<StudentResponse> ToResponseAsync(Student student, CancellationToken cancellationToken)
     {
         var subjects = await db.Set<StudentSubject>().AsNoTracking().Where(x => x.StudentId == student.Id).Select(x => x.SubjectId).ToListAsync(cancellationToken);
+        var now = clock.GetUtcNow().UtcDateTime;
+        var invitation = await db.Set<StudentInvitation>().AsNoTracking()
+            .Where(i => i.StudentId == student.Id && i.AcceptedAtUtc == null && i.RevokedAtUtc == null && i.ExpiresAtUtc > now)
+            .OrderByDescending(i => i.CreatedAtUtc)
+            .Select(i => new StudentInvitationInfo(i.Email, i.CreatedAtUtc, i.ExpiresAtUtc))
+            .FirstOrDefaultAsync(cancellationToken);
         return new StudentResponse(student.Id, student.FirstName, student.LastName, student.Email, student.Phone, student.IsMinor, student.GuardianName,
             student.GuardianEmail, student.GuardianPhone, subjects, student.SourceLeadId, student.ArchivedAtUtc is not null, student.CreatedAtUtc, student.UpdatedAtUtc,
-            student.Version);
+            student.Version, student.UserId is not null, student.UserId is null ? invitation : null);
     }
 
     private static string? Clean(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();

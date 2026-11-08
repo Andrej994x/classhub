@@ -7,10 +7,10 @@ This is the live status of the autonomous implementation loop ([ROADMAP.md](ROAD
 | Field | Value |
 |---|---|
 | Release | R2 — Teaching operations (R0 and R1 complete) |
-| Current phase | R2-P2 — Groups |
-| Branch | `feature/r2-p2-groups` (from `main` @ `550667c`) |
+| Current phase | R2-P3 — Student accounts & invitations |
+| Branch | `feature/r2-p3-student-accounts` (from `main` @ `0873148`) |
 | Workflow step | 5 — signed Codex review, then PR |
-| Next action | R2-P2 PR; then R2-P3 (student accounts & invitations) |
+| Next action | R2-P3 PR; then R2-P4 (lessons core & calendar) |
 | Open blockers | None. User actions (optional): direct-push probe (R0-P8); remove the now redundant required `pr-gate` check (see Decisions) |
 
 ## Phase status
@@ -43,8 +43,8 @@ Status values: `not started`, `in progress`, `in review` (PR open), `merged`, `b
 | R1-P11 | Moderation & reference data admin | merged | `feature/r1-p11-moderation-catalog` | [#23](https://github.com/Andrej994x/classhub/pull/23) | `5c90a22` | 3 rounds: 4 × P2 fixed (parallel section hides, deactivated references on edit, parallel report decisions, atomic report cap); round 3 clean | green | Migration applied to local `ClassHubDb` |
 | R1-P12 | Release 1 hardening | merged | `chore/r1-p12-hardening` | [#24](https://github.com/Andrej994x/classhub/pull/24) | `3c11d1b` | 1 round clean; release-level review of all R1 changes clean | green | Release 1 complete |
 | R2-P1 | Students | merged | `feature/r2-p1-students` | [#25](https://github.com/Andrej994x/classhub/pull/25) | `550667c` | 6 rounds: 5 × P2 fixed (source-lead FK, editor remount on refetch, stale cache on reopen, phone format, conversion of closed requests); final round clean | green | Migration applied to local `ClassHubDb` |
-| R2-P2 | Groups | in progress | `feature/r2-p2-groups` | | | | | Plan: groups CRUD with archive/restore, many-to-many members (soft remove keeps history), composite tenant FKs to students, 100-member cap under a per-group lock, groups on the student page |
-| R2-P3 | Student accounts & invitations | not started | | | | | | |
+| R2-P2 | Groups | merged | `feature/r2-p2-groups` | [#26](https://github.com/Andrej994x/classhub/pull/26) | `0873148` | 4 rounds: 3 × P2 fixed (cap on re-added members, deactivated subject shown, paged member picker); round 4 clean | green | Migration applied to local `ClassHubDb` |
+| R2-P3 | Student accounts & invitations | in progress | `feature/r2-p3-student-accounts` | | | | | Plan: hashed single-use 7-day invitations, accept with a new account or link an existing one (D-16), `student:self` policy, portal shell and settings, guardian agreement for minors (D-18), unlink and revoke |
 | R2-P4 | Lessons core & calendar | not started | | | | | | |
 | R2-P5 | Recurring lessons | not started | | | | | | |
 | R2-P6 | Availability & booking | not started | | | | | | |

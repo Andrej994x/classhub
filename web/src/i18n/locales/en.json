@@ -8,7 +8,8 @@
     "retry": "Try again",
     "close": "Close",
     "openMenu": "Open menu",
-    "backHome": "Back to the home page"
+    "backHome": "Back to the home page",
+    "cancel": "Cancel"
   },
   "language": {
     "label": "Language",
@@ -37,7 +38,8 @@
     "adminHidden": "Hidden content",
     "adminCatalog": "Catalog",
     "students": "Students",
-    "groups": "Groups"
+    "groups": "Groups",
+    "studentSettings": "Settings"
   },
   "layout": {
     "teacherArea": "Teacher workspace",
@@ -373,7 +375,10 @@
       "SIGN_IN_EXPIRED": "The sign-in has expired. Go back and sign in again.",
       "ADMIN_TARGET_FORBIDDEN": "You cannot make this change to this account.",
       "PLAN_LIMIT_REACHED": "Your plan does not allow more of this. Open Plan in the menu to see the limits and how to move to Pro.",
-      "STUDENT_EMAIL_TAKEN": "Another student in your records already uses this email."
+      "STUDENT_EMAIL_TAKEN": "Another student in your records already uses this email.",
+      "STUDENT_ALREADY_LINKED": "This student already has an account.",
+      "ACCOUNT_ALREADY_LINKED": "Your account is already linked to a student of this teacher.",
+      "EMAIL_REGISTERED": "An account with this email already exists. Sign in to accept the invitation."
     }
   },
   "auth": {
@@ -930,6 +935,21 @@
       "lead": "Only you see these notes, never the student or a guardian.",
       "add": "New note",
       "save": "Save note"
+    },
+    "account": {
+      "title": "Student account",
+      "lead": "Invite the student to their own ClassHub account to see their lessons and materials. You never see their password.",
+      "linked": "The student has an account.",
+      "unlink": "Remove access",
+      "unlinkConfirm": "The student will no longer see anything from you. Continue?",
+      "unlinkYes": "Yes, remove access",
+      "archived": "Restore the student to invite them.",
+      "pending": "Invitation sent to {{email}}, valid until {{date}}.",
+      "revoke": "Withdraw",
+      "email": "Send the invitation to",
+      "invite": "Send invitation",
+      "resend": "Send a new invitation",
+      "sent": "Invitation sent."
     }
   },
   "groups": {
@@ -979,5 +999,33 @@
     "restore": "Restore group",
     "ofStudent": "Groups",
     "noneForStudent": "Not in any group."
+  },
+  "studentPortal": {
+    "teachers": "Your teachers",
+    "noTeachers": "You are not linked to a teacher yet. Open the invitation link your teacher sent you.",
+    "as": "You are {{name}}",
+    "allTeachers": "All teachers",
+    "subjects": "Subjects",
+    "lessonsTitle": "Lessons",
+    "invitation": {
+      "title": "Invitation to ClassHub",
+      "lead": "{{teacher}} invites {{name}} to their own ClassHub account.",
+      "invalid": "This invitation is invalid or has expired. Ask your teacher for a new one.",
+      "signedInAs": "You are signed in as {{email}}. Accepting links this account.",
+      "accept": "Accept the invitation",
+      "create": "Create account and accept",
+      "haveAccount": "Already have a ClassHub account?",
+      "emailRegistered": "An account with this email already exists. Sign in, then open this page again to accept.",
+      "minorNotice": "The student is recorded as a minor. A parent or guardian must agree before the account is created.",
+      "guardianConsent": "I am the parent or guardian, or a parent or guardian has agreed.",
+      "guardianConsentRequired": "Confirm that a parent or guardian agreed."
+    },
+    "settings": {
+      "title": "Settings",
+      "language": "Language",
+      "languageLead": "Used in the app and in emails from ClassHub.",
+      "notifications": "Notifications",
+      "notificationsLater": "Lesson reminders and notification choices arrive in a later version."
+    }
   }
 }

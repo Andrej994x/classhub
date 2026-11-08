@@ -56,6 +56,9 @@ public static class ErrorCodes
 
     // Students (R2-P1)
     public const string StudentEmailTaken = "STUDENT_EMAIL_TAKEN";
+    public const string StudentAlreadyLinked = "STUDENT_ALREADY_LINKED";
+    public const string AccountAlreadyLinked = "ACCOUNT_ALREADY_LINKED";
+    public const string EmailRegistered = "EMAIL_REGISTERED";
 
     /// <summary>Default code for an HTTP status when no specific code was set.</summary>
     public static string ForStatus(int statusCode) => statusCode switch
