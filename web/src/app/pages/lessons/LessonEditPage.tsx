@@ -1,5 +1,5 @@
 import { ArrowLeft } from 'lucide-react';
-import { useEffect, useState, type FormEvent } from 'react';
+import { useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router';
 import { ApiError, errorMessage } from '../../../api/errors.ts';
@@ -12,6 +12,7 @@ import { useGroups } from '../../../teacher/groups.ts';
 import { isDate, localDay, localTime, useCancelLesson, useCompleteLesson, useLesson, useSaveLesson, type Lesson, type LessonInput } from '../../../teacher/lessons.ts';
 import { num } from '../../../teacher/offers.ts';
 import { useCatalog } from '../../../teacher/queries.ts';
+import { useStarted } from '../../../lib/useStarted.ts';
 import { StudentPicker } from '../../components/StudentPicker.tsx';
 import { NotFoundContent } from '../Pages.tsx';
 
@@ -289,19 +290,6 @@ function LessonEditor({ workspaceId, lesson }: { workspaceId: string; lesson: Le
       )}
     </section>
   );
-}
-
-/** Whether the time has been reached; re-checks at that moment, so a page left open enables "held" when the lesson starts. */
-function useStarted(startUtc: string) {
-  const start = new Date(startUtc).getTime();
-  const [now, setNow] = useState(() => Date.now());
-  useEffect(() => {
-    if (now >= start) return;
-    // Browsers cap timer delays at about 24.8 days; a longer wait simply re-arms.
-    const timer = setTimeout(() => setNow(Date.now()), Math.min(start - now + 50, 2_147_000_000));
-    return () => clearTimeout(timer);
-  }, [now, start]);
-  return now >= start;
 }
 
 /** Mark as held (once it has started) or cancel with a reason. Both are final. */
