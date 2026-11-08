@@ -37,6 +37,10 @@ export function StudentPicker({
   const pages = Math.max(1, Math.ceil((num(students.data?.total) ?? 0) / (num(students.data?.pageSize) ?? 20)));
   const candidates = (students.data?.items ?? []).filter((s) => !exclude.includes(s.id));
   const listed = candidates.some((s) => s.id === value);
+  // The label of every student chosen here (or given for the initial value), so a choice that a later search or page
+  // no longer lists still shows its own name.
+  const [labels, setLabels] = useState<Record<string, string>>(() => (value && currentLabel ? { [value]: currentLabel } : {}));
+  const optionLabel = (s: (typeof candidates)[number]) => [[s.firstName, s.lastName].filter(Boolean).join(' '), s.email ?? s.phone].filter(Boolean).join(' · ');
 
   return (
     <div className="flex flex-col gap-2">
@@ -52,12 +56,22 @@ export function StudentPicker({
         }}
       />
       <Label htmlFor={id}>{label}</Label>
-      <select id={id} className={field} value={value} aria-invalid={error ? true : undefined} onChange={(e) => onChange(e.target.value)}>
+      <select
+        id={id}
+        className={field}
+        value={value}
+        aria-invalid={error ? true : undefined}
+        onChange={(e) => {
+          const picked = candidates.find((s) => s.id === e.target.value);
+          if (picked) setLabels({ ...labels, [picked.id]: optionLabel(picked) });
+          onChange(e.target.value);
+        }}
+      >
         <option value="">{t('students.picker.choose')}</option>
-        {value && !listed && currentLabel && <option value={value}>{currentLabel}</option>}
+        {value && !listed && labels[value] && <option value={value}>{labels[value]}</option>}
         {candidates.map((s) => (
           <option key={s.id} value={s.id}>
-            {[[s.firstName, s.lastName].filter(Boolean).join(' '), s.email ?? s.phone].filter(Boolean).join(' · ')}
+            {optionLabel(s)}
           </option>
         ))}
       </select>

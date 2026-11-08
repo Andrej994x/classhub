@@ -36,13 +36,12 @@ function lessonsApi() {
   const state = { lessons: [lesson(), lesson({ id: 'l2', title: 'Физика', startLocal: '2030-11-14T09:00:00', endLocal: '2030-11-14T10:30:00', startUtc: '2030-11-14T08:00:00Z', endUtc: '2030-11-14T09:30:00Z' })] };
   const handler = (call: FakeCall) => {
     if (call.path === `/api/w/${WORKSPACE_ID}/students` && call.method === 'GET') {
-      return json(200, {
-        items: [{ id: 's1', firstName: 'Ана', lastName: 'Илиева', email: 'ana@example.test', phone: null, isMinor: false, subjectIds: [], archived: false, updatedAtUtc: '2030-11-01T09:00:00Z' }],
-        total: 1,
-        page: 1,
-        pageSize: 20,
-        activeCount: 1,
-      });
+      const q = new URLSearchParams(call.search).get('q') ?? '';
+      const items = [
+        { id: 's1', firstName: 'Ана', lastName: 'Илиева', email: 'ana@example.test', phone: null, isMinor: false, subjectIds: [], archived: false, updatedAtUtc: '2030-11-01T09:00:00Z' },
+        { id: 's2', firstName: 'Борис', lastName: 'Трајков', email: null, phone: null, isMinor: false, subjectIds: [], archived: false, updatedAtUtc: '2030-11-01T09:00:00Z' },
+      ].filter((s) => !q || `${s.firstName} ${s.lastName}`.includes(q));
+      return json(200, { items, total: items.length, page: 1, pageSize: 20, activeCount: 2 });
     }
     if (call.path === `/api/w/${WORKSPACE_ID}/groups` && call.method === 'GET') return json(200, [{ id: 'g1', name: 'Алгебра 8', subjectId: null, memberCount: 2, archived: false, updatedAtUtc: '2030-11-01T09:00:00Z' }]);
     if (call.path === BASE && call.method === 'GET') {
@@ -187,6 +186,22 @@ describe('lesson editor', () => {
     const held = await screen.findByRole('button', { name: 'Означи како одржан' });
     expect(held).toBeDisabled();
     await expect.poll(() => (held as HTMLButtonElement).disabled, { timeout: 4000 }).toBe(false);
+  });
+
+  it('keeps showing the chosen student when a new search no longer lists them', async () => {
+    const user = userEvent.setup();
+    const { api } = lessonsApi();
+    await renderRoute(`/app/w/${WORKSPACE_ID}/lessons/l1`);
+
+    const picker = await screen.findByLabelText('Ученик');
+    await expect.poll(() => (picker as HTMLSelectElement).selectedOptions[0]?.textContent).toBe('Ана Илиева · ana@example.test');
+    await user.selectOptions(picker, 's2');
+    await user.type(screen.getByLabelText('Пронајди ученик'), 'Ана');
+    await expect.poll(() => api.to(`/api/w/${WORKSPACE_ID}/students`).some((c) => new URLSearchParams(c.search).get('q') === 'Ана')).toBe(true);
+    await expect.poll(() => within(picker).queryAllByRole('option').length).toBe(3); // choose, Борис (kept), Ана (listed)
+
+    expect(picker).toHaveValue('s2');
+    expect((picker as HTMLSelectElement).selectedOptions[0]?.textContent).toBe('Борис Трајков');
   });
 
   it('cancels a future lesson with a reason, after which it is read-only', async () => {
