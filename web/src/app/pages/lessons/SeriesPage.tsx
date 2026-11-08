@@ -1,26 +1,28 @@
 import { ArrowLeft } from 'lucide-react';
-import { useQuery } from '@tanstack/react-query';
 import { useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useLocation, useNavigate, useParams } from 'react-router';
-import { api } from '../../../api/client.ts';
 import { ApiError, errorMessage } from '../../../api/errors.ts';
 import { Alert } from '../../../components/ui/alert.tsx';
 import { Button } from '../../../components/ui/button.tsx';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../../components/ui/card.tsx';
 import { FormField } from '../../../components/ui/form-field.tsx';
 import { Label } from '../../../components/ui/label.tsx';
-import { addDays, isDate, seriesEnd, today, useEndSeries, useSeries, useUpdateSeries, type Series } from '../../../teacher/lessons.ts';
+import { addDays, isDate, nowTime, seriesEnd, today, useEndSeries, useSeries, useUpdateSeries, type Series } from '../../../teacher/lessons.ts';
 import { num } from '../../../teacher/offers.ts';
 import { NotFoundContent } from '../Pages.tsx';
 
 const field = 'h-11 w-full rounded-md border border-input bg-background px-3 text-base sm:h-10 sm:text-sm';
 const dayNumber = (date: string) => Math.round(new Date(`${date}T12:00:00Z`).getTime() / 86_400_000);
 
-/** The first occurrence on or after `date` (index and date). */
-function nextOccurrence(series: Series, date: string): { index: number; date: string } {
+/**
+ * The next occurrence that has not started yet (index and date), in the series' own zone: one today that already
+ * started stays as it is and is not counted again.
+ */
+function nextOccurrence(series: Series, todayDate: string, timeNow: string): { index: number; date: string } {
   const step = 7 * (num(series.intervalWeeks) ?? 1);
-  const index = date <= series.startDate ? 0 : Math.ceil((dayNumber(date) - dayNumber(series.startDate)) / step);
+  let index = todayDate <= series.startDate ? 0 : Math.ceil((dayNumber(todayDate) - dayNumber(series.startDate)) / step);
+  if (addDays(series.startDate, index * step) === todayDate && series.startTime.slice(0, 5) <= timeNow) index++;
   return { index, date: addDays(series.startDate, index * step) };
 }
 
@@ -34,17 +36,14 @@ function SeriesLoader() {
   const { t } = useTranslation();
   const { workspaceId = '', seriesId = '' } = useParams();
   const series = useSeries(workspaceId, seriesId);
-  const workspace = useQuery({
-    queryKey: ['w', workspaceId],
-    queryFn: async () => (await api.client.GET('/api/w/{workspaceId}', { params: { path: { workspaceId } } })).data!,
-  });
 
   if (series.isError) return series.error instanceof ApiError && series.error.status === 404 ? <NotFoundContent /> : <Alert variant="error">{errorMessage(series.error, t)}</Alert>;
-  if (!series.data || !series.isFetchedAfterMount || !workspace.data) return <output className="block">{t('common.loading')}</output>;
-  return <SeriesView workspaceId={workspaceId} series={series.data} todayDate={today(workspace.data.timeZone)} />;
+  if (!series.data || !series.isFetchedAfterMount) return <output className="block">{t('common.loading')}</output>;
+  // The form reads and sends its dates and times in the series' own zone, so "today" is that zone's too.
+  return <SeriesView workspaceId={workspaceId} series={series.data} todayDate={today(series.data.timeZone)} timeNow={nowTime(series.data.timeZone)} />;
 }
 
-function SeriesView({ workspaceId, series, todayDate }: { workspaceId: string; series: Series; todayDate: string }) {
+function SeriesView({ workspaceId, series, todayDate, timeNow }: { workspaceId: string; series: Series; todayDate: string; timeNow: string }) {
   const { t, i18n } = useTranslation();
   const location = useLocation();
   const created = (location.state as { created?: number } | null)?.created;
@@ -106,18 +105,18 @@ function SeriesView({ workspaceId, series, todayDate }: { workspaceId: string; s
         </CardContent>
       </Card>
 
-      {!series.replacedBySeriesId && <EditSeries workspaceId={workspaceId} series={series} todayDate={todayDate} />}
+      {!series.replacedBySeriesId && <EditSeries workspaceId={workspaceId} series={series} todayDate={todayDate} timeNow={timeNow} />}
       {!series.replacedBySeriesId && <EndSeries workspaceId={workspaceId} series={series} todayDate={todayDate} />}
     </section>
   );
 }
 
 /** "All future" (D-24): from the next lesson on, a new series with these settings continues this one. */
-function EditSeries({ workspaceId, series, todayDate }: { workspaceId: string; series: Series; todayDate: string }) {
+function EditSeries({ workspaceId, series, todayDate, timeNow }: { workspaceId: string; series: Series; todayDate: string; timeNow: string }) {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const update = useUpdateSeries(workspaceId, series.id);
-  const next = nextOccurrence(series, todayDate);
+  const next = nextOccurrence(series, todayDate, timeNow);
   const end = seriesEnd(series);
   const left = end.count === null ? null : Math.max(1, end.count - next.index);
   const [values, setValues] = useState({

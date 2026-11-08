@@ -196,3 +196,10 @@ export function seriesEnd(series: Series): { endDate: string | null; count: numb
   const lastByCount = addDays(series.startDate, (count - 1) * 7 * Number(series.intervalWeeks));
   return series.endDate < lastByCount ? { endDate: series.endDate, count: null } : { endDate: null, count };
 }
+
+/** The current wall-clock time in a time zone, `HH:mm`. */
+export function nowTime(timeZone: string, now = new Date()): string {
+  const parts = new Intl.DateTimeFormat('en-GB', { timeZone, hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).formatToParts(now);
+  const get = (type: string) => parts.find((p) => p.type === type)!.value;
+  return `${get('hour')}:${get('minute')}`;
+}

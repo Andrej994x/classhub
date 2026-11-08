@@ -1,6 +1,6 @@
 import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { fakeApi, json, teacher, WORKSPACE_ID, type FakeCall } from '../../../test/fakeApi.ts';
 import { renderRoute } from '../../../test/render.tsx';
 import { today } from '../../../teacher/lessons.ts';
@@ -182,6 +182,35 @@ describe('recurring lessons', () => {
     await user.click(screen.getByRole('button', { name: 'Примени на сите идни часови' }));
     await expect.poll(() => api.to(`${SERIES}/r1`, 'PUT').length).toBe(1);
     expect(api.to(`${SERIES}/r1`, 'PUT')[0]!.body).toMatchObject({ scope: 'AllFuture', fromLessonId: null, timeZone: 'Europe/Skopje', series: { startDate: '2030-11-12', intervalWeeks: 2, count: 10 } });
+  });
+
+  it('changes all future lessons from the next one that has not started, counting only those left', async () => {
+    // 17:30 in Skopje on the day of the first lesson (17:00): it already started.
+    vi.useFakeTimers({ now: new Date('2030-11-12T16:30:00Z'), toFake: ['Date'] });
+    try {
+      seriesApi();
+      await renderRoute(`/app/w/${WORKSPACE_ID}/series/r1`);
+
+      expect(await screen.findByLabelText('Од')).toHaveValue('2030-11-19');
+      expect(screen.getByLabelText('Број на часови')).toHaveValue(9);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('takes today in the series time zone, not the workspace one', async () => {
+    // 22:00 on 12 November in New York is already 13 November in Skopje (the workspace).
+    vi.useFakeTimers({ now: new Date('2030-11-13T03:00:00Z'), toFake: ['Date'] });
+    try {
+      seriesApi(series({ timeZone: 'America/New_York', startDate: '2030-11-05', startTime: '23:00:00' }));
+      await renderRoute(`/app/w/${WORKSPACE_ID}/series/r1`);
+
+      // Tonight's 23:00 lesson in New York has not started: it is the next one.
+      expect(await screen.findByLabelText('Од')).toHaveValue('2030-11-12');
+      expect(screen.getByLabelText('Број на часови')).toHaveValue(9);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('offers the earlier end when a counted series was ended early', async () => {
