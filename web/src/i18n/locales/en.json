@@ -40,7 +40,8 @@
     "students": "Students",
     "groups": "Groups",
     "studentSettings": "Settings",
-    "calendar": "Calendar"
+    "calendar": "Calendar",
+    "booking": "Booking"
   },
   "layout": {
     "teacherArea": "Teacher workspace",
@@ -1163,6 +1164,56 @@
       "endConfirm": "Upcoming lessons of this series from that date are removed. Continue?",
       "endYes": "Yes, end it",
       "ended": "The series ends."
+    }
+  },
+  "booking": {
+    "title": "Booking",
+    "lead": "Visitors book free times on your public page; you confirm or decline every request.",
+    "statuses": {
+      "Pending": "Waiting for you",
+      "Confirmed": "Confirmed",
+      "Declined": "Declined",
+      "Cancelled": "Cancelled"
+    },
+    "requests": {
+      "title": "Booking requests",
+      "lead": "A request does not hold the time: confirming checks again that it is free and creates the lesson.",
+      "none": "No booking requests yet.",
+      "confirm": "Confirm",
+      "decline": "Decline",
+      "declineReason": "Message to the visitor (optional)",
+      "declineConfirm": "Decline the request",
+      "reschedule": "Move",
+      "rescheduleConfirm": "Move the lesson",
+      "cancel": "Cancel",
+      "cancelReason": "Reason for cancelling",
+      "cancelConfirm": "Cancel the lesson",
+      "openLesson": "Open the lesson",
+      "overlap": "You already have a lesson at this time. Decline the request or move the other lesson."
+    },
+    "settings": {
+      "title": "Booking settings",
+      "lead": "Working hours and days off are in {{zone}}.",
+      "enabled": "Visitors can book on my public page",
+      "step": "Times start every",
+      "notice": "Earliest booking (hours ahead)",
+      "horizon": "Bookable days ahead",
+      "hours": "Working hours",
+      "from": "{{day}} from",
+      "to": "{{day}} until",
+      "add": "Add hours",
+      "addHours": "Add hours on {{day}}",
+      "removeHours": "Remove hours on {{day}}",
+      "timeOff": "Days off",
+      "offFrom": "Off from",
+      "offTo": "Off until",
+      "offNote": "Note",
+      "removeOff": "Remove days off",
+      "addOff": "Add days off",
+      "invalid": "Check the times (each ends after it starts), the days off, the notice (0–168 hours) and the days ahead (7–90).",
+      "changedElsewhere": "The settings were changed elsewhere. Reload the page and apply your changes again.",
+      "saved": "Saved.",
+      "save": "Save"
     }
   }
 }

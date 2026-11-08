@@ -38,7 +38,8 @@ public sealed record SubmitLeadRequest(
     string? FormToken,
     string? Website,
     Guid? AttemptId = null,
-    bool ShareResult = false);
+    bool ShareResult = false,
+    DateTime? SlotStartUtc = null);
 
 /// <summary>Always the same answer: nothing the visitor sent is echoed back.</summary>
 public sealed record LeadReceivedResponse(bool Received);

@@ -18,6 +18,7 @@ import { OfferEditPage } from './pages/offers/OfferEditPage.tsx';
 import { OffersPage } from './pages/offers/OffersPage.tsx';
 import { PlanPage } from './pages/plan/PlanPage.tsx';
 import { GroupEditPage, GroupsPage } from './pages/groups/GroupsPages.tsx';
+import { BookingPage } from './pages/booking/BookingPage.tsx';
 import { CalendarPage } from './pages/lessons/CalendarPage.tsx';
 import { LessonEditPage } from './pages/lessons/LessonEditPage.tsx';
 import { SeriesPage } from './pages/lessons/SeriesPage.tsx';
@@ -66,6 +67,7 @@ export const routes: RouteObject[] = [
       { path: 'w/:workspaceId/students/new', element: <StudentEditPage /> },
       { path: 'w/:workspaceId/students/:studentId', element: <StudentEditPage /> },
       { path: 'w/:workspaceId/calendar', element: <CalendarPage /> },
+      { path: 'w/:workspaceId/booking', element: <BookingPage /> },
       { path: 'w/:workspaceId/lessons/new', element: <LessonEditPage /> },
       { path: 'w/:workspaceId/lessons/:lessonId', element: <LessonEditPage /> },
       { path: 'w/:workspaceId/series/:seriesId', element: <SeriesPage /> },

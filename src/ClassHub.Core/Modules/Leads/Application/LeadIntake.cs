@@ -5,6 +5,7 @@ using ClassHub.Core.Modules.Catalog.Contracts;
 using ClassHub.Core.Modules.DiagnosticTests.Contracts;
 using ClassHub.Core.Modules.Leads.Contracts;
 using ClassHub.Core.Modules.Leads.Domain;
+using ClassHub.Core.Modules.Lessons.Contracts;
 using ClassHub.Core.Modules.Leads.Persistence;
 using ClassHub.Core.Modules.Offers.Contracts;
 using ClassHub.Core.Modules.Sites.Contracts;
@@ -31,6 +32,7 @@ internal sealed partial class LeadIntake(
     ITeacherPublicProfile profiles,
     ICatalogLookup catalog,
     IDiagnosticAttemptLink attempts,
+    IBookingIntake bookings,
     LeadFormTokens tokens,
     IServiceScopeFactory scopes,
     IOptions<LeadOptions> options,
@@ -99,6 +101,9 @@ internal sealed partial class LeadIntake(
             throw Invalid("subjectId", "Choose one of the teacher's subjects.");
         }
 
+        // A booked time must be a free slot of a bookable offer right now (pending requests do not block it, D-23).
+        var booking = request.SlotStartUtc is { } slot ? await bookings.CheckAsync(request.OfferId!.Value, slot, cancellationToken) : null;
+
         // A test result request must name an attempt of this teacher that has no request yet.
         if (request.AttemptId is { } attemptId && !await attempts.CanLinkAsync(attemptId, cancellationToken))
         {
@@ -146,6 +151,13 @@ internal sealed partial class LeadIntake(
         catch (Microsoft.EntityFrameworkCore.DbUpdateException ex) when (SqlServerErrors.IsUniqueViolation(ex))
         {
             throw new ConflictException("A request was already sent for this result.");
+        }
+
+        if (booking is not null)
+        {
+            // In the same transaction: the request and its booking are recorded together or not at all.
+            await scope.ServiceProvider.GetRequiredService<IBookingIntake>()
+                .AddAsync(site.WorkspaceId, leadId, booking, request.SlotStartUtc!.Value, now.UtcDateTime, cancellationToken);
         }
 
         if (request.AttemptId is { } linkedAttempt)

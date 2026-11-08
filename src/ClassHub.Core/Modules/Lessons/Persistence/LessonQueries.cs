@@ -25,4 +25,12 @@ internal sealed class LessonQueries(ClassHubDbContext db)
         db.Set<Lesson>().IgnoreQueryFilters([TenancyFilters.Tenant]).AsNoTracking()
             .AnyAsync(l => l.TeacherUserId == teacherUserId && l.Status != Contracts.LessonStatus.Cancelled
                 && l.StartUtc < endUtc && startUtc < l.EndUtc && l.Id != exceptLessonId, cancellationToken);
+
+    /// <summary>The teacher's lessons that occupy time in [fromUtc, toUtc), in every workspace (times only, for free slots).</summary>
+    public async Task<IReadOnlyList<(DateTime StartUtc, DateTime EndUtc)>> BusyAsync(Guid teacherUserId, DateTime fromUtc, DateTime toUtc, CancellationToken cancellationToken) =>
+        [.. (await db.Set<Lesson>().IgnoreQueryFilters([TenancyFilters.Tenant]).AsNoTracking()
+                .Where(l => l.TeacherUserId == teacherUserId && l.Status != Contracts.LessonStatus.Cancelled && l.StartUtc < toUtc && fromUtc < l.EndUtc)
+                .Select(l => new { l.StartUtc, l.EndUtc })
+                .ToListAsync(cancellationToken))
+            .Select(l => (l.StartUtc, l.EndUtc))];
 }

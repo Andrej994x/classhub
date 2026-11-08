@@ -29,7 +29,7 @@ internal sealed record SiteSnapshot(string Template, string Palette, string Lang
 /// site's workspace (tenant filters apply) and copies only public fields: visible sections, the profile's public
 /// fields, and public offers (only when their sections are visible).
 /// </summary>
-internal sealed class SiteRenderer(ITeacherPublicProfile profiles, ICatalogLookup catalog, IOfferLookup offers, IPublicTests tests)
+internal sealed class SiteRenderer(ITeacherPublicProfile profiles, ICatalogLookup catalog, IOfferLookup offers, IPublicTests tests, ClassHub.Core.Modules.Lessons.Contracts.IBookingAvailability booking)
 {
     public async Task<SiteRenderModel> RenderAsync(string slug, SiteSnapshot snapshot, Func<string, string> photoUrl, CancellationToken cancellationToken)
     {
@@ -91,7 +91,8 @@ internal sealed class SiteRenderer(ITeacherPublicProfile profiles, ICatalogLooku
             photo,
             teaching,
             offerViews,
-            testLinks);
+            testLinks,
+            await booking.IsEnabledAsync(cancellationToken));
     }
 }
 

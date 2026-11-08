@@ -41,6 +41,13 @@ npm run e2e                                # builds the SPA and the API, then ru
 
 Flows (each in **mk and en**, on **desktop and mobile**): register → dev mailbox → confirm → sign in → the dashboard shows the workspace → sign out; forgot password → reset link → the old password fails, the new one works; a second teacher opening the first teacher's workspace URL sees "not found". Texts come from the app's locale files, so wording changes do not break tests. CI job `e2e` uploads the HTML report and traces on failure.
 
+## Booking tests (R2-P6)
+
+- Unit: `BookingSlotsTests` (step and fit, busy lessons with touching allowed, notice, days off, weekdays, past and horizon, several intervals, the spring clock change).
+- Integration: `BookingTests` (page, slots, site link and booking page; two visitors may request the same time (D-23); confirm creates the student and the lesson and emails the visitor; the other request then conflicts and is declined; **parallel confirmations (same request and overlapping requests) create exactly one lesson** (fails without the lock); reschedule and cancel with emails; only free slots of public offers, booking off refused; honeypot and per-site cap; settings validation, stale version, isolation).
+- Vitest: `BookingWidget.test.tsx` (book a time through the protected form without cookies, a just-taken time reloads the slots, field checks, booking off → contact form, text parity) and `BookingPage.test.tsx` (confirm, conflict message then decline with a message, cancel needs a reason, settings saved with the loaded and then the new version).
+- E2E: `booking.spec.ts` (a visitor books on a phone from the site link; the teacher confirms and opens the lesson).
+
 ## Recurring lesson tests (R2-P5)
 
 - Unit: `SeriesPatternTests` (weekly/bi-weekly weekdays, end by count and date, same local time across the autumn change, the skipped spring hour has no instant, first index on or after a date).

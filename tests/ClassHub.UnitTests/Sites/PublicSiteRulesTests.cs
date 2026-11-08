@@ -201,6 +201,7 @@ public sealed partial class PublicSiteRulesTests
         [
             "CacheTag",
             "Seo.CanonicalUrl", "Seo.Description", "Seo.ImageUrl", "Seo.JsonLd", "Seo.OgLocale", "Seo.Title",
+            "Site.BookingEnabled",
             "Site.Language",
             "Site.Offers.Currency", "Site.Offers.Description", "Site.Offers.DurationMinutes", "Site.Offers.Kind", "Site.Offers.LessonCount",
             "Site.Offers.Mode", "Site.Offers.Price", "Site.Offers.Seats", "Site.Offers.Subject", "Site.Offers.Title",

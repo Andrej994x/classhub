@@ -953,6 +953,151 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/w/{workspaceId}/booking/settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetBookingSettings"];
+        put: operations["SaveBookingSettings"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/w/{workspaceId}/booking/requests": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["ListBookingRequests"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/w/{workspaceId}/booking/requests/{bookingId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetBookingRequest"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/w/{workspaceId}/booking/requests/{bookingId}/confirm": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Creates the student (if needed) and the lesson after a conflict check; 409 LESSON_OVERLAP leaves it pending. */
+        post: operations["ConfirmBookingRequest"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/w/{workspaceId}/booking/requests/{bookingId}/decline": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["DeclineBookingRequest"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/w/{workspaceId}/booking/requests/{bookingId}/reschedule": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["RescheduleBookingRequest"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/w/{workspaceId}/booking/requests/{bookingId}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["CancelBookingRequest"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/public/sites/{slug}/booking": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetPublicBooking"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/public/sites/{slug}/booking/slots": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetPublicBookingSlots"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/public/sites/{slug}/reports": {
         parameters: {
             query?: never;
@@ -1786,6 +1931,59 @@ export interface components {
             sharedKey: string;
             authenticatorUri: string;
         };
+        BookingDecisionRequest: {
+            /** Format: int32 */
+            version: null | number | string;
+            reason: null | string;
+        };
+        BookingRequestResponse: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            leadId: string;
+            name: string;
+            email: string;
+            phone: null | string;
+            /** Format: uuid */
+            offerId: string;
+            offerTitle: string;
+            /** Format: date-time */
+            startUtc: string;
+            /** Format: date-time */
+            endUtc: string;
+            /** Format: date-time */
+            startLocal: string;
+            /** Format: date-time */
+            endLocal: string;
+            timeZone: string;
+            status: string;
+            /** Format: uuid */
+            lessonId: null | string;
+            reason: null | string;
+            /** Format: date-time */
+            createdAtUtc: string;
+            /** Format: int32 */
+            version: number | string;
+        };
+        BookingSettingsResponse: {
+            enabled: boolean;
+            /** Format: int32 */
+            slotStepMinutes: number | string;
+            /** Format: int32 */
+            minNoticeHours: number | string;
+            /** Format: int32 */
+            horizonDays: number | string;
+            workingHours: components["schemas"]["WorkingHoursItem"][];
+            timeOff: components["schemas"]["TimeOffItem"][];
+            timeZone: string;
+            /** Format: int32 */
+            version: number | string;
+        };
+        CancelBookingRequest: {
+            /** Format: int32 */
+            version: null | number | string;
+            reason: null | string;
+        };
         CancelLessonRequest: {
             /** Format: int32 */
             version: null | number | string;
@@ -1917,6 +2115,7 @@ export interface components {
             /** Format: int32 */
             sharedResultsInPeriod: number | string;
         };
+        DayOfWeek: number;
         DiagnosticResultSummary: {
             /** Format: uuid */
             testId: string;
@@ -2307,6 +2506,35 @@ export interface components {
             /** Format: int32 */
             totalQuestions: number | string;
         };
+        PublicBookingOffer: {
+            /** Format: uuid */
+            id: string;
+            title: string;
+            /** Format: int32 */
+            durationMinutes: number | string;
+            mode: string;
+        };
+        PublicBookingResponse: {
+            available: boolean;
+            timeZone: string;
+            /** Format: int32 */
+            horizonDays: number | string;
+            offers: components["schemas"]["PublicBookingOffer"][];
+        };
+        PublicSlot: {
+            /** Format: date-time */
+            startUtc: string;
+            time: string;
+        };
+        PublicSlotDay: {
+            /** Format: date */
+            date: string;
+            slots: components["schemas"]["PublicSlot"][];
+        };
+        PublicSlotsResponse: {
+            timeZone: string;
+            days: components["schemas"]["PublicSlotDay"][];
+        };
         PublicTestOption: {
             /** Format: uuid */
             id: string;
@@ -2348,6 +2576,12 @@ export interface components {
         ReorderOffersRequest: {
             offerIds: null | string[];
         };
+        RescheduleBookingRequest: {
+            /** Format: int32 */
+            version: null | number | string;
+            /** Format: date-time */
+            startLocal: null | string;
+        };
         ResetPasswordRequest: {
             email: null | string;
             token: null | string;
@@ -2361,6 +2595,19 @@ export interface components {
             /** Format: uuid */
             testId: null | string;
             reason: null | string;
+        };
+        SaveBookingSettingsRequest: {
+            enabled: boolean;
+            /** Format: int32 */
+            slotStepMinutes: null | number | string;
+            /** Format: int32 */
+            minNoticeHours: null | number | string;
+            /** Format: int32 */
+            horizonDays: null | number | string;
+            workingHours: null | components["schemas"]["WorkingHoursItem"][];
+            timeOff: null | components["schemas"]["TimeOffItem"][];
+            /** Format: int32 */
+            version: null | number | string;
         };
         SaveDiagnosticTestRequest: {
             title: null | string;
@@ -2711,6 +2958,8 @@ export interface components {
             attemptId?: null | string;
             /** @default false */
             shareResult: boolean;
+            /** Format: date-time */
+            slotStartUtc?: null | string;
         };
         SubmitReportRequest: {
             target: null | string;
@@ -2794,6 +3043,13 @@ export interface components {
             /** Format: int32 */
             version: null | number | string;
         };
+        TimeOffItem: {
+            /** Format: date */
+            startDate: string;
+            /** Format: date */
+            endDate: string;
+            note: null | string;
+        };
         TwoFactorLoginRequest: {
             code: null | string;
             recoveryCode: null | string;
@@ -2839,6 +3095,13 @@ export interface components {
             timeZone: null | string;
             currency: null | string;
             locale: null | string;
+        };
+        WorkingHoursItem: {
+            dayOfWeek: components["schemas"]["DayOfWeek"];
+            /** Format: time */
+            start: string;
+            /** Format: time */
+            end: string;
         };
         WorkspaceResponse: {
             /** Format: uuid */
@@ -4787,6 +5050,292 @@ export interface operations {
                 };
                 content: {
                     "application/problem+json": components["schemas"]["HttpValidationProblemDetails"];
+                };
+            };
+        };
+    };
+    GetBookingSettings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BookingSettingsResponse"];
+                };
+            };
+        };
+    };
+    SaveBookingSettings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SaveBookingSettingsRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BookingSettingsResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["HttpValidationProblemDetails"];
+                };
+            };
+        };
+    };
+    ListBookingRequests: {
+        parameters: {
+            query?: {
+                status?: string;
+            };
+            header?: never;
+            path: {
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BookingRequestResponse"][];
+                };
+            };
+        };
+    };
+    GetBookingRequest: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                bookingId: string;
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BookingRequestResponse"];
+                };
+            };
+        };
+    };
+    ConfirmBookingRequest: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                bookingId: string;
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BookingDecisionRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BookingRequestResponse"];
+                };
+            };
+        };
+    };
+    DeclineBookingRequest: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                bookingId: string;
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BookingDecisionRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BookingRequestResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["HttpValidationProblemDetails"];
+                };
+            };
+        };
+    };
+    RescheduleBookingRequest: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                bookingId: string;
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RescheduleBookingRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BookingRequestResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["HttpValidationProblemDetails"];
+                };
+            };
+        };
+    };
+    CancelBookingRequest: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                bookingId: string;
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CancelBookingRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BookingRequestResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["HttpValidationProblemDetails"];
+                };
+            };
+        };
+    };
+    GetPublicBooking: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicBookingResponse"];
+                };
+            };
+        };
+    };
+    GetPublicBookingSlots: {
+        parameters: {
+            query: {
+                offerId: string;
+                from: string;
+            };
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicSlotsResponse"];
                 };
             };
         };

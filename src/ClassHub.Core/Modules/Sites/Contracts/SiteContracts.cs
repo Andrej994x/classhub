@@ -216,7 +216,9 @@ public sealed record SiteRenderModel(
     SiteTeaching Teaching,
     IReadOnlyList<SiteOfferView> Offers,
     /// <summary>Published diagnostic tests, linked from the page (<c>/{slug}/tests/{testSlug}</c>).</summary>
-    IReadOnlyList<SiteTestLink> Tests);
+    IReadOnlyList<SiteTestLink> Tests,
+    /// <summary>The teacher takes bookings: the page links to <c>/{slug}/book</c> (R2-P6).</summary>
+    bool BookingEnabled = false);
 
 public sealed record SiteTestLink(string Slug, string Title);
 

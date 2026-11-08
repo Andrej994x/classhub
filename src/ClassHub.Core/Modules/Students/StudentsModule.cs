@@ -25,6 +25,7 @@ public sealed class StudentsModule : IModule
         services.AddScoped<StudentQueries>();
         services.AddScoped<StudentService>();
         services.AddScoped<IStudentLookup, StudentLookup>();
+        services.AddScoped<ILeadStudents, LeadStudents>();
         services.AddScoped<StudentAccountQueries>();
         services.AddScoped<IStudentSelfLookup>(sp => sp.GetRequiredService<StudentAccountQueries>());
         services.AddScoped<StudentAccountService>();
