@@ -71,4 +71,33 @@ public sealed record FinanceOverviewResponse(IReadOnlyList<StudentFinanceSummary
 /// <summary>A period's money in one currency (never summed across currencies).</summary>
 public sealed record CurrencyReportResponse(string Currency, int PackagesSold, long ChargedMinor, long ReceivedMinor);
 
+/// <summary>An amount in one currency (never summed across currencies).</summary>
+public sealed record CurrencyAmountResponse(string Currency, long AmountMinor);
+
+/// <summary>Payments received in one month (<c>yyyy-MM</c>, by the day they were paid), per currency.</summary>
+public sealed record MonthlyIncomeResponse(string Month, IReadOnlyList<CurrencyAmountResponse> Received);
+
+/// <summary>An active student whose open packages have at most one lesson left (the snapshot lists the first few; <c>StudentsRunningLow</c> counts all).</summary>
+public sealed record PackageRunningLowResponse(Guid StudentId, string Name, int RemainingLessons);
+
+/// <summary>
+/// The teacher's money from lessons (R2-P12): what students owe, lessons left in open packages, and payments received
+/// per month. The teacher's own income only (recorded payments), never ClassHub's subscription revenue.
+/// </summary>
+public sealed record FinanceSnapshotResponse(
+    IReadOnlyList<CurrencyAmountResponse> Outstanding,
+    int StudentsOwing,
+    int RemainingLessons,
+    int UnpaidLessons,
+    int StudentsRunningLow,
+    IReadOnlyList<PackageRunningLowResponse> RunningLow,
+    IReadOnlyList<MonthlyIncomeResponse> Income);
+
+/// <summary>The current workspace's finance numbers for its dashboard.</summary>
+public interface IFinanceStats
+{
+    /// <summary>The snapshot now, with the income of the last <paramref name="months"/> months (this one included).</summary>
+    Task<FinanceSnapshotResponse> SnapshotAsync(int months, CancellationToken cancellationToken);
+}
+
 public sealed record FinanceReportResponse(DateOnly From, DateOnly To, IReadOnlyList<CurrencyReportResponse> Currencies, int LessonsConsumed, int UnpaidLessons);

@@ -19,6 +19,7 @@ import { applyServerFieldErrors } from '../auth/serverErrors.ts';
 import { NotFoundContent } from '../Pages.tsx';
 import { MyHomeworkList } from '../homework/HomeworkPages.tsx';
 import { MyMaterials } from '../materials/MaterialsPages.tsx';
+import { MyLessons } from './MyLessons.tsx';
 
 const linkClass = 'text-primary underline-offset-4 hover:underline';
 
@@ -217,7 +218,7 @@ export function StudentHomePage() {
   );
 }
 
-/** `/student/w/:workspaceId`: the student's own page with one teacher: subjects, homework and materials (lessons arrive in a later phase). */
+/** `/student/w/:workspaceId`: the student's own page with one teacher (R2-P12 dashboard): lessons, subjects, homework and materials. */
 export function StudentTeacherPage() {
   const { t, i18n } = useTranslation();
   const { workspaceId = '' } = useParams();
@@ -244,6 +245,7 @@ export function StudentTeacherPage() {
         <h1 className="text-2xl font-semibold tracking-tight">{profile.data.teacherName}</h1>
         <p className="text-sm text-muted-foreground">{t('studentPortal.as', { name: [profile.data.firstName, profile.data.lastName].filter(Boolean).join(' ') })}</p>
       </div>
+      <MyLessons workspaceId={workspaceId} />
       {subjects.length > 0 && (
         <Card>
           <CardHeader>
@@ -262,12 +264,6 @@ export function StudentTeacherPage() {
       )}
       <MyHomeworkList workspaceId={workspaceId} />
       <MyMaterials workspaceId={workspaceId} />
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">{t('studentPortal.lessonsTitle')}</CardTitle>
-          <CardDescription>{t('student.empty')}</CardDescription>
-        </CardHeader>
-      </Card>
     </section>
   );
 }

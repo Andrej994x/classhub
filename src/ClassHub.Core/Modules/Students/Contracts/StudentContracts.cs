@@ -16,6 +16,9 @@ public interface IStudentLookup
 
     /// <summary>How to reach the student (notifications, R2-P11): their own email and linked account, if any.</summary>
     Task<StudentContact?> ContactAsync(Guid studentId, CancellationToken cancellationToken);
+
+    /// <summary>How many students are active (not archived), for the dashboard (R2-P12).</summary>
+    Task<int> CountActiveAsync(CancellationToken cancellationToken);
 }
 
 /// <summary>A student's own contact for notifications (never the guardian's: the student's record decides).</summary>

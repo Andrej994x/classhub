@@ -29,6 +29,8 @@ public sealed class LessonsModule : IModule
         services.AddScoped<IBookingIntake>(sp => sp.GetRequiredService<BookingPublicService>());
         services.AddScoped<IBookingAvailability, BookingAvailability>();
         services.AddScoped<ILessonLookup, LessonLookup>();
+        services.AddScoped<ILessonOutlook, LessonOutlook>();
+        services.AddScoped<StudentLessons>();
         services.AddScoped<LessonEventQueries>();
         services.AddScoped<ILessonEventFeed>(sp => sp.GetRequiredService<LessonEventQueries>());
         services.AddScoped<IUpcomingLessons>(sp => sp.GetRequiredService<LessonEventQueries>());
@@ -39,6 +41,13 @@ public sealed class LessonsModule : IModule
 
     public void MapEndpoints(IEndpointRouteBuilder endpoints)
     {
+        // The student portal (R2-P12): only the student's own lessons.
+        endpoints.MapGroup("/student/w/{workspaceId:guid}/lessons").WithTags("Student portal").RequireAntiforgeryHeader()
+            .MapGet("", async (StudentLessons service, CancellationToken ct) => TypedResults.Ok(await service.GetAsync(ct)))
+            .RequireAuthorization(ClassHubPolicies.StudentSelf)
+            .WithName("GetMyLessons")
+            .WithSummary("The signed-in student's next lessons, most recent past lessons (attendance, shared summary) and attendance counts.");
+
         var lessons = endpoints.MapGroup($"{WorkspacesModule.WorkspaceRoute}/lessons").WithTags("Lessons").RequireAntiforgeryHeader();
         var read = WorkspacePolicies.For(WorkspacePermissions.LessonsRead);
         var manage = WorkspacePolicies.For(WorkspacePermissions.LessonsManage);

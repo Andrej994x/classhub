@@ -238,6 +238,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/w/{workspaceId}/dashboard/teaching": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Lessons of the next 7 days, active students, what students owe, lessons left in packages and payments received per month. */
+        get: operations["GetTeachingDashboard"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/public/sites/{slug}/tests/{testSlug}": {
         parameters: {
             query?: never;
@@ -1190,6 +1207,23 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["RestoreLead"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/student/w/{workspaceId}/lessons": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The signed-in student's next lessons, most recent past lessons (attendance, shared summary) and attendance counts. */
+        get: operations["GetMyLessons"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -2544,6 +2578,7 @@ export interface components {
             version: null | number | string;
             attendance: null | components["schemas"]["AttendanceItem"][];
         };
+        AttendanceStatus: number;
         AuthenticatorSetupRequest: {
             code: null | string;
             recoveryCode: null | string;
@@ -2691,6 +2726,11 @@ export interface components {
             /** Format: int32 */
             count: number | string;
         };
+        CurrencyAmountResponse: {
+            currency: string;
+            /** Format: int64 */
+            amountMinor: number | string;
+        };
         CurrencyBalanceResponse: {
             currency: string;
             /** Format: int64 */
@@ -2732,6 +2772,23 @@ export interface components {
             inPeriod: number | string;
             byStatus: components["schemas"]["CountByKey"][];
             byTypeInPeriod: components["schemas"]["CountByKey"][];
+        };
+        DashboardLesson: {
+            /** Format: uuid */
+            id: string;
+            title: string;
+            /** Format: date-time */
+            startUtc: string;
+            /** Format: date-time */
+            endUtc: string;
+            timeZone: string;
+            kind: components["schemas"]["LessonKind"];
+            students: string[];
+        };
+        DashboardLessons: {
+            /** Format: int32 */
+            next7Days: number | string;
+            next: components["schemas"]["DashboardLesson"][];
         };
         DashboardOffers: {
             /** Format: int32 */
@@ -2875,6 +2932,19 @@ export interface components {
             lessonsConsumed: number | string;
             /** Format: int32 */
             unpaidLessons: number | string;
+        };
+        FinanceSnapshotResponse: {
+            outstanding: components["schemas"]["CurrencyAmountResponse"][];
+            /** Format: int32 */
+            studentsOwing: number | string;
+            /** Format: int32 */
+            remainingLessons: number | string;
+            /** Format: int32 */
+            unpaidLessons: number | string;
+            /** Format: int32 */
+            studentsRunningLow: number | string;
+            runningLow: components["schemas"]["PackageRunningLowResponse"][];
+            income: components["schemas"]["MonthlyIncomeResponse"][];
         };
         GroupListItem: {
             /** Format: uuid */
@@ -3167,6 +3237,8 @@ export interface components {
             /** Format: int32 */
             pageSize: number | string;
         };
+        LessonKind: number;
+        LessonMode: number;
         LessonNotesRequest: {
             /** Format: int32 */
             version: null | number | string;
@@ -3220,6 +3292,7 @@ export interface components {
             privateNote: null | string;
             sharedSummary: null | string;
         };
+        LessonStatus: number;
         LoginRequest: {
             email: null | string;
             password: null | string;
@@ -3314,6 +3387,10 @@ export interface components {
             /** Format: int64 */
             amountMinor: number | string;
         };
+        MonthlyIncomeResponse: {
+            month: string;
+            received: components["schemas"]["CurrencyAmountResponse"][];
+        };
         MyWorkspaceResponse: {
             /** Format: uuid */
             id: string;
@@ -3383,6 +3460,13 @@ export interface components {
             createdAtUtc: string;
             /** Format: int32 */
             version: number | string;
+        };
+        PackageRunningLowResponse: {
+            /** Format: uuid */
+            studentId: string;
+            name: string;
+            /** Format: int32 */
+            remainingLessons: number | string;
         };
         PackageVersionRequest: {
             /** Format: int32 */
@@ -3784,6 +3868,16 @@ export interface components {
             available: boolean;
             reason: null | string;
         };
+        StudentAttendanceResponse: {
+            /** Format: int32 */
+            held: number | string;
+            /** Format: int32 */
+            present: number | string;
+            /** Format: int32 */
+            absent: number | string;
+            /** Format: int32 */
+            excused: number | string;
+        };
         StudentFinanceResponse: {
             /** Format: uuid */
             studentId: string;
@@ -3837,6 +3931,28 @@ export interface components {
             sentAtUtc: string;
             /** Format: date-time */
             expiresAtUtc: string;
+        };
+        StudentLessonResponse: {
+            /** Format: uuid */
+            id: string;
+            title: string;
+            topic: null | string;
+            /** Format: date-time */
+            startUtc: string;
+            /** Format: date-time */
+            endUtc: string;
+            timeZone: string;
+            mode: components["schemas"]["LessonMode"];
+            meetingUrl: null | string;
+            location: null | string;
+            status: components["schemas"]["LessonStatus"];
+            attendance: null | components["schemas"]["AttendanceStatus"];
+            sharedSummary: null | string;
+        };
+        StudentLessonsResponse: {
+            upcoming: components["schemas"]["StudentLessonResponse"][];
+            past: components["schemas"]["StudentLessonResponse"][];
+            attendance: components["schemas"]["StudentAttendanceResponse"];
         };
         StudentListItem: {
             /** Format: uuid */
@@ -4013,6 +4129,12 @@ export interface components {
             updatedAtUtc: null | string;
             /** Format: int32 */
             version: null | number | string;
+        };
+        TeachingDashboardResponse: {
+            lessons: components["schemas"]["DashboardLessons"];
+            /** Format: int32 */
+            activeStudents: number | string;
+            finance: components["schemas"]["FinanceSnapshotResponse"];
         };
         TestAttemptsResponse: {
             /** Format: int32 */
@@ -4516,6 +4638,28 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["DashboardResponse"];
+                };
+            };
+        };
+    };
+    GetTeachingDashboard: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TeachingDashboardResponse"];
                 };
             };
         };
@@ -6448,6 +6592,28 @@ export interface operations {
                 };
                 content: {
                     "application/problem+json": components["schemas"]["HttpValidationProblemDetails"];
+                };
+            };
+        };
+    };
+    GetMyLessons: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StudentLessonsResponse"];
                 };
             };
         };

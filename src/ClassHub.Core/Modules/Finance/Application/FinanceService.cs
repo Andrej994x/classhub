@@ -1,3 +1,4 @@
+using System.Globalization;
 using ClassHub.Core.Infrastructure.Audit;
 using ClassHub.Core.Infrastructure.Persistence;
 using ClassHub.Core.Modules.Finance.Contracts;
@@ -28,9 +29,10 @@ internal sealed class FinanceService(
     ILessonLookup lessons,
     IWorkspaceSettings workspace,
     IAuditLog audit,
-    TimeProvider clock)
+    TimeProvider clock) : IFinanceStats
 {
     public const int HistoryPageSize = 50;
+    public const int RunningLowMax = 10;
     private const long MaxAmountMinor = StudentPackage.MaxPriceMinor;
 
     /// <summary>The student's balances, packages and one page of the history (changes answer with the first page).</summary>
@@ -355,6 +357,56 @@ internal sealed class FinanceService(
                     ledger.Where(e => e.StudentId == id && e.PackageId is null).Sum(e => e.Quantity));
             })
             .OrderBy(s => s.Archived).ThenBy(s => s.Name, StringComparer.CurrentCulture)]);
+    }
+
+    /// <summary>
+    /// The dashboard's money (R2-P12): what students owe per currency (only debts: a student's credit never lowers
+    /// another's debt), lessons left in open packages of active students and who is running low, lessons held without a
+    /// package, and payments received per month by the day they were paid (reversals included).
+    /// </summary>
+    public async Task<FinanceSnapshotResponse> SnapshotAsync(int months, CancellationToken cancellationToken)
+    {
+        var packages = await db.Set<StudentPackage>().AsNoTracking()
+            .Select(p => new { p.Id, p.StudentId, p.Currency, p.PriceMinor, p.LessonCount, Open = p.ClosedAtUtc == null }).ToListAsync(cancellationToken);
+        var ledger = await db.Set<LessonLedgerEntry>().AsNoTracking().Select(e => new { e.StudentId, e.PackageId, e.Quantity }).ToListAsync(cancellationToken);
+        var payments = await db.Set<Payment>().AsNoTracking().Select(p => new { p.StudentId, p.Currency, p.AmountMinor, p.PaidOn }).ToListAsync(cancellationToken);
+        var adjustments = await db.Set<BalanceAdjustment>().AsNoTracking().Select(a => new { a.StudentId, a.Currency, a.AmountMinor }).ToListAsync(cancellationToken);
+        var used = ledger.Where(e => e.PackageId is not null).GroupBy(e => e.PackageId!.Value).ToDictionary(g => g.Key, g => g.Sum(e => e.Quantity));
+
+        var ids = packages.Select(p => p.StudentId).Concat(payments.Select(p => p.StudentId)).Concat(adjustments.Select(a => a.StudentId)).ToHashSet();
+        var debts = ids.SelectMany(id => FinanceRules.Balances(
+                packages.Where(p => p.StudentId == id).Select(p => (p.Currency, p.PriceMinor)),
+                adjustments.Where(a => a.StudentId == id).Select(a => (a.Currency, a.AmountMinor)),
+                payments.Where(p => p.StudentId == id).Select(p => (p.Currency, p.AmountMinor)))
+            .Where(b => b.OutstandingMinor > 0).Select(b => (StudentId: id, b.Currency, b.OutstandingMinor)))
+            .ToList();
+
+        var names = await students.FindAsync(packages.Select(p => p.StudentId).ToHashSet(), cancellationToken);
+        var open = packages.Where(p => p.Open && names.TryGetValue(p.StudentId, out var s) && !s.Archived)
+            .GroupBy(p => p.StudentId)
+            .Select(g => (StudentId: g.Key, Remaining: g.Sum(p => p.LessonCount - used.GetValueOrDefault(p.Id))))
+            .ToList();
+
+        var today = await TodayAsync(cancellationToken);
+        var thisMonth = new DateOnly(today.Year, today.Month, 1);
+        var income = Enumerable.Range(0, Math.Clamp(months, 1, 24)).Reverse().Select(back => thisMonth.AddMonths(-back)).Select(start =>
+        {
+            var end = start.AddMonths(1);
+            var received = payments.Where(p => p.PaidOn >= start && p.PaidOn < end).GroupBy(p => p.Currency).OrderBy(g => g.Key, StringComparer.Ordinal)
+                .Select(g => new CurrencyAmountResponse(g.Key, g.Sum(p => p.AmountMinor)));
+            return new MonthlyIncomeResponse(start.ToString("yyyy-MM", CultureInfo.InvariantCulture), [.. received]);
+        });
+
+        return new FinanceSnapshotResponse(
+            [.. debts.GroupBy(d => d.Currency).OrderBy(g => g.Key, StringComparer.Ordinal).Select(g => new CurrencyAmountResponse(g.Key, g.Sum(d => d.OutstandingMinor)))],
+            debts.Select(d => d.StudentId).Distinct().Count(),
+            open.Sum(o => Math.Max(0, o.Remaining)),
+            ledger.Where(e => e.PackageId is null).Sum(e => e.Quantity),
+            open.Count(o => o.Remaining <= 1), // all of them: the list below shows only the first few
+            [.. open.Where(o => o.Remaining <= 1)
+                .Select(o => new PackageRunningLowResponse(o.StudentId, Name(names[o.StudentId]), Math.Max(0, o.Remaining)))
+                .OrderBy(o => o.RemainingLessons).ThenBy(o => o.Name, StringComparer.CurrentCulture).Take(RunningLowMax)],
+            [.. income]);
     }
 
     /// <summary>A period's money per currency (local days of the workspace) and the lessons consumed in it.</summary>

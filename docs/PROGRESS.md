@@ -7,10 +7,10 @@ This is the live status of the autonomous implementation loop ([ROADMAP.md](ROAD
 | Field | Value |
 |---|---|
 | Release | R2 — Teaching operations (R0 and R1 complete) |
-| Current phase | R2-P11 — Notifications |
-| Branch | `feature/r2-p11-notifications` (from `main` @ `d1ac8a8`) |
-| Workflow step | 5 — signed Codex review, then PR |
-| Next action | R2-P11 PR; then R2-P12 (dashboards) |
+| Current phase | R2-P12 — Dashboards (teacher + student) |
+| Branch | `feature/r2-p12-dashboards` (from `main` @ `939e059`) |
+| Workflow step | 3 — implementation and local checks |
+| Next action | R2-P12 checks, Codex review and PR; then R2-P13 (Release 2 hardening) |
 | Open blockers | None. User actions (optional): direct-push probe (R0-P8); remove the now redundant required `pr-gate` check (see Decisions) |
 
 ## Phase status
@@ -52,8 +52,8 @@ Status values: `not started`, `in progress`, `in review` (PR open), `merged`, `b
 | R2-P8 | Materials | merged | `feature/r2-p8-materials` | [#32](https://github.com/Andrej994x/classhub/pull/32) | `c9b3e36` | 3 rounds: 3 × P2 fixed (profile photos under the shared storage quota, Office packages in any entry order, subject filter); round 3 clean | green | Migration applied to local `ClassHubDb` |
 | R2-P9 | Homework | merged | `feature/r2-p9-homework` | [#33](https://github.com/Andrej994x/classhub/pull/33) | `6c45831` | 3 rounds: 2 × P2 fixed (archive racing an answer upload, stale form overwriting a newer answer); round 3 clean | green | Migration applied to local `ClassHubDb` |
 | R2-P10 | Packages & payments | merged | `feature/r2-p10-finance` | [#34](https://github.com/Andrej994x/classhub/pull/34) | `d1ac8a8` | 5 rounds: 1 × P1 + 6 × P2 fixed (lesson lock before attendance, correction bounds and waivers, safe validators, report counts corrections, paged history, closing under the student lock, typed currencies); round 5 clean | green | Migration applied to local `ClassHubDb` |
-| R2-P11 | Notifications | in progress | `feature/r2-p11-notifications` | | | | | Plan: student notifications by email (lesson scheduled/rescheduled/cancelled, reminders, new homework) with dedupe keys, reminders planned from the schedule, withdrawal on cancel/reschedule, a leased dispatcher (no double sends), recipients and preferences resolved at send time, preferences in the student portal |
-| R2-P12 | Dashboards (teacher + student) | not started | | | | | | |
+| R2-P11 | Notifications | merged | `feature/r2-p11-notifications` | [#35](https://github.com/Andrej994x/classhub/pull/35) | `939e059` | 15 rounds: 1 × P1 + 16 × P2 fixed (keys per change, series announcements and endings, paged reminder planning, reminder replacement rules, READCOMMITTEDLOCK, re-added students, removed students told as they knew it, last-hour rule at send time, told-per-series, preference save race, horizon series, cancellations of lessons known without our email, send time per notice, kept series lessons named); round 15 clean | green after 2 CI fixes (oldest-first multi-batch dispatch; a test backlog) | Migration applied to local `ClassHubDb` |
+| R2-P12 | Dashboards (teacher + student) | in progress | `feature/r2-p12-dashboards` | | | | | Plan: teaching numbers for the teacher (lessons in the next 7 days, active students, debts per currency, lessons left and running low, lessons without a package, income per month) under the lessons/students/finance read permissions; the student portal shows their own next and past lessons with attendance and shared summaries; isolation tests |
 | R2-P13 | Release 2 hardening | not started | | | | | | |
 
 Release 3 and Beta are listed in [ROADMAP.md](ROADMAP.md) section D. They are added to this table when Release 2 is complete.

@@ -93,6 +93,32 @@
       "table": "Show as a table",
       "day": "Day",
       "none": "No visits in this period yet."
+    },
+    "teaching": {
+      "title": "Teaching",
+      "lessonsAhead": "Lessons in the next 7 days",
+      "lessonsAheadHint": "Scheduled, not over yet",
+      "activeStudents": "Active students",
+      "remainingLessons": "Lessons left in packages",
+      "runningLowCount_one": "{{count}} student running low",
+      "runningLowCount_other": "{{count}} students running low",
+      "unpaidLessons": "Lessons without a package",
+      "unpaidLessonsHint": "Held, not covered by a package",
+      "nextLessons": "Next lessons",
+      "nextLessonsLead": "The first five of the next 7 days.",
+      "noLessons": "No lessons in the next 7 days.",
+      "owed": "Students owe",
+      "owedLead": "Unpaid amounts now, per currency.",
+      "nothingOwed": "Nobody owes you anything.",
+      "studentsOwing_one": "{{count}} student",
+      "studentsOwing_other": "{{count}} students",
+      "runningLow": "Packages running low",
+      "lessonsLeft_one": "{{count}} lesson left",
+      "lessonsLeft_other": "{{count}} lessons left",
+      "income": "Payments received",
+      "incomeLead": "Your income from lessons, by the day it was paid (not your ClassHub subscription).",
+      "noIncome": "No payments recorded in the last 6 months.",
+      "month": "Month"
     }
   },
   "student": {
@@ -1281,7 +1307,6 @@
     "as": "You are {{name}}",
     "allTeachers": "All teachers",
     "subjects": "Subjects",
-    "lessonsTitle": "Lessons",
     "invitation": {
       "title": "Invitation to ClassHub",
       "lead": "{{teacher}} invites {{name}} to their own ClassHub account.",
@@ -1308,6 +1333,15 @@
       "title": "Materials",
       "none": "Your teacher has not shared materials with you yet.",
       "download": "Download {{title}}"
+    },
+    "lessons": {
+      "next": "Next lesson",
+      "later": "After that",
+      "join": "Join the lesson",
+      "past": "Past lessons",
+      "noneHeld": "No lessons held yet.",
+      "attendance": "You attended {{present}} of {{held}} held lessons (absent: {{absent}}, excused: {{excused}}).",
+      "notRecorded": "Not recorded yet"
     }
   },
   "lessons": {

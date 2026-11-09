@@ -93,6 +93,32 @@
       "table": "Прикажи како табела",
       "day": "Ден",
       "none": "Сè уште нема посети во овој период."
+    },
+    "teaching": {
+      "title": "Настава",
+      "lessonsAhead": "Часови во наредните 7 дена",
+      "lessonsAheadHint": "Закажани, уште не завршени",
+      "activeStudents": "Активни ученици",
+      "remainingLessons": "Преостанати часови од пакети",
+      "runningLowCount_one": "{{count}} ученик при крај на пакетот",
+      "runningLowCount_other": "{{count}} ученици при крај на пакетот",
+      "unpaidLessons": "Часови без пакет",
+      "unpaidLessonsHint": "Одржани, непокриени со пакет",
+      "nextLessons": "Следни часови",
+      "nextLessonsLead": "Првите пет во наредните 7 дена.",
+      "noLessons": "Нема часови во наредните 7 дена.",
+      "owed": "Ученици должат",
+      "owedLead": "Неплатени износи сега, по валута.",
+      "nothingOwed": "Никој не ви должи.",
+      "studentsOwing_one": "{{count}} ученик",
+      "studentsOwing_other": "{{count}} ученици",
+      "runningLow": "Пакети при крај",
+      "lessonsLeft_one": "уште {{count}} час",
+      "lessonsLeft_other": "уште {{count}} часа",
+      "income": "Примени уплати",
+      "incomeLead": "Вашиот приход од часови, според денот на уплатата (не претплатата за ClassHub).",
+      "noIncome": "Нема евидентирани уплати во последните 6 месеци.",
+      "month": "Месец"
     }
   },
   "student": {
@@ -1281,7 +1307,6 @@
     "as": "Вие сте {{name}}",
     "allTeachers": "Сите наставници",
     "subjects": "Предмети",
-    "lessonsTitle": "Часови",
     "invitation": {
       "title": "Покана за ClassHub",
       "lead": "{{teacher}} го/ја поканува {{name}} на сопствена ClassHub сметка.",
@@ -1308,6 +1333,15 @@
       "title": "Материјали",
       "none": "Наставникот сè уште не споделил материјали со вас.",
       "download": "Преземи {{title}}"
+    },
+    "lessons": {
+      "next": "Следен час",
+      "later": "Потоа",
+      "join": "Приклучи се на часот",
+      "past": "Претходни часови",
+      "noneHeld": "Сè уште нема одржани часови.",
+      "attendance": "Присуствувавте на {{present}} од {{held}} одржани часови (отсуства: {{absent}}, оправдани: {{excused}}).",
+      "notRecorded": "Сè уште не е евидентирано"
     }
   },
   "lessons": {

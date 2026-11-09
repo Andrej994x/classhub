@@ -288,6 +288,14 @@ export function fakeApi({ me = null as FakeMe | null, extra = [] as Handler[] } 
     // Homework (R2-P9): none by default, for the portal and for a lesson.
     if (route === `GET /api/student/w/${WORKSPACE_ID}/homework`) return state.me ? json(200, []) : problem(401, 'UNAUTHORIZED');
     if (route === `GET /api/w/${WORKSPACE_ID}/homework`) return json(200, { items: [], total: 0, page: 1, pageSize: 20 });
+    // Dashboards (R2-P12): nothing ahead, no money, no lessons by default.
+    if (route === `GET /api/w/${WORKSPACE_ID}/dashboard/teaching`) {
+      const income = Array.from({ length: 6 }, (_, i) => ({ month: `2026-${String(6 + i).padStart(2, '0')}`, received: [] }));
+      return json(200, { lessons: { next7Days: 0, next: [] }, activeStudents: 0, finance: { outstanding: [], studentsOwing: 0, remainingLessons: 0, unpaidLessons: 0, studentsRunningLow: 0, runningLow: [], income } });
+    }
+    if (route === `GET /api/student/w/${WORKSPACE_ID}/lessons`) {
+      return state.me ? json(200, { upcoming: [], past: [], attendance: { held: 0, present: 0, absent: 0, excused: 0 } }) : problem(401, 'UNAUTHORIZED');
+    }
     // Finance (R2-P10): no records by default on a student page.
     const financeOf = /^GET \/api\/w\/[^/]+\/finance\/students\/([^/]+)$/.exec(route);
     if (financeOf) return json(200, { studentId: financeOf[1], balances: [], packages: [], unpaidLessons: 0, entries: [], historyTotal: 0, historyPage: 1, historyPageSize: 50 });

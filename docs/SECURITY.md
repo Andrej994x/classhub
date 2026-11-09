@@ -88,6 +88,12 @@ ASP.NET Core Identity with cookie sessions. See [ARCHITECTURE.md](ARCHITECTURE.m
 - Names, phones and guardian contacts are redacted in logs.
 - No duplicates by email within a workspace (unique index) and no limit overrun under parallel requests (intake lock; tested).
 
+## Dashboards (R2-P12)
+
+- The teacher's teaching numbers need the lessons, students and finance read permissions together. Every number comes from the tenant-filtered contracts of the current workspace; another teacher (or a student) reaching the route gets the cross-tenant 404.
+- The student's lessons come only from their own participations under `StudentSelf`. The response has no private note and no other participants, and the meeting link only while the lesson is ahead. Another workspace's portal route is 404.
+- Money is shown per currency only and is the teacher's own income from lessons (recorded payments), kept apart from ClassHub's subscription revenue.
+
 ## Notifications (R2-P11)
 
 - A notification goes only to the student's own address (their linked account, otherwise the email on their record), resolved when it is sent; archived students and students without an address get nothing. Emails contain the teacher's name, the lesson's title and time or the homework's title and due date, and a portal link only for account holders.

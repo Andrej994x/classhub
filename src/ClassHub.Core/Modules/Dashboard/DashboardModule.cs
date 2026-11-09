@@ -1,8 +1,11 @@
 using ClassHub.Core.Infrastructure.Web;
 using ClassHub.Core.Modules.DiagnosticTests.Contracts;
+using ClassHub.Core.Modules.Finance.Contracts;
 using ClassHub.Core.Modules.Leads.Contracts;
+using ClassHub.Core.Modules.Lessons.Contracts;
 using ClassHub.Core.Modules.Offers.Contracts;
 using ClassHub.Core.Modules.Sites.Contracts;
+using ClassHub.Core.Modules.Students.Contracts;
 using ClassHub.Core.Modules.Teachers.Contracts;
 using ClassHub.Core.Modules.Workspaces;
 using ClassHub.Core.SharedKernel.Errors;
@@ -21,14 +24,58 @@ namespace ClassHub.Core.Modules.Dashboard;
 /// </summary>
 public sealed class DashboardModule : IModule
 {
-    public void AddServices(IServiceCollection services, IConfiguration configuration) => services.AddScoped<DashboardService>();
+    public void AddServices(IServiceCollection services, IConfiguration configuration)
+    {
+        services.AddScoped<DashboardService>();
+        services.AddScoped<TeachingDashboardService>();
+    }
 
-    public void MapEndpoints(IEndpointRouteBuilder endpoints) =>
-        endpoints.MapGroup(WorkspacesModule.WorkspaceRoute).WithTags("Dashboard").RequireAntiforgeryHeader()
-            .MapGet("/dashboard", async (int? days, DashboardService service, CancellationToken ct) => TypedResults.Ok(await service.GetAsync(days ?? 30, ct)))
+    public void MapEndpoints(IEndpointRouteBuilder endpoints)
+    {
+        var dashboard = endpoints.MapGroup(WorkspacesModule.WorkspaceRoute).WithTags("Dashboard").RequireAntiforgeryHeader();
+        dashboard.MapGet("/dashboard", async (int? days, DashboardService service, CancellationToken ct) => TypedResults.Ok(await service.GetAsync(days ?? 30, ct)))
             .RequireAuthorization(WorkspacePolicies.Read)
             .WithName("GetDashboard")
             .WithSummary("Leads, tests, page visits, offers, onboarding and the conversion funnel for the last 7, 30 or 90 days.");
+
+        // R2-P12: lessons, students and money, each under its own read permission.
+        dashboard.MapGet("/dashboard/teaching", async (TeachingDashboardService service, CancellationToken ct) => TypedResults.Ok(await service.GetAsync(ct)))
+            .RequireAuthorization(
+                WorkspacePolicies.For(WorkspacePermissions.LessonsRead),
+                WorkspacePolicies.For(WorkspacePermissions.StudentsRead),
+                WorkspacePolicies.For(WorkspacePermissions.FinanceRead))
+            .WithName("GetTeachingDashboard")
+            .WithSummary("Lessons of the next 7 days, active students, what students owe, lessons left in packages and payments received per month.");
+    }
+}
+
+/// <summary>A lesson ahead, with its students' names (only this workspace's students).</summary>
+public sealed record DashboardLesson(Guid Id, string Title, DateTime StartUtc, DateTime EndUtc, string TimeZone, LessonKind Kind, IReadOnlyList<string> Students);
+
+/// <summary>The scheduled lessons not over yet that start within the next 7 days: how many, and the first five.</summary>
+public sealed record DashboardLessons(int Next7Days, IReadOnlyList<DashboardLesson> Next);
+
+/// <summary>The teacher's teaching numbers (R2-P12). Money is the teacher's own (recorded payments), per currency.</summary>
+public sealed record TeachingDashboardResponse(DashboardLessons Lessons, int ActiveStudents, FinanceSnapshotResponse Finance);
+
+internal sealed class TeachingDashboardService(ILessonOutlook lessons, IStudentLookup students, IFinanceStats finance, TimeProvider clock)
+{
+    public const int NextLessons = 5;
+    public const int IncomeMonths = 6;
+
+    public async Task<TeachingDashboardResponse> GetAsync(CancellationToken cancellationToken)
+    {
+        var now = clock.GetUtcNow().UtcDateTime;
+        var ahead = await lessons.AheadAsync(now, now.AddDays(7), NextLessons, cancellationToken);
+        var names = await students.FindAsync(ahead.First.SelectMany(l => l.StudentIds).ToHashSet(), cancellationToken);
+        var next = ahead.First.Select(l => new DashboardLesson(l.Id, l.Title, l.StartUtc, l.EndUtc, l.TimeZone, l.Kind,
+            [.. l.StudentIds.Where(names.ContainsKey).Select(id => names[id]).Select(s => string.Join(' ', new[] { s.FirstName, s.LastName }.Where(p => !string.IsNullOrWhiteSpace(p))))
+                .Order(StringComparer.CurrentCulture)]));
+        return new TeachingDashboardResponse(
+            new DashboardLessons(ahead.Count, [.. next]),
+            await students.CountActiveAsync(cancellationToken),
+            await finance.SnapshotAsync(IncomeMonths, cancellationToken));
+    }
 }
 
 public sealed record DashboardResponse(
