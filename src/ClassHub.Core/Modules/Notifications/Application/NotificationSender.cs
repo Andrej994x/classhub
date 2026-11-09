@@ -120,6 +120,12 @@ internal sealed class NotificationSender(
 
             content = new NotificationContent(teacher, contact.FirstName, next.Title, NotificationRules.LocalTime(next.StartUtc, next.TimeZone, locale), null, portal);
         }
+        else if (n.Kind == NotificationKind.SeriesEnded)
+        {
+            // Named as the series' first removed lesson was (it is gone).
+            content = new NotificationContent(teacher, contact.FirstName, n.LessonTitle ?? string.Empty,
+                NotificationRules.LocalTime(n.LessonStartUtc!.Value, n.LessonTimeZone!, locale), null, portal);
+        }
         else if (n.Kind == NotificationKind.LessonCancelled)
         {
             // Told unless it is no longer true: the student is (again) in the lesson and it is still scheduled. Also when

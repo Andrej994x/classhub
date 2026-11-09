@@ -200,13 +200,41 @@ public sealed class NotificationTests(ClassHubApiFixture fixture)
             new { fromDate = tomorrow, version = series.Series.Version }));
         await RunAsync(remindAt.AddMinutes(1));
 
-        // Told it is off: that first lesson (removed, named as it was); the others were never announced one by one.
+        // Told it is off: the reminded first lesson (removed, named as it was), and once that the series' lessons are off.
         var cancelled = await fixture.WaitForEmailAsync(ana.Email!, "notify.lesson-cancelled", since);
         cancelled.Subject.ShouldContain("Англиски");
+        var ended = await fixture.WaitForEmailAsync(ana.Email!, "notify.series-ended", since);
+        ended.TextBody.ShouldContain(NotificationRules.LocalTime(first, "Europe/Skopje", "mk"));
         await Task.Delay(500, Ct); // the outbox delivers anything left
-        (await EmailsAsync(ana.Email!, "notify.lesson-cancelled", since)).ShouldBe(1);
+        (await EmailsAsync(ana.Email!, "notify.lesson-cancelled", since)).ShouldBe(1); // not one per removed lesson
+        (await EmailsAsync(ana.Email!, "notify.series-ended", since)).ShouldBe(1);
         (await EmailsAsync(ana.Email!, "notify.series-scheduled", since)).ShouldBe(1);
         (await EmailsAsync(ana.Email!, "notify.lesson-reminder", since)).ShouldBe(1);
+    }
+
+    [Fact]
+    public async Task A_lesson_of_an_announced_series_is_told_when_cancelled()
+    {
+        using var teacher = await fixture.CreateTeacherAsync();
+        var ana = await StudentAsync(teacher, "Ана", ApiTestExtensions.UniqueEmail("ana"));
+        var since = DateTime.UtcNow.AddSeconds(-1);
+        var tomorrow = DateOnly.FromDateTime(TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, Skopje)).AddDays(1);
+        using var created = await teacher.Client.PostAsync($"/api/w/{teacher.WorkspaceId}/lesson-series", new
+        {
+            kind = "Individual", studentId = ana.Id, title = "Француски", startDate = tomorrow, startTime = "17:00:00", durationMinutes = 60, intervalWeeks = 1, count = 3, mode = "Online",
+        });
+        created.StatusCode.ShouldBe(HttpStatusCode.Created);
+        await RunAsync(DateTime.UtcNow);
+        await fixture.WaitForEmailAsync(ana.Email!, "notify.series-scheduled", since);
+
+        // The third lesson is cancelled (no reminder for it yet): Ana knew about it from the series announcement.
+        var lessons = await teacher.Client.GetJsonAsync<List<LessonResponse>>($"/api/w/{teacher.WorkspaceId}/lessons?from={tomorrow:yyyy-MM-dd}&to={tomorrow.AddDays(20):yyyy-MM-dd}");
+        var third = lessons.OrderBy(l => l.StartUtc).Last();
+        (await teacher.Client.PostAsync($"/api/w/{teacher.WorkspaceId}/lessons/{third.Id}/cancel", new { version = third.Version, reason = "Празник" })).StatusCode.ShouldBe(HttpStatusCode.OK);
+        await RunAsync(DateTime.UtcNow);
+
+        var cancelled = await fixture.WaitForEmailAsync(ana.Email!, "notify.lesson-cancelled", since);
+        cancelled.TextBody.ShouldContain(NotificationRules.LocalTime(third.StartUtc, "Europe/Skopje", "mk"));
     }
 
     [Fact]

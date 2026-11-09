@@ -67,15 +67,64 @@ internal sealed class NotificationScheduler(ClassHubDbContext db, ITenantContext
         foreach (var studentId in studentIds.Distinct())
         {
             Withdraw(await PendingAsync(lesson.LessonId, studentId, cancellationToken), "cancelled");
-            // Only a student who was told about this lesson (announcement, reschedule or reminder) needs to hear it is off.
-            var told = await db.Set<Notification>().AnyAsync(n => n.LessonId == lesson.LessonId && n.StudentId == studentId && n.Status == NotificationStatus.Sent
-                && n.Kind != NotificationKind.LessonCancelled, cancellationToken);
-            if (told)
+            // Only a student who was told about this lesson (announcement, reschedule or reminder) or about its series needs
+            // to hear it is off.
+            if (await ToldAboutLessonAsync(lesson.LessonId, studentId, cancellationToken)
+                || (lesson.SeriesId is { } seriesId && await ToldAboutSeriesAsync(seriesId, studentId, cancellationToken)))
             {
                 await AddLessonAsync(NotificationKind.LessonCancelled, lesson, studentId, cancellationToken);
             }
         }
     }
+
+    public async Task SeriesEndedAsync(Guid seriesId, IReadOnlyList<(LessonNotice Lesson, IReadOnlyCollection<Guid> StudentIds)> removed, CancellationToken cancellationToken)
+    {
+        if (removed.Count == 0)
+        {
+            return;
+        }
+
+        foreach (var (lesson, studentIds) in removed)
+        {
+            foreach (var studentId in studentIds.Distinct())
+            {
+                Withdraw(await PendingAsync(lesson.LessonId, studentId, cancellationToken), "cancelled");
+                // Reminded about this very lesson: told that it is off.
+                if (await ToldAboutLessonAsync(lesson.LessonId, studentId, cancellationToken))
+                {
+                    await AddLessonAsync(NotificationKind.LessonCancelled, lesson, studentId, cancellationToken);
+                }
+            }
+        }
+
+        // Told about the series: one email that its lessons are off from the first removed one on.
+        var first = removed.MinBy(r => r.Lesson.StartUtc).Lesson;
+        foreach (var studentId in removed.SelectMany(r => r.StudentIds).Distinct())
+        {
+            if (await ToldAboutSeriesAsync(seriesId, studentId, cancellationToken))
+            {
+                await AddAsync(new Notification
+                {
+                    Kind = NotificationKind.SeriesEnded,
+                    DedupeKey = NotificationRules.LessonKey(NotificationKind.SeriesEnded, first.LessonId, studentId, first.Revision),
+                    StudentId = studentId,
+                    LessonId = first.LessonId,
+                    SeriesId = seriesId,
+                    LessonStartUtc = first.StartUtc,
+                    LessonTitle = Title(first.Title),
+                    LessonTimeZone = first.TimeZone,
+                }, cancellationToken);
+            }
+        }
+    }
+
+    private Task<bool> ToldAboutLessonAsync(Guid lessonId, Guid studentId, CancellationToken cancellationToken) =>
+        db.Set<Notification>().AnyAsync(n => n.LessonId == lessonId && n.StudentId == studentId && n.Status == NotificationStatus.Sent
+            && n.Kind != NotificationKind.LessonCancelled && n.Kind != NotificationKind.SeriesScheduled && n.Kind != NotificationKind.SeriesEnded, cancellationToken);
+
+    private Task<bool> ToldAboutSeriesAsync(Guid seriesId, Guid studentId, CancellationToken cancellationToken) =>
+        db.Set<Notification>().AnyAsync(n => n.SeriesId == seriesId && n.StudentId == studentId && n.Status == NotificationStatus.Sent
+            && n.Kind == NotificationKind.SeriesScheduled, cancellationToken);
 
     public async Task LessonChangedQuietlyAsync(Guid lessonId, IReadOnlyCollection<Guid> studentIds, CancellationToken cancellationToken)
     {

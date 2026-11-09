@@ -382,7 +382,7 @@ internal sealed class LessonService(
 
     /// <summary>The lesson as notifications record it; its version (after the change) tells changes apart.</summary>
     internal static LessonNotice Notice(Lesson lesson, int? revision = null) =>
-        new(lesson.Id, revision ?? lesson.Version, lesson.Title, lesson.StartUtc, lesson.TimeZone);
+        new(lesson.Id, revision ?? lesson.Version, lesson.Title, lesson.StartUtc, lesson.TimeZone, lesson.SeriesId);
 
     private void Touch(Lesson lesson)
     {

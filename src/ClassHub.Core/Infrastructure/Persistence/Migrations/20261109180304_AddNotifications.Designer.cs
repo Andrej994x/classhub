@@ -12,7 +12,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace ClassHub.Core.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(ClassHubDbContext))]
-    [Migration("20261109173325_AddNotifications")]
+    [Migration("20261109180304_AddNotifications")]
     partial class AddNotifications
     {
         /// <inheritdoc />
@@ -2572,11 +2572,11 @@ namespace ClassHub.Core.Infrastructure.Persistence.Migrations
 
                     b.ToTable("Notifications", null, t =>
                         {
-                            t.HasCheckConstraint("CK_Notifications_Kind", "[Kind] BETWEEN 1 AND 6");
+                            t.HasCheckConstraint("CK_Notifications_Kind", "[Kind] BETWEEN 1 AND 7");
 
                             t.HasCheckConstraint("CK_Notifications_Sent", "([Status] = 2 AND [SentAtUtc] IS NOT NULL) OR ([Status] <> 2 AND [SentAtUtc] IS NULL)");
 
-                            t.HasCheckConstraint("CK_Notifications_Series", "([Kind] = 6 AND [SeriesId] IS NOT NULL) OR ([Kind] <> 6 AND [SeriesId] IS NULL)");
+                            t.HasCheckConstraint("CK_Notifications_Series", "([Kind] IN (6, 7) AND [SeriesId] IS NOT NULL) OR ([Kind] NOT IN (6, 7) AND [SeriesId] IS NULL)");
 
                             t.HasCheckConstraint("CK_Notifications_Status", "[Status] BETWEEN 1 AND 5");
 

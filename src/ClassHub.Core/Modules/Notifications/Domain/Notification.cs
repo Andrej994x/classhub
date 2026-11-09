@@ -13,6 +13,9 @@ public enum NotificationKind
 
     /// <summary>Recurring lessons were scheduled (one email for the series; each lesson then gets its reminder).</summary>
     SeriesScheduled = 6,
+
+    /// <summary>A series' remaining lessons were removed (one email, to students told about the series).</summary>
+    SeriesEnded = 7,
 }
 
 public enum NotificationStatus
@@ -172,6 +175,7 @@ public static class NotificationRules
         NotificationKind.LessonReminder => "lesson-reminder",
         NotificationKind.HomeworkAssigned => "homework-assigned",
         NotificationKind.SeriesScheduled => "series-scheduled",
+        NotificationKind.SeriesEnded => "series-ended",
         _ => throw new ArgumentOutOfRangeException(nameof(kind)),
     };
 }

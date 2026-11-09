@@ -227,12 +227,10 @@ internal sealed class LessonSeriesService(
             .ToListAsync(cancellationToken);
         var ids = lessons.Select(l => l.Id).ToList();
         var removedParticipants = await db.Set<LessonParticipant>().Where(p => ids.Contains(p.LessonId)).ToListAsync(cancellationToken);
-        foreach (var lesson in lessons)
-        {
-            // Pending notices of the removed lesson are withdrawn; students already told about it hear it is off.
-            await notifications.LessonCancelledAsync(LessonService.Notice(lesson, lesson.Version + 1),
-                [.. removedParticipants.Where(p => p.LessonId == lesson.Id).Select(p => p.StudentId)], cancellationToken);
-        }
+        // Pending notices of the removed lessons are withdrawn; students told about them or the series hear they are off.
+        await notifications.SeriesEndedAsync(series.Id,
+            [.. lessons.Select(l => (LessonService.Notice(l, l.Version + 1), (IReadOnlyCollection<Guid>)[.. removedParticipants.Where(p => p.LessonId == l.Id).Select(p => p.StudentId)]))],
+            cancellationToken);
 
         db.Set<LessonParticipant>().RemoveRange(removedParticipants);
         db.Set<Lesson>().RemoveRange(lessons);
