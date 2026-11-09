@@ -88,6 +88,9 @@ function financeApi() {
         entry({ id: 'pay1', kind: 'Payment', amountMinor: 200_000, currency: 'MKD', paidOn: '2026-11-02', method: 'Cash', reversible: true }),
         entry({ id: 'l1', kind: 'LessonConsumed', lessons: 1, packageId: 'p1', packageTitle: 'Пакет 4 часа', lessonTitle: 'Равенки', reversible: true }),
       ],
+      historyTotal: 2,
+      historyPage: 1,
+      historyPageSize: 50,
     },
   };
   const handler = (call: FakeCall) => {
@@ -99,7 +102,10 @@ function financeApi() {
         { id: 'o2', kind: 'SingleLesson', title: 'Неактивна', priceMinor: 1000, currency: 'MKD', lessonCount: null, isActive: false, archived: false },
       ]);
     }
-    if (call.path === `${FINANCE}/students/s1`) return json(200, state.finance);
+    if (call.path === `${FINANCE}/students/s1`) {
+      const page = Number(new URLSearchParams(call.search).get('historyPage') ?? '1');
+      return json(200, page === 1 ? state.finance : { ...state.finance, historyPage: page, entries: [entry({ id: 'old', kind: 'Payment', amountMinor: 100, currency: 'MKD', paidOn: '2025-01-10', method: 'Cash', reversible: true })] });
+    }
     if (call.path === `${FINANCE}/students/s1/packages`) {
       state.finance = { ...state.finance, packages: [pkg({ id: 'p2', title: 'Пакет математика', usedLessons: 0, remainingLessons: 4 }), ...state.finance.packages] };
       return json(200, state.finance);
@@ -157,6 +163,21 @@ describe('finance on the student page', () => {
     const history = screen.getByRole('list', { name: 'Историја' });
     expect(within(history).getByText('Уплата')).toBeInTheDocument();
     expect(within(history).getByText('Одржан час')).toBeInTheDocument();
+  });
+
+  it('pages through a long history so older entries stay reachable', async () => {
+    const user = userEvent.setup();
+    const { api, state } = financeApi();
+    state.finance = { ...state.finance, historyTotal: 60 };
+    await renderRoute(`/app/w/${WORKSPACE_ID}/students/s1`);
+
+    const pager = await screen.findByRole('navigation', { name: 'Страници од историјата' });
+    expect(within(pager).getByText('Страница 1 од 2')).toBeInTheDocument();
+    await user.click(within(pager).getByRole('button', { name: 'Следна' }));
+
+    await expect.poll(() => api.to(`${FINANCE}/students/s1`).some((c) => new URLSearchParams(c.search).get('historyPage') === '2')).toBe(true);
+    expect(await within(screen.getByRole('list', { name: 'Историја' })).findByText(/1,00/)).toBeInTheDocument();
+    expect(screen.getByText('Страница 2 од 2')).toBeInTheDocument();
   });
 
   it('assigns a package from an active offer', async () => {

@@ -1239,6 +1239,7 @@
     },
     "history": {
       "title": "History",
+      "pages": "History pages",
       "lessons_one": "{{count}} lesson",
       "lessons_other": "{{count}} lessons",
       "kinds": {

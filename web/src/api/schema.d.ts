@@ -416,6 +416,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /** Balances per currency, packages and one page of the history (newest first). */
         get: operations["GetStudentFinance"];
         put?: never;
         post?: never;
@@ -3770,6 +3771,12 @@ export interface components {
             /** Format: int32 */
             unpaidLessons: number | string;
             entries: components["schemas"]["FinanceEntryResponse"][];
+            /** Format: int32 */
+            historyTotal: number | string;
+            /** Format: int32 */
+            historyPage: number | string;
+            /** Format: int32 */
+            historyPageSize: number | string;
         };
         StudentFinanceSummary: {
             /** Format: uuid */
@@ -4842,7 +4849,10 @@ export interface operations {
     };
     GetStudentFinance: {
         parameters: {
-            query?: never;
+            query?: {
+                historyPage?: number | string;
+                historyPageSize?: number | string;
+            };
             header?: never;
             path: {
                 studentId: string;

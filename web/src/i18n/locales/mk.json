@@ -1239,6 +1239,7 @@
     },
     "history": {
       "title": "Историја",
+      "pages": "Страници од историјата",
       "lessons_one": "{{count}} час",
       "lessons_other": "{{count}} часа",
       "kinds": {

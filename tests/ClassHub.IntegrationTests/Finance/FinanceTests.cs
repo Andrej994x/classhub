@@ -358,6 +358,34 @@ public sealed class FinanceTests(ClassHubApiFixture fixture)
     }
 
     [Fact]
+    public async Task The_whole_history_stays_reachable_page_by_page()
+    {
+        using var teacher = await fixture.CreateTeacherAsync();
+        var ana = await StudentAsync(teacher, "Ана");
+        for (var i = 1; i <= 55; i++)
+        {
+            await PayAsync(teacher, ana.Id, new { amountMinor = i * 100, currency = "MKD", paidOn = "2026-11-01", method = "Cash" });
+        }
+
+        var first = await GetAsync(teacher, ana.Id);
+        first.HistoryTotal.ShouldBe(55);
+        first.Entries.Count.ShouldBe(50);
+        first.Entries[0].AmountMinor.ShouldBe(5_500); // newest first
+        var second = await teacher.Client.GetJsonAsync<StudentFinanceResponse>(Path(teacher, $"/students/{ana.Id}?historyPage=2"));
+        second.Entries.Count.ShouldBe(5);
+        var oldest = second.Entries[^1];
+        oldest.AmountMinor.ShouldBe(100);
+        first.Entries.Select(e => e.Id).Concat(second.Entries.Select(e => e.Id)).Distinct().Count().ShouldBe(55);
+
+        // The oldest payment can still be reversed.
+        oldest.Reversible.ShouldBeTrue();
+        (await ReadAsync<StudentFinanceResponse>(await teacher.Client.PostAsync(Path(teacher, $"/payments/{oldest.Id}/reverse"), new { reason = "Грешка" })))
+            .HistoryTotal.ShouldBe(56);
+        (await teacher.Client.GetAsync(Path(teacher, $"/students/{ana.Id}?historyPage=0"))).StatusCode.ShouldBe(HttpStatusCode.BadRequest);
+        (await teacher.Client.GetAsync(Path(teacher, $"/students/{ana.Id}?historyPageSize=500"))).StatusCode.ShouldBe(HttpStatusCode.BadRequest);
+    }
+
+    [Fact]
     public async Task The_ledger_is_append_only()
     {
         using var teacher = await fixture.CreateTeacherAsync();

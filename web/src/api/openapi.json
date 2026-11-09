@@ -1209,6 +1209,7 @@
         "tags": [
           "Finance"
         ],
+        "summary": "Balances per currency, packages and one page of the history (newest first).",
         "operationId": "GetStudentFinance",
         "parameters": [
           {
@@ -1218,6 +1219,30 @@
             "schema": {
               "type": "string",
               "format": "uuid"
+            }
+          },
+          {
+            "name": "historyPage",
+            "in": "query",
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          },
+          {
+            "name": "historyPageSize",
+            "in": "query",
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
             }
           },
           {
@@ -13860,7 +13885,10 @@
           "balances",
           "packages",
           "unpaidLessons",
-          "entries"
+          "entries",
+          "historyTotal",
+          "historyPage",
+          "historyPageSize"
         ],
         "type": "object",
         "properties": {
@@ -13893,6 +13921,30 @@
             "items": {
               "$ref": "#/components/schemas/FinanceEntryResponse"
             }
+          },
+          "historyTotal": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "historyPage": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "historyPageSize": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
           }
         }
       },

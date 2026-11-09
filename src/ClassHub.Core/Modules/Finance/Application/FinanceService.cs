@@ -30,11 +30,20 @@ internal sealed class FinanceService(
     IAuditLog audit,
     TimeProvider clock)
 {
-    private const int HistoryLimit = 200;
+    public const int HistoryPageSize = 50;
     private const long MaxAmountMinor = StudentPackage.MaxPriceMinor;
 
-    public async Task<StudentFinanceResponse> GetStudentAsync(Guid studentId, CancellationToken cancellationToken)
+    /// <summary>The student's balances, packages and one page of the history (changes answer with the first page).</summary>
+    public async Task<StudentFinanceResponse> GetStudentAsync(Guid studentId, CancellationToken cancellationToken) =>
+        await GetStudentAsync(studentId, 1, HistoryPageSize, cancellationToken);
+
+    public async Task<StudentFinanceResponse> GetStudentAsync(Guid studentId, int historyPage, int historyPageSize, CancellationToken cancellationToken)
     {
+        if (historyPage is < 1 or > 10_000 || historyPageSize is < 1 or > 100)
+        {
+            throw new BadRequestException("The history page must be 1 to 10000 and its size 1 to 100.");
+        }
+
         await RequireStudentAsync(studentId, cancellationToken);
         var packages = await db.Set<StudentPackage>().AsNoTracking().Where(p => p.StudentId == studentId).ToListAsync(cancellationToken);
         var ledger = await db.Set<LessonLedgerEntry>().AsNoTracking().Where(e => e.StudentId == studentId).ToListAsync(cancellationToken);
@@ -64,7 +73,10 @@ internal sealed class FinanceService(
             [.. Balances(packages, adjustments, payments)],
             [.. packages.OrderByDescending(p => p.CreatedAtUtc).Select(p => ToPackage(p, used.GetValueOrDefault(p.Id)))],
             ledger.Where(e => e.PackageId is null).Sum(e => e.Quantity),
-            [.. entries.OrderByDescending(e => e.OccurredAtUtc).ThenByDescending(e => e.Id).Take(HistoryLimit)]);
+            [.. entries.OrderByDescending(e => e.OccurredAtUtc).ThenByDescending(e => e.Id).Skip((historyPage - 1) * historyPageSize).Take(historyPageSize)],
+            entries.Count,
+            historyPage,
+            historyPageSize);
     }
 
     /// <summary>Assigns a package with its terms copied now: from an offer, or custom.</summary>

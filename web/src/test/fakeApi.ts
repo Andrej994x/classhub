@@ -288,7 +288,7 @@ export function fakeApi({ me = null as FakeMe | null, extra = [] as Handler[] } 
     if (route === `GET /api/w/${WORKSPACE_ID}/homework`) return json(200, { items: [], total: 0, page: 1, pageSize: 20 });
     // Finance (R2-P10): no records by default on a student page.
     const financeOf = /^GET \/api\/w\/[^/]+\/finance\/students\/([^/]+)$/.exec(route);
-    if (financeOf) return json(200, { studentId: financeOf[1], balances: [], packages: [], unpaidLessons: 0, entries: [] });
+    if (financeOf) return json(200, { studentId: financeOf[1], balances: [], packages: [], unpaidLessons: 0, entries: [], historyTotal: 0, historyPage: 1, historyPageSize: 50 });
     if (route === 'GET /api/me/workspaces') return state.me ? json(200, [{ id: WORKSPACE_ID, name: 'Мој работен простор', role: 'Owner' }]) : problem(401, 'UNAUTHORIZED');
     if (route === `GET /api/w/${WORKSPACE_ID}`) {
       return state.me

@@ -44,9 +44,11 @@ public sealed class FinanceModule : IModule
             .WithName("GetFinanceReport")
             .WithSummary("A period (local days, at most a year): packages sold, charged and received per currency, lessons consumed.");
 
-        finance.MapGet("/students/{studentId:guid}", async (Guid studentId, FinanceService service, CancellationToken ct) => TypedResults.Ok(await service.GetStudentAsync(studentId, ct)))
+        finance.MapGet("/students/{studentId:guid}", async (Guid studentId, int? historyPage, int? historyPageSize, FinanceService service, CancellationToken ct) =>
+                TypedResults.Ok(await service.GetStudentAsync(studentId, historyPage ?? 1, historyPageSize ?? FinanceService.HistoryPageSize, ct)))
             .RequireAuthorization(read)
-            .WithName("GetStudentFinance");
+            .WithName("GetStudentFinance")
+            .WithSummary("Balances per currency, packages and one page of the history (newest first).");
 
         finance.MapPost("/students/{studentId:guid}/packages", async (Guid studentId, AssignPackageRequest request, FinanceService service, CancellationToken ct) =>
                 TypedResults.Ok(await service.AssignPackageAsync(studentId, request, ct)))

@@ -14,14 +14,18 @@ export type PaymentMethod = (typeof PAYMENT_METHODS)[number];
 const keys = {
   all: (workspaceId: string) => ['w', workspaceId, 'finance'] as const,
   student: (workspaceId: string, studentId: string) => ['w', workspaceId, 'finance', 'student', studentId] as const,
+  studentPage: (workspaceId: string, studentId: string, page: number) => ['w', workspaceId, 'finance', 'student', studentId, page] as const,
   overview: (workspaceId: string) => ['w', workspaceId, 'finance', 'overview'] as const,
   report: (workspaceId: string, from: string, to: string) => ['w', workspaceId, 'finance', 'report', from, to] as const,
 };
 
-export function useStudentFinance(workspaceId: string, studentId: string) {
+/** The student's finance with one page of the history (50 entries, newest first). */
+export function useStudentFinance(workspaceId: string, studentId: string, historyPage = 1) {
   return useQuery({
-    queryKey: keys.student(workspaceId, studentId),
-    queryFn: async () => (await api.client.GET('/api/w/{workspaceId}/finance/students/{studentId}', { params: { path: { workspaceId, studentId } } })).data!,
+    queryKey: keys.studentPage(workspaceId, studentId, historyPage),
+    placeholderData: (previous) => previous,
+    queryFn: async () =>
+      (await api.client.GET('/api/w/{workspaceId}/finance/students/{studentId}', { params: { path: { workspaceId, studentId }, query: { historyPage } } })).data!,
   });
 }
 
@@ -47,8 +51,10 @@ function useFinanceMutation<TInput>(workspaceId: string, studentId: string, run:
   return useMutation({
     mutationFn: run,
     onSuccess: async (finance) => {
-      queryClient.setQueryData(keys.student(workspaceId, studentId), finance);
+      // The answer is the first page; every other page of this student is refetched.
+      queryClient.setQueryData(keys.studentPage(workspaceId, studentId, 1), finance);
       await Promise.all([
+        queryClient.invalidateQueries({ queryKey: keys.student(workspaceId, studentId), predicate: (q) => q.queryKey[5] !== 1 }),
         queryClient.invalidateQueries({ queryKey: keys.overview(workspaceId) }),
         queryClient.invalidateQueries({ queryKey: [...keys.all(workspaceId), 'report'] }),
       ]);

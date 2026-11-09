@@ -52,12 +52,16 @@ public sealed record FinanceEntryResponse(
     string? Note,
     bool Reversible);
 
+/// <summary>The student's finance with one page of the history (newest first; every entry stays reachable).</summary>
 public sealed record StudentFinanceResponse(
     Guid StudentId,
     IReadOnlyList<CurrencyBalanceResponse> Balances,
     IReadOnlyList<PackageResponse> Packages,
     int UnpaidLessons,
-    IReadOnlyList<FinanceEntryResponse> Entries);
+    IReadOnlyList<FinanceEntryResponse> Entries,
+    int HistoryTotal,
+    int HistoryPage,
+    int HistoryPageSize);
 
 /// <summary>A student in the finance overview: what they owe per currency and the lessons left.</summary>
 public sealed record StudentFinanceSummary(Guid StudentId, string Name, bool Archived, IReadOnlyList<CurrencyBalanceResponse> Balances, int RemainingLessons, int UnpaidLessons);

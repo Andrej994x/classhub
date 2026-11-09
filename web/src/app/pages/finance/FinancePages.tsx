@@ -74,7 +74,8 @@ function Balances({ balances }: { balances: StudentFinance['balances'] }) {
 /** On the student page: what the student owes, their packages, payments and corrections, and the history (R2-P10). */
 export function FinanceCard({ workspaceId, studentId, archived }: { workspaceId: string; studentId: string; archived: boolean }) {
   const { t } = useTranslation();
-  const finance = useStudentFinance(workspaceId, studentId);
+  const [historyPage, setHistoryPage] = useState(1);
+  const finance = useStudentFinance(workspaceId, studentId, historyPage);
   const [action, setAction] = useState<'package' | 'payment' | 'adjustment' | null>(null);
 
   return (
@@ -110,6 +111,11 @@ export function FinanceCard({ workspaceId, studentId, archived }: { workspaceId:
             {action === 'payment' && <PaymentForm workspaceId={workspaceId} studentId={studentId} finance={finance.data} onDone={() => setAction(null)} />}
             {action === 'adjustment' && <AdjustmentForm workspaceId={workspaceId} studentId={studentId} finance={finance.data} onDone={() => setAction(null)} />}
             <History workspaceId={workspaceId} studentId={studentId} entries={finance.data.entries} />
+            <HistoryPages
+              page={historyPage}
+              pages={Math.max(1, Math.ceil((num(finance.data.historyTotal) ?? 0) / (num(finance.data.historyPageSize) ?? 50)))}
+              onPage={setHistoryPage}
+            />
           </>
         )}
       </CardContent>
@@ -399,6 +405,22 @@ function AdjustmentForm({ workspaceId, studentId, finance, onDone }: { workspace
         {t('finance.saveCorrection')}
       </Button>
     </form>
+  );
+}
+
+function HistoryPages({ page, pages, onPage }: { page: number; pages: number; onPage: (page: number) => void }) {
+  const { t } = useTranslation();
+  if (pages <= 1) return null;
+  return (
+    <nav aria-label={t('finance.history.pages')} className="flex items-center gap-2">
+      <Button type="button" size="sm" variant="outline" disabled={page <= 1} onClick={() => onPage(page - 1)}>
+        {t('leads.previous')}
+      </Button>
+      <span className="text-sm">{t('leads.pageOf', { page, pages })}</span>
+      <Button type="button" size="sm" variant="outline" disabled={page >= pages} onClick={() => onPage(page + 1)}>
+        {t('leads.next')}
+      </Button>
+    </nav>
   );
 }
 
