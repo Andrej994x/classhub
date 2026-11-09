@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '../api/client.ts';
 import type { components } from '../api/schema';
 
@@ -10,6 +10,7 @@ export type TimeOffItem = components['schemas']['TimeOffItem'];
 const keys = {
   settings: (workspaceId: string) => ['w', workspaceId, 'booking', 'settings'] as const,
   requests: (workspaceId: string) => ['w', workspaceId, 'booking', 'requests'] as const,
+  page: (workspaceId: string, page: number) => ['w', workspaceId, 'booking', 'requests', page] as const,
 };
 
 export function useBookingSettings(workspaceId: string) {
@@ -29,10 +30,13 @@ export function useSaveBookingSettings(workspaceId: string) {
   });
 }
 
-export function useBookingRequests(workspaceId: string) {
+/** One page of requests (pending first, then by time). */
+export function useBookingRequests(workspaceId: string, page: number) {
   return useQuery({
-    queryKey: keys.requests(workspaceId),
-    queryFn: async () => (await api.client.GET('/api/w/{workspaceId}/booking/requests', { params: { path: { workspaceId } } })).data!,
+    queryKey: keys.page(workspaceId, page),
+    placeholderData: keepPreviousData,
+    queryFn: async () =>
+      (await api.client.GET('/api/w/{workspaceId}/booking/requests', { params: { path: { workspaceId }, query: { page, pageSize: 20 } } })).data!,
   });
 }
 

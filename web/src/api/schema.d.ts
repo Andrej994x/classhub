@@ -1936,6 +1936,15 @@ export interface components {
             version: null | number | string;
             reason: null | string;
         };
+        BookingRequestListResponse: {
+            items: components["schemas"]["BookingRequestResponse"][];
+            /** Format: int32 */
+            total: number | string;
+            /** Format: int32 */
+            page: number | string;
+            /** Format: int32 */
+            pageSize: number | string;
+        };
         BookingRequestResponse: {
             /** Format: uuid */
             id: string;
@@ -5115,6 +5124,8 @@ export interface operations {
         parameters: {
             query?: {
                 status?: string;
+                page?: number | string;
+                pageSize?: number | string;
             };
             header?: never;
             path: {
@@ -5130,7 +5141,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["BookingRequestResponse"][];
+                    "application/json": components["schemas"]["BookingRequestListResponse"];
                 };
             };
         };

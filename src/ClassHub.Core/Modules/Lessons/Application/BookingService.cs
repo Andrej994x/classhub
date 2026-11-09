@@ -27,6 +27,7 @@ internal sealed class BookingService(
     IWorkspaceNames names,
     ILeadConversion leads,
     ILeadStudents leadStudents,
+    LessonParticipants participants,
     IPublicSiteCache siteCache,
     IEmailOutbox outbox,
     TimeProvider clock)
@@ -82,8 +83,16 @@ internal sealed class BookingService(
         return await GetSettingsAsync(cancellationToken);
     }
 
-    public async Task<IReadOnlyList<BookingRequestResponse>> ListAsync(string? status, CancellationToken cancellationToken)
+    public const int DefaultPageSize = 50;
+    public const int MaxPageSize = 100;
+
+    public async Task<BookingRequestListResponse> ListAsync(string? status, int page, int pageSize, CancellationToken cancellationToken)
     {
+        if (page is < 1 or > 10_000 || pageSize is < 1 or > MaxPageSize)
+        {
+            throw new BadRequestException($"The page must be 1 to 10000 and the page size 1 to {MaxPageSize}.");
+        }
+
         var requests = db.Set<BookingRequest>().AsNoTracking();
         if (status is not null)
         {
@@ -93,7 +102,9 @@ internal sealed class BookingService(
             requests = requests.Where(r => r.Status == wanted);
         }
 
-        var list = await requests.OrderBy(r => r.Status).ThenBy(r => r.StartUtc).Take(200).ToListAsync(cancellationToken);
+        var total = await requests.CountAsync(cancellationToken);
+        var list = await requests.OrderBy(r => r.Status).ThenBy(r => r.StartUtc).ThenBy(r => r.Id)
+            .Skip((page - 1) * pageSize).Take(pageSize).ToListAsync(cancellationToken);
         var zone = await ZoneAsync(cancellationToken);
         var result = new List<BookingRequestResponse>(list.Count);
         foreach (var request in list)
@@ -101,7 +112,7 @@ internal sealed class BookingService(
             result.Add(await ToResponseAsync(request, zone, cancellationToken));
         }
 
-        return result;
+        return new BookingRequestListResponse(result, total, page, pageSize);
     }
 
     public async Task<BookingRequestResponse> GetAsync(Guid bookingId, CancellationToken cancellationToken) =>
@@ -128,6 +139,8 @@ internal sealed class BookingService(
 
         // In this transaction: a failed confirmation (conflict, plan limit, a parallel decision) converts nothing.
         var studentId = await leadStudents.EnsureStudentAsync(booking.LeadId, cancellationToken);
+        // The request may match an archived student: the same rule as any lesson (restore first) rolls everything back.
+        await participants.RequireAsync(LessonKind.Individual, studentId, null, cancellationToken);
         var lesson = new Lesson
         {
             Id = Guid.CreateVersion7(),

@@ -47,7 +47,7 @@ public sealed class BookingTests(ClassHubApiFixture fixture)
         await RequestAsync(visitor, site, slot.StartUtc, "ana@example.test");
         await RequestAsync(visitor, site, slot.StartUtc, "boris@example.test");
         (await FirstSlotAsync(visitor, site)).StartUtc.ShouldBe(slot.StartUtc);
-        var pending = await site.Teacher.Client.GetJsonAsync<List<BookingRequestResponse>>(site.Path("/requests?status=Pending"));
+        var pending = (await site.Teacher.Client.GetJsonAsync<BookingRequestListResponse>(site.Path("/requests?status=Pending"))).Items;
         pending.Count.ShouldBe(2);
         var ana = pending.Single(r => r.Email == "ana@example.test");
         ana.StartLocal.ShouldBe(Tomorrow.ToDateTime(new TimeOnly(9, 0)));
@@ -85,7 +85,7 @@ public sealed class BookingTests(ClassHubApiFixture fixture)
             await RequestAsync(visitor, site, slot.StartUtc, email);
         }
 
-        var pending = await site.Teacher.Client.GetJsonAsync<List<BookingRequestResponse>>(site.Path("/requests?status=Pending"));
+        var pending = (await site.Teacher.Client.GetJsonAsync<BookingRequestListResponse>(site.Path("/requests?status=Pending"))).Items;
         // Each of the three twice: the same request and different requests for the same time race each other.
         var responses = await Task.WhenAll(pending.Concat(pending).Select(r => site.Teacher.Client.PostAsync(site.Path($"/requests/{r.Id}/confirm"), new { version = r.Version })));
 
@@ -106,7 +106,7 @@ public sealed class BookingTests(ClassHubApiFixture fixture)
         using var visitor = fixture.Factory.CreateClient();
         var slot = await FirstSlotAsync(visitor, site);
         await RequestAsync(visitor, site, slot.StartUtc, "mila@example.test");
-        var request = (await site.Teacher.Client.GetJsonAsync<List<BookingRequestResponse>>(site.Path("/requests"))).ShouldHaveSingleItem();
+        var request = ((await site.Teacher.Client.GetJsonAsync<BookingRequestListResponse>(site.Path("/requests"))).Items).ShouldHaveSingleItem();
         var confirmed = await ReadAsync<BookingRequestResponse>(await site.Teacher.Client.PostAsync(site.Path($"/requests/{request.Id}/confirm"), new { version = request.Version }));
         var since = DateTime.UtcNow.AddSeconds(-1);
 
@@ -130,7 +130,7 @@ public sealed class BookingTests(ClassHubApiFixture fixture)
         using var site = await BookableAsync();
         using var visitor = fixture.Factory.CreateClient();
         await RequestAsync(visitor, site, (await FirstSlotAsync(visitor, site)).StartUtc, "nina@example.test");
-        var request = (await site.Teacher.Client.GetJsonAsync<List<BookingRequestResponse>>(site.Path("/requests"))).ShouldHaveSingleItem();
+        var request = ((await site.Teacher.Client.GetJsonAsync<BookingRequestListResponse>(site.Path("/requests"))).Items).ShouldHaveSingleItem();
         var confirmed = await ReadAsync<BookingRequestResponse>(await site.Teacher.Client.PostAsync(site.Path($"/requests/{request.Id}/confirm"), new { version = request.Version }));
         var lesson = await site.Teacher.Client.GetJsonAsync<LessonResponse>($"/api/w/{site.Teacher.WorkspaceId}/lessons/{confirmed.LessonId}");
         var since = DateTime.UtcNow.AddSeconds(-1);
@@ -168,7 +168,7 @@ public sealed class BookingTests(ClassHubApiFixture fixture)
         {
             kind = "Individual", studentId = otherId, title = "Друг час", startLocal = TimeZoneInfo.ConvertTimeFromUtc(slot.StartUtc, Skopje), durationMinutes = 60, mode = "Online",
         })).StatusCode.ShouldBe(HttpStatusCode.Created);
-        var request = (await site.Teacher.Client.GetJsonAsync<List<BookingRequestResponse>>(site.Path("/requests"))).ShouldHaveSingleItem();
+        var request = ((await site.Teacher.Client.GetJsonAsync<BookingRequestListResponse>(site.Path("/requests"))).Items).ShouldHaveSingleItem();
 
         using (var clash = await site.Teacher.Client.PostAsync(site.Path($"/requests/{request.Id}/confirm"), new { version = request.Version }))
         {
@@ -179,6 +179,53 @@ public sealed class BookingTests(ClassHubApiFixture fixture)
         await using var db = fixture.CreateDbContext();
         (await db.Database.SqlQuery<int>($"SELECT COUNT(*) AS [Value] FROM Students WHERE WorkspaceId = {site.Teacher.WorkspaceId} AND Email = {email}").SingleAsync(Ct)).ShouldBe(0);
         (await db.Database.SqlQuery<int>($"SELECT COUNT(*) AS [Value] FROM Leads WHERE Id = {request.LeadId} AND StudentId IS NULL").SingleAsync(Ct)).ShouldBe(1);
+    }
+
+    [Fact]
+    public async Task A_request_from_an_archived_student_cannot_be_confirmed_until_restored()
+    {
+        using var site = await BookableAsync();
+        Guid studentId;
+        int version;
+        using (var created = await site.Teacher.Client.PostAsync($"/api/w/{site.Teacher.WorkspaceId}/students", new { firstName = "Стар", email = "old@example.test" }))
+        {
+            var student = (await created.Content.ReadFromJsonAsync<ClassHub.Core.Modules.Students.Contracts.StudentResponse>(Ct))!;
+            (studentId, version) = (student.Id, student.Version);
+        }
+
+        (await site.Teacher.Client.PostAsync($"/api/w/{site.Teacher.WorkspaceId}/students/{studentId}/archive", new { version })).StatusCode.ShouldBe(HttpStatusCode.OK);
+        using var visitor = fixture.Factory.CreateClient();
+        await RequestAsync(visitor, site, (await FirstSlotAsync(visitor, site)).StartUtc, "old@example.test");
+        var request = (await site.Teacher.Client.GetJsonAsync<BookingRequestListResponse>(site.Path("/requests"))).Items.ShouldHaveSingleItem();
+
+        using (var refused = await site.Teacher.Client.PostAsync(site.Path($"/requests/{request.Id}/confirm"), new { version = request.Version }))
+        {
+            refused.StatusCode.ShouldBe(HttpStatusCode.UnprocessableEntity);
+            (await refused.ErrorCodeAsync()).ShouldBe(ErrorCodes.InvalidStatusTransition);
+        }
+
+        await using var db = fixture.CreateDbContext();
+        (await db.Database.SqlQuery<int>($"SELECT COUNT(*) AS [Value] FROM Lessons WHERE WorkspaceId = {site.Teacher.WorkspaceId}").SingleAsync(Ct)).ShouldBe(0);
+        (await db.Database.SqlQuery<int>($"SELECT COUNT(*) AS [Value] FROM Leads WHERE Id = {request.LeadId} AND StudentId IS NULL").SingleAsync(Ct)).ShouldBe(1);
+        (await site.Teacher.Client.GetJsonAsync<BookingRequestResponse>(site.Path($"/requests/{request.Id}"))).Status.ShouldBe("Pending");
+    }
+
+    [Fact]
+    public async Task Requests_are_listed_page_by_page()
+    {
+        using var site = await BookableAsync();
+        using var visitor = fixture.Factory.CreateClient();
+        var slot = await FirstSlotAsync(visitor, site);
+        await RequestAsync(visitor, site, slot.StartUtc, "p1@example.test");
+        await RequestAsync(visitor, site, slot.StartUtc.AddHours(1), "p2@example.test");
+        await RequestAsync(visitor, site, slot.StartUtc.AddHours(2), "p3@example.test");
+
+        var first = await site.Teacher.Client.GetJsonAsync<BookingRequestListResponse>(site.Path("/requests?pageSize=2"));
+        var second = await site.Teacher.Client.GetJsonAsync<BookingRequestListResponse>(site.Path("/requests?pageSize=2&page=2"));
+
+        (first.Total, first.Items.Count, second.Items.Count).ShouldBe((3, 2, 1));
+        first.Items.Concat(second.Items).Select(r => r.Email).ShouldBe(["p1@example.test", "p2@example.test", "p3@example.test"]);
+        (await site.Teacher.Client.GetAsync(site.Path("/requests?pageSize=500"))).StatusCode.ShouldBe(HttpStatusCode.BadRequest);
     }
 
     [Fact]
@@ -205,7 +252,7 @@ public sealed class BookingTests(ClassHubApiFixture fixture)
         (await visitor.GetFromJsonAsync<PublicBookingResponse>($"/api/public/sites/{site.Slug}/booking", Ct))!.Available.ShouldBeFalse();
         (await visitor.GetStringAsync($"/{site.Slug}", Ct)).ShouldNotContain($"/{site.Slug}/book");
         (await visitor.PostAsJsonAsync($"/api/public/sites/{site.Slug}/leads", Booking(await TokenAsync(site.Slug), site.Offer.Id, slot.StartUtc, "x@example.test"), Ct)).StatusCode.ShouldBe(HttpStatusCode.BadRequest);
-        (await site.Teacher.Client.GetJsonAsync<List<BookingRequestResponse>>(site.Path("/requests"))).ShouldBeEmpty();
+        ((await site.Teacher.Client.GetJsonAsync<BookingRequestListResponse>(site.Path("/requests"))).Items).ShouldBeEmpty();
     }
 
     [Fact]
@@ -222,11 +269,11 @@ public sealed class BookingTests(ClassHubApiFixture fixture)
             bot.StatusCode.ShouldBe(HttpStatusCode.Accepted);
         }
 
-        (await site.Teacher.Client.GetJsonAsync<List<BookingRequestResponse>>(site.Path("/requests"))).ShouldBeEmpty();
+        ((await site.Teacher.Client.GetJsonAsync<BookingRequestListResponse>(site.Path("/requests"))).Items).ShouldBeEmpty();
         await RequestAsync(visitor, site, slot.StartUtc, "one@example.test");
         using var second = await visitor.PostAsJsonAsync($"/api/public/sites/{site.Slug}/leads", Booking(await TokenAsync(site.Slug), site.Offer.Id, slot.StartUtc, "two@example.test"), Ct);
         second.StatusCode.ShouldBe(HttpStatusCode.TooManyRequests);
-        (await site.Teacher.Client.GetJsonAsync<List<BookingRequestResponse>>(site.Path("/requests"))).ShouldHaveSingleItem();
+        ((await site.Teacher.Client.GetJsonAsync<BookingRequestListResponse>(site.Path("/requests"))).Items).ShouldHaveSingleItem();
     }
 
     [Fact]
@@ -253,7 +300,7 @@ public sealed class BookingTests(ClassHubApiFixture fixture)
 
         using var visitor = fixture.Factory.CreateClient();
         await RequestAsync(visitor, site, (await FirstSlotAsync(visitor, site)).StartUtc, "iso@example.test");
-        var request = (await site.Teacher.Client.GetJsonAsync<List<BookingRequestResponse>>(site.Path("/requests"))).ShouldHaveSingleItem();
+        var request = ((await site.Teacher.Client.GetJsonAsync<BookingRequestListResponse>(site.Path("/requests"))).Items).ShouldHaveSingleItem();
         await TenantIsolationKit.AssertCrossTenantDeniedAsync(intruder.Client, HttpMethod.Get, site.Path($"/requests/{request.Id}"));
         await TenantIsolationKit.AssertCrossTenantDeniedAsync(intruder.Client, HttpMethod.Post, site.Path($"/requests/{request.Id}/confirm"), new { version = request.Version });
         await TenantIsolationKit.AssertCrossTenantDeniedAsync(intruder.Client, HttpMethod.Get, site.Path("/settings"));

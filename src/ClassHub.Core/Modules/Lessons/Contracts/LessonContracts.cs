@@ -208,6 +208,9 @@ public sealed record BookingRequestResponse(
     DateTime CreatedAtUtc,
     int Version);
 
+/// <summary>One page of booking requests: pending first, then by time.</summary>
+public sealed record BookingRequestListResponse(IReadOnlyList<BookingRequestResponse> Items, int Total, int Page, int PageSize);
+
 public sealed record BookingDecisionRequest(int? Version, string? Reason);
 
 /// <summary>Cancel a confirmed booking (its lesson is cancelled with the reason; the visitor is told).</summary>

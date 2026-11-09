@@ -144,6 +144,14 @@ public static class BookingSlots
             {
                 var startMinute = interval.StartTime.Hour * 60 + interval.StartTime.Minute;
                 var endMinute = interval.EndTime.Hour * 60 + interval.EndTime.Minute;
+                // The interval's end as an instant: on a clock-change day the wall-clock fit alone is not enough.
+                var endLocal = day.ToDateTime(interval.EndTime, DateTimeKind.Unspecified);
+                while (zone.IsInvalidTime(endLocal))
+                {
+                    endLocal = endLocal.AddMinutes(15);
+                }
+
+                var intervalEndUtc = LessonTime.ToUtc(endLocal, zone, "endTime");
                 for (var minute = startMinute; minute + durationMinutes <= endMinute; minute += stepMinutes)
                 {
                     var time = new TimeOnly(minute / 60, minute % 60);
@@ -155,7 +163,7 @@ public static class BookingSlots
 
                     var start = LessonTime.ToUtc(local, zone, "startUtc");
                     var end = start.AddMinutes(durationMinutes);
-                    if (start >= earliest && !busy.Any(b => LessonRules.Overlaps(start, end, b.StartUtc, b.EndUtc)) && !slots.Any(s => s.StartUtc == start))
+                    if (start >= earliest && end <= intervalEndUtc && !busy.Any(b => LessonRules.Overlaps(start, end, b.StartUtc, b.EndUtc)) && !slots.Any(s => s.StartUtc == start))
                     {
                         slots.Add(new BookableSlot(day, time, start));
                     }

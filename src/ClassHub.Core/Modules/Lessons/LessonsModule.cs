@@ -109,7 +109,8 @@ public sealed class LessonsModule : IModule
             .WithValidation<SaveBookingSettingsRequest>()
             .RequireAuthorization(manage)
             .WithName("SaveBookingSettings");
-        booking.MapGet("/requests", async (string? status, BookingService service, CancellationToken ct) => TypedResults.Ok(await service.ListAsync(status, ct)))
+        booking.MapGet("/requests", async (string? status, int? page, int? pageSize, BookingService service, CancellationToken ct) =>
+                TypedResults.Ok(await service.ListAsync(status, page ?? 1, pageSize ?? BookingService.DefaultPageSize, ct)))
             .RequireAuthorization(read)
             .WithName("ListBookingRequests");
         booking.MapGet("/requests/{bookingId:guid}", async (Guid bookingId, BookingService service, CancellationToken ct) => TypedResults.Ok(await service.GetAsync(bookingId, ct)))

@@ -67,6 +67,19 @@ public sealed class BookingSlotsTests
     }
 
     [Fact]
+    public void On_the_spring_day_a_lesson_must_end_within_the_working_hours_in_real_time()
+    {
+        // 01:00–03:30 on 31 March 2030: two hours from 01:00 end at 04:00 local (the clock skips 02:00–03:00).
+        var sunday = new DateOnly(2030, 3, 31);
+        var now = new DateTime(2030, 3, 30, 0, 0, 0, DateTimeKind.Utc);
+        Slots([Hours(DayOfWeek.Sunday, 1, 3)], step: 30, duration: 120, from: sunday, to: sunday, now: now).ShouldBeEmpty();
+        Slots([new WorkingHours { DayOfWeek = DayOfWeek.Sunday, StartTime = new TimeOnly(1, 0), EndTime = new TimeOnly(3, 30) }], step: 30, duration: 120, from: sunday, to: sunday, now: now)
+            .ShouldBeEmpty();
+        Slots([new WorkingHours { DayOfWeek = DayOfWeek.Sunday, StartTime = new TimeOnly(1, 0), EndTime = new TimeOnly(3, 30) }], step: 30, duration: 60, from: sunday, to: sunday, now: now)
+            .Select(s => s.Time.ToString("HH:mm")).ShouldBe(["01:00", "01:30"]); // end at 03:00 and 03:30
+    }
+
+    [Fact]
     public void The_clock_change_moves_the_instant_but_keeps_the_local_time()
     {
         var sunday = new DateOnly(2030, 3, 31); // clocks jump 02:00 → 03:00

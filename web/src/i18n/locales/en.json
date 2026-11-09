@@ -1189,7 +1189,8 @@
       "cancelReason": "Reason for cancelling",
       "cancelConfirm": "Cancel the lesson",
       "openLesson": "Open the lesson",
-      "overlap": "You already have a lesson at this time. Decline the request or move the other lesson."
+      "overlap": "You already have a lesson at this time. Decline the request or move the other lesson.",
+      "pages": "Pages of requests"
     },
     "settings": {
       "title": "Booking settings",

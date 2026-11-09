@@ -41,7 +41,9 @@ export function BookingPage() {
 
 function Requests({ workspaceId }: { workspaceId: string }) {
   const { t } = useTranslation();
-  const requests = useBookingRequests(workspaceId);
+  const [page, setPage] = useState(1);
+  const requests = useBookingRequests(workspaceId, page);
+  const pages = Math.max(1, Math.ceil((num(requests.data?.total) ?? 0) / (num(requests.data?.pageSize) ?? 20)));
   return (
     <Card>
       <CardHeader>
@@ -53,14 +55,25 @@ function Requests({ workspaceId }: { workspaceId: string }) {
           <Alert variant="error">{errorMessage(requests.error, t)}</Alert>
         ) : !requests.data ? (
           <output className="block">{t('common.loading')}</output>
-        ) : requests.data.length === 0 ? (
+        ) : requests.data.items.length === 0 ? (
           <p className="text-sm text-muted-foreground">{t('booking.requests.none')}</p>
         ) : (
           <ul aria-label={t('booking.requests.title')} className="flex flex-col divide-y divide-border">
-            {requests.data.map((request) => (
+            {requests.data.items.map((request) => (
               <RequestItem key={request.id} workspaceId={workspaceId} request={request} />
             ))}
           </ul>
+        )}
+        {pages > 1 && (
+          <nav aria-label={t('booking.requests.pages')} className="mt-3 flex items-center gap-2">
+            <Button type="button" size="sm" variant="outline" disabled={page <= 1} onClick={() => setPage(page - 1)}>
+              {t('leads.previous')}
+            </Button>
+            <span className="text-sm">{t('leads.pageOf', { page, pages })}</span>
+            <Button type="button" size="sm" variant="outline" disabled={page >= pages} onClick={() => setPage(page + 1)}>
+              {t('leads.next')}
+            </Button>
+          </nav>
         )}
       </CardContent>
     </Card>

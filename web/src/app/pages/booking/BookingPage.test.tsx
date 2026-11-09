@@ -43,7 +43,10 @@ function bookingApi({ confirm = (): Response => json(200, request({ status: 'Con
   const handler = (call: FakeCall) => {
     if (call.path === `${BASE}/settings` && call.method === 'GET') return json(200, SETTINGS);
     if (call.path === `${BASE}/settings` && call.method === 'PUT') return json(200, { ...SETTINGS, ...(call.body as object), version: 2 });
-    if (call.path === `${BASE}/requests`) return json(200, state.requests);
+    if (call.path === `${BASE}/requests`) {
+      const page = Number(new URLSearchParams(call.search).get('page') ?? '1');
+      return json(200, { items: page === 1 ? state.requests : [], total: state.requests.length, page, pageSize: 20 });
+    }
     if (call.path === `${BASE}/requests/b1/confirm`) return confirm();
     if (call.path === `${BASE}/requests/b1/decline`) {
       state.requests[0] = request({ status: 'Declined', reason: (call.body as { reason: string | null }).reason, version: 1 });
@@ -100,6 +103,23 @@ describe('booking page', () => {
     await user.click(within(confirmed).getByRole('button', { name: 'Откажи го часот' }));
     await expect.poll(() => api.to(`${BASE}/requests/b2/cancel`).length).toBe(1);
     expect(api.to(`${BASE}/requests/b2/cancel`)[0]!.body).toEqual({ version: 0, reason: 'Болест' });
+  });
+
+  it('pages through many requests', async () => {
+    const user = userEvent.setup();
+    const handler = (call: FakeCall) => {
+      if (call.path === `${BASE}/settings`) return json(200, SETTINGS);
+      if (call.path !== `${BASE}/requests`) return undefined;
+      const page = Number(new URLSearchParams(call.search).get('page') ?? '1');
+      return json(200, { items: [request({ id: `b${page}`, name: page === 1 ? 'Прва' : 'Втора' })], total: 25, page, pageSize: 20 });
+    };
+    const api = fakeApi({ me: teacher(), extra: [handler] });
+    await renderRoute(`/app/w/${WORKSPACE_ID}/booking`);
+
+    expect(await screen.findByText('Страница 1 од 2')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Следна' }));
+    expect(await screen.findByRole('listitem', { name: /Втора/ })).toBeInTheDocument();
+    expect(api.to(`${BASE}/requests`).some((c) => new URLSearchParams(c.search).get('page') === '2')).toBe(true);
   });
 
   it('saves working hours, days off and the rules with the loaded version', async () => {
