@@ -382,17 +382,19 @@ public sealed class FinanceTests(ClassHubApiFixture fixture)
         using var teacher = await fixture.CreateTeacherAsync();
         var ana = await StudentAsync(teacher, "Ана");
         var boris = await StudentAsync(teacher, "Борис");
-        await AssignAsync(teacher, ana.Id, new { title = "Пакет", lessonCount = 4, priceMinor = 480_000, currency = "MKD" });
+        var anaPackage = (await AssignAsync(teacher, ana.Id, new { title = "Пакет", lessonCount = 4, priceMinor = 480_000, currency = "MKD" })).Packages.Single();
         await AssignAsync(teacher, boris.Id, new { title = "Course", lessonCount = 2, priceMinor = 10_000, currency = "EUR" });
         await PayAsync(teacher, ana.Id, new { amountMinor = 200_000, currency = "MKD", paidOn = "2026-11-02", method = "Cash" });
         await PayAsync(teacher, boris.Id, new { amountMinor = 5_000, currency = "EUR", paidOn = "2026-10-15", method = "Card" });
         await CompleteAsync(teacher, await IndividualLessonAsync(teacher, ana.Id), Array.Empty<object>());
         await ProcessAsync();
+        // A no-show counted by a correction (not linked to a lesson) is a consumed lesson too.
+        await ReadAsync<StudentFinanceResponse>(await teacher.Client.PostAsync(Path(teacher, $"/packages/{anaPackage.Id}/lesson-adjustments"), new { quantity = 1, reason = "Не дојде без најава" }));
 
         var overview = await teacher.Client.GetJsonAsync<FinanceOverviewResponse>(Path(teacher, "/overview"));
         overview.Students.Select(s => s.Name).ShouldBe(["Ана", "Борис"]);
         overview.Students[0].Balances.ShouldHaveSingleItem().OutstandingMinor.ShouldBe(280_000);
-        overview.Students[0].RemainingLessons.ShouldBe(3);
+        overview.Students[0].RemainingLessons.ShouldBe(2);
         overview.Students[1].Balances.ShouldHaveSingleItem().Currency.ShouldBe("EUR");
 
         var today = DateOnly.FromDateTime(DateTime.UtcNow);
@@ -402,7 +404,7 @@ public sealed class FinanceTests(ClassHubApiFixture fixture)
         mkd.PackagesSold.ShouldBe(1);
         mkd.ChargedMinor.ShouldBe(480_000);
         report.Currencies.Single(c => c.Currency == "EUR").ReceivedMinor.ShouldBe(0); // paid in October, outside the period
-        report.LessonsConsumed.ShouldBe(1);
+        report.LessonsConsumed.ShouldBe(2); // the held lesson and the counted no-show
         (await teacher.Client.GetAsync(Path(teacher, "/report?from=2026-11-10&to=2026-11-01"))).StatusCode.ShouldBe(HttpStatusCode.BadRequest);
         (await teacher.Client.GetAsync(Path(teacher, "/report?from=2024-01-01&to=2026-01-01"))).StatusCode.ShouldBe(HttpStatusCode.BadRequest);
     }

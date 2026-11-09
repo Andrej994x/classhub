@@ -352,7 +352,7 @@ internal sealed class FinanceService(
             .Select(a => new { a.Currency, a.AmountMinor }).ToListAsync(cancellationToken);
         var payments = await db.Set<Payment>().AsNoTracking().Where(p => p.PaidOn >= from && p.PaidOn <= to)
             .Select(p => new { p.Currency, p.AmountMinor }).ToListAsync(cancellationToken);
-        var lessonsInPeriod = await db.Set<LessonLedgerEntry>().AsNoTracking().Where(e => e.CreatedAtUtc >= fromUtc && e.CreatedAtUtc < toUtc && e.LessonId != null)
+        var lessonsInPeriod = await db.Set<LessonLedgerEntry>().AsNoTracking().Where(e => e.CreatedAtUtc >= fromUtc && e.CreatedAtUtc < toUtc) // held lessons, corrections and their reversals
             .Select(e => new { e.PackageId, e.Quantity }).ToListAsync(cancellationToken);
 
         var currencies = packages.Select(p => p.Currency).Concat(adjustments.Select(a => a.Currency)).Concat(payments.Select(p => p.Currency)).Distinct().Order(StringComparer.Ordinal);
