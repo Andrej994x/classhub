@@ -88,6 +88,12 @@ ASP.NET Core Identity with cookie sessions. See [ARCHITECTURE.md](ARCHITECTURE.m
 - Names, phones and guardian contacts are redacted in logs.
 - No duplicates by email within a workspace (unique index) and no limit overrun under parallel requests (intake lock; tested).
 
+## Teaching Toolbox (R3-P1)
+
+- Only platform staff change the catalog. Changes are audited; a teacher gets 403 and an anonymous caller 401 (also covered by the isolation sweep).
+- **External tools open only through their official HTTPS links on approved domains.** The domains are configured in `Toolbox:AllowedHosts`; other schemes (`javascript:`, `data:`, `http:`), other ports, credentials, IP hosts and look-alike domains are refused. They open in a new tab with `noopener noreferrer`, so the site cannot reach back to ClassHub, and nothing is embedded.
+- Teachers see only active tools. The search text is a bound parameter, limited to 100 characters.
+
 ## Dashboards (R2-P12)
 
 - The teacher's teaching numbers need the lessons, students and finance read permissions together. Every number comes from the tenant-filtered contracts of the current workspace; another teacher (or a student) reaching the route gets the cross-tenant 404.

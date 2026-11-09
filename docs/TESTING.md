@@ -43,6 +43,21 @@ Flows (each in **mk and en**, on **desktop and mobile**): register → dev mailb
 
 On a machine with little free memory, many local workers can exhaust Chromium's blob storage: a request then fails in the browser (`net::ERR_BLOB_OUT_OF_MEMORY` in the trace's network log) and the app shows "no connection to the server", in any test. Run with fewer workers (`npx playwright test --workers=3`; CI uses 2) rather than retrying.
 
+## Toolbox tests (R3-P1)
+
+- **Unit:** `ToolRulesTests`.
+  - Allowed: official HTTPS links on approved domains and their subdomains.
+  - Refused: other schemes, ports, credentials, look-alike and parent domains, IP hosts, overlong links.
+- **Integration:** `ToolboxTests`. The catalog is shared by all tests, so each test uses its own codes and words.
+  - Teachers find the seeded tools by search (also the Macedonian description), subject and category. Inactive built-in boards are hidden; featured tools come first. An invalid category or an overlong search is a 400.
+  - **Staff add, feature and deactivate a tool:** teachers then no longer see it. A stale version is a 409; the code is permanent and unique. All changes are audited.
+  - **Only official HTTPS links on approved sites** and known boards are accepted; each board has one entry.
+  - **Only platform staff manage tools:** a teacher gets 403, an anonymous caller 401.
+- **Vitest:** `ToolboxPage.test.tsx`.
+  - Cards, search and category filters, and the external link with `target` and `rel`.
+  - Admin: add an external tool, and edit one with its version.
+- **E2E:** `toolbox.spec.ts` (desktop and phone). From the navigation, search for GeoGebra and open it. It opens in a new tab at the official URL, and `window.opener` is null. The site is answered by a local route, so the test never leaves the machine.
+
 ## Dashboard tests (R2-P12)
 
 - Integration: `TeachingDashboardTests`:

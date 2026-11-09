@@ -3434,6 +3434,281 @@ namespace ClassHub.Core.Infrastructure.Persistence.Migrations
                     b.ToTable("TeacherProfileSubjects", (string)null);
                 });
 
+            modelBuilder.Entity("ClassHub.Core.Modules.Toolbox.Domain.Tool", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("BuiltInKey")
+                        .HasMaxLength(40)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(40)");
+
+                    b.Property<int>("Category")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(40)");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasPrecision(3)
+                        .HasColumnType("datetime2(3)");
+
+                    b.Property<string>("DescriptionEn")
+                        .IsRequired()
+                        .HasMaxLength(600)
+                        .HasColumnType("nvarchar(600)");
+
+                    b.Property<string>("DescriptionMk")
+                        .IsRequired()
+                        .HasMaxLength(600)
+                        .HasColumnType("nvarchar(600)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsFeatured")
+                        .HasColumnType("bit");
+
+                    b.Property<int>("Kind")
+                        .HasColumnType("int");
+
+                    b.Property<string>("LicenseNote")
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)");
+
+                    b.Property<string>("NameEn")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("NameMk")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("UpdatedAtUtc")
+                        .HasPrecision(3)
+                        .HasColumnType("datetime2(3)");
+
+                    b.Property<string>("Url")
+                        .HasMaxLength(400)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(400)");
+
+                    b.Property<int>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BuiltInKey")
+                        .IsUnique()
+                        .HasFilter("[BuiltInKey] IS NOT NULL");
+
+                    b.HasIndex("Code")
+                        .IsUnique();
+
+                    b.ToTable("Tools", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_Tools_Category", "[Category] BETWEEN 1 AND 6");
+
+                            t.HasCheckConstraint("CK_Tools_Kind", "([Kind] = 1 AND [Url] IS NOT NULL AND [BuiltInKey] IS NULL) OR ([Kind] = 2 AND [BuiltInKey] IS NOT NULL AND [Url] IS NULL)");
+
+                            t.HasCheckConstraint("CK_Tools_Url", "[Url] IS NULL OR [Url] LIKE 'https://%'");
+                        });
+
+                    b.HasData(
+                        new
+                        {
+                            Id = new Guid("a55d46a7-f68a-8314-aaa2-1bf162dae108"),
+                            Category = 1,
+                            Code = "geogebra",
+                            CreatedAtUtc = new DateTime(2026, 11, 10, 0, 0, 0, 0, DateTimeKind.Utc),
+                            DescriptionEn = "Geometry, algebra, graphs and spreadsheets in one; constructions with points, lines, circles and functions.",
+                            DescriptionMk = "Геометрија, алгебра, графици и табели во едно; конструкции со точки, прави, кругови и функции.",
+                            IsActive = true,
+                            IsFeatured = true,
+                            Kind = 1,
+                            LicenseNote = "Free for non-commercial use under the GeoGebra license; opened on geogebra.org.",
+                            NameEn = "GeoGebra",
+                            NameMk = "GeoGebra",
+                            SortOrder = 10,
+                            UpdatedAtUtc = new DateTime(2026, 11, 10, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Url = "https://www.geogebra.org/classic",
+                            Version = 1
+                        },
+                        new
+                        {
+                            Id = new Guid("41e11b64-3665-8b4e-8beb-324b54514dd9"),
+                            Category = 2,
+                            Code = "desmos",
+                            CreatedAtUtc = new DateTime(2026, 11, 10, 0, 0, 0, 0, DateTimeKind.Utc),
+                            DescriptionEn = "Plot functions, inequalities and tables, with sliders for parameters.",
+                            DescriptionMk = "Цртање графици на функции, неравенки и табели, со лизгачи за параметри.",
+                            IsActive = true,
+                            IsFeatured = true,
+                            Kind = 1,
+                            LicenseNote = "Free to use on desmos.com under the Desmos terms of service.",
+                            NameEn = "Desmos graphing calculator",
+                            NameMk = "Desmos калкулатор за графици",
+                            SortOrder = 20,
+                            UpdatedAtUtc = new DateTime(2026, 11, 10, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Url = "https://www.desmos.com/calculator",
+                            Version = 1
+                        },
+                        new
+                        {
+                            Id = new Guid("8d1326f7-2ad6-8aa3-8852-74e14f7dd483"),
+                            Category = 3,
+                            Code = "phet",
+                            CreatedAtUtc = new DateTime(2026, 11, 10, 0, 0, 0, 0, DateTimeKind.Utc),
+                            DescriptionEn = "Interactive simulations for physics, chemistry, mathematics and biology.",
+                            DescriptionMk = "Интерактивни симулации по физика, хемија, математика и биологија.",
+                            IsActive = true,
+                            IsFeatured = true,
+                            Kind = 1,
+                            LicenseNote = "Free simulations (CC BY 4.0) by the University of Colorado Boulder; opened on phet.colorado.edu.",
+                            NameEn = "PhET interactive simulations",
+                            NameMk = "PhET интерактивни симулации",
+                            SortOrder = 30,
+                            UpdatedAtUtc = new DateTime(2026, 11, 10, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Url = "https://phet.colorado.edu/",
+                            Version = 1
+                        },
+                        new
+                        {
+                            Id = new Guid("787c3baf-dd00-8a1d-9463-5a9f1d1e36dd"),
+                            Category = 4,
+                            Code = "molview",
+                            CreatedAtUtc = new DateTime(2026, 11, 10, 0, 0, 0, 0, DateTimeKind.Utc),
+                            DescriptionEn = "Draw molecules and view them in 3D.",
+                            DescriptionMk = "Цртање и 3D приказ на молекули.",
+                            IsActive = true,
+                            IsFeatured = false,
+                            Kind = 1,
+                            LicenseNote = "Free web application; opened on molview.org.",
+                            NameEn = "MolView",
+                            NameMk = "MolView",
+                            SortOrder = 40,
+                            UpdatedAtUtc = new DateTime(2026, 11, 10, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Url = "https://molview.org/",
+                            Version = 1
+                        },
+                        new
+                        {
+                            Id = new Guid("32f1e49c-bfaf-8602-8389-935cbebfcf81"),
+                            BuiltInKey = "drawing-board",
+                            Category = 5,
+                            Code = "drawing-board",
+                            CreatedAtUtc = new DateTime(2026, 11, 10, 0, 0, 0, 0, DateTimeKind.Utc),
+                            DescriptionEn = "Free drawing, text, shapes, arrows and diagrams; save and reopen.",
+                            DescriptionMk = "Слободно цртање, текст, форми, стрелки и дијаграми; зачувување и повторно отворање.",
+                            IsActive = false,
+                            IsFeatured = false,
+                            Kind = 2,
+                            LicenseNote = "Built into ClassHub.",
+                            NameEn = "Drawing board",
+                            NameMk = "Табла за цртање",
+                            SortOrder = 50,
+                            UpdatedAtUtc = new DateTime(2026, 11, 10, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Version = 1
+                        },
+                        new
+                        {
+                            Id = new Guid("7f1bc077-85d3-8050-b87c-be3f80599a31"),
+                            BuiltInKey = "geometry-board",
+                            Category = 1,
+                            Code = "geometry-board",
+                            CreatedAtUtc = new DateTime(2026, 11, 10, 0, 0, 0, 0, DateTimeKind.Utc),
+                            DescriptionEn = "Points, lines, angles, triangles, circles, a coordinate system and graphs; save and reopen.",
+                            DescriptionMk = "Точки, прави, агли, триаголници, кругови, координатен систем и графици; зачувување и повторно отворање.",
+                            IsActive = false,
+                            IsFeatured = false,
+                            Kind = 2,
+                            LicenseNote = "Built into ClassHub.",
+                            NameEn = "Geometry board",
+                            NameMk = "Геометриска табла",
+                            SortOrder = 60,
+                            UpdatedAtUtc = new DateTime(2026, 11, 10, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Version = 1
+                        });
+                });
+
+            modelBuilder.Entity("ClassHub.Core.Modules.Toolbox.Domain.ToolSubject", b =>
+                {
+                    b.Property<Guid>("ToolId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("SubjectId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("ToolId", "SubjectId");
+
+                    b.HasIndex("SubjectId");
+
+                    b.ToTable("ToolSubjects", (string)null);
+
+                    b.HasData(
+                        new
+                        {
+                            ToolId = new Guid("a55d46a7-f68a-8314-aaa2-1bf162dae108"),
+                            SubjectId = new Guid("44136582-6911-86d2-93a3-6313a3781ba5")
+                        },
+                        new
+                        {
+                            ToolId = new Guid("a55d46a7-f68a-8314-aaa2-1bf162dae108"),
+                            SubjectId = new Guid("3669c55e-f275-87a0-9cd8-a34178c16196")
+                        },
+                        new
+                        {
+                            ToolId = new Guid("41e11b64-3665-8b4e-8beb-324b54514dd9"),
+                            SubjectId = new Guid("44136582-6911-86d2-93a3-6313a3781ba5")
+                        },
+                        new
+                        {
+                            ToolId = new Guid("8d1326f7-2ad6-8aa3-8852-74e14f7dd483"),
+                            SubjectId = new Guid("3669c55e-f275-87a0-9cd8-a34178c16196")
+                        },
+                        new
+                        {
+                            ToolId = new Guid("8d1326f7-2ad6-8aa3-8852-74e14f7dd483"),
+                            SubjectId = new Guid("e962a711-7192-8d10-be32-bdcb2ce2b979")
+                        },
+                        new
+                        {
+                            ToolId = new Guid("8d1326f7-2ad6-8aa3-8852-74e14f7dd483"),
+                            SubjectId = new Guid("44136582-6911-86d2-93a3-6313a3781ba5")
+                        },
+                        new
+                        {
+                            ToolId = new Guid("8d1326f7-2ad6-8aa3-8852-74e14f7dd483"),
+                            SubjectId = new Guid("31006688-ac16-8b8b-bee9-870edeb892cf")
+                        },
+                        new
+                        {
+                            ToolId = new Guid("787c3baf-dd00-8a1d-9463-5a9f1d1e36dd"),
+                            SubjectId = new Guid("e962a711-7192-8d10-be32-bdcb2ce2b979")
+                        },
+                        new
+                        {
+                            ToolId = new Guid("787c3baf-dd00-8a1d-9463-5a9f1d1e36dd"),
+                            SubjectId = new Guid("31006688-ac16-8b8b-bee9-870edeb892cf")
+                        },
+                        new
+                        {
+                            ToolId = new Guid("7f1bc077-85d3-8050-b87c-be3f80599a31"),
+                            SubjectId = new Guid("44136582-6911-86d2-93a3-6313a3781ba5")
+                        });
+                });
+
             modelBuilder.Entity("ClassHub.Core.Modules.Workspaces.Domain.Workspace", b =>
                 {
                     b.Property<Guid>("Id")
@@ -4320,6 +4595,21 @@ namespace ClassHub.Core.Infrastructure.Persistence.Migrations
                         .WithMany()
                         .HasForeignKey("WorkspaceId", "ProfileId")
                         .HasPrincipalKey("WorkspaceId", "Id")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("ClassHub.Core.Modules.Toolbox.Domain.ToolSubject", b =>
+                {
+                    b.HasOne("ClassHub.Core.Modules.Catalog.Domain.Subject", null)
+                        .WithMany()
+                        .HasForeignKey("SubjectId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.HasOne("ClassHub.Core.Modules.Toolbox.Domain.Tool", null)
+                        .WithMany()
+                        .HasForeignKey("ToolId")
                         .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
                 });

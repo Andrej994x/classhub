@@ -44,7 +44,9 @@
     "booking": "Booking",
     "materials": "Materials",
     "homework": "Homework",
-    "finance": "Finance"
+    "finance": "Finance",
+    "toolbox": "Toolbox",
+    "adminToolbox": "Toolbox"
   },
   "layout": {
     "teacherArea": "Teacher workspace",
@@ -362,6 +364,28 @@
       "deactivate": "Deactivate",
       "activate": "Activate",
       "codeHint": "Lowercase letters, digits and hyphens; it never changes."
+    },
+    "toolbox": {
+      "title": "Toolbox",
+      "lead": "Tools teachers see in the toolbox. External tools only by their official HTTPS links on approved sites; deactivate instead of deleting.",
+      "add": "Add a tool",
+      "edit": "Edit {{name}}",
+      "save": "Save",
+      "create": "Add the tool",
+      "cancel": "Cancel",
+      "saved": "The tool was added.",
+      "code": "Code (permanent)",
+      "nameMk": "Name (Macedonian)",
+      "nameEn": "Name (English)",
+      "descriptionMk": "Description (Macedonian)",
+      "descriptionEn": "Description (English)",
+      "kind": "Kind",
+      "url": "Official link (HTTPS)",
+      "board": "Built-in board",
+      "license": "License or terms",
+      "sortOrder": "Order",
+      "active": "Active",
+      "inactive": "Inactive"
     }
   },
   "notFound": {
@@ -1547,6 +1571,33 @@
       "changedElsewhere": "The settings were changed elsewhere. Reload the page and apply your changes again.",
       "saved": "Saved.",
       "save": "Save"
+    }
+  },
+  "toolbox": {
+    "title": "Toolbox",
+    "lead": "Teaching tools for your lessons: search by name, subject or category.",
+    "search": "Search tools",
+    "subject": "Subject",
+    "allSubjects": "All subjects",
+    "category": "Category",
+    "allCategories": "All categories",
+    "tools": "Tools",
+    "none": "No tools match your search.",
+    "featured": "Featured",
+    "open": "Open {{name}}",
+    "newTab": "(opens in a new tab)",
+    "note": "External tools open on their official sites under their own terms; ClassHub does not grade work done there.",
+    "kinds": {
+      "External": "External site",
+      "BuiltIn": "Built into ClassHub"
+    },
+    "categories": {
+      "Geometry": "Geometry",
+      "Graphing": "Graphs",
+      "Simulations": "Simulations",
+      "Chemistry": "Chemistry",
+      "Drawing": "Drawing",
+      "Other": "Other"
     }
   }
 }
