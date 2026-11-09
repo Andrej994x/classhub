@@ -2475,6 +2475,132 @@ namespace ClassHub.Core.Infrastructure.Persistence.Migrations
                         });
                 });
 
+            modelBuilder.Entity("ClassHub.Core.Modules.Notifications.Domain.Notification", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("Attempts")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasPrecision(3)
+                        .HasColumnType("datetime2(3)");
+
+                    b.Property<string>("DedupeKey")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(200)");
+
+                    b.Property<DateTime>("DueAtUtc")
+                        .HasPrecision(3)
+                        .HasColumnType("datetime2(3)");
+
+                    b.Property<Guid?>("HomeworkAssignmentId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("HomeworkId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("Kind")
+                        .HasColumnType("int");
+
+                    b.Property<Guid?>("LessonId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("LessonStartUtc")
+                        .HasPrecision(3)
+                        .HasColumnType("datetime2(3)");
+
+                    b.Property<string>("LessonTimeZone")
+                        .HasMaxLength(64)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(64)");
+
+                    b.Property<string>("LessonTitle")
+                        .HasMaxLength(160)
+                        .HasColumnType("nvarchar(160)");
+
+                    b.Property<DateTime?>("LockedUntilUtc")
+                        .HasPrecision(3)
+                        .HasColumnType("datetime2(3)");
+
+                    b.Property<string>("Outcome")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<DateTime?>("SentAtUtc")
+                        .HasPrecision(3)
+                        .HasColumnType("datetime2(3)");
+
+                    b.Property<Guid?>("SeriesId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.Property<Guid>("StudentId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("TeacherUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("int");
+
+                    b.Property<Guid>("WorkspaceId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DedupeKey")
+                        .IsUnique();
+
+                    b.HasIndex("WorkspaceId");
+
+                    b.HasIndex("Status", "DueAtUtc");
+
+                    b.HasIndex("WorkspaceId", "StudentId");
+
+                    b.HasIndex("WorkspaceId", "LessonId", "StudentId");
+
+                    b.ToTable("Notifications", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_Notifications_Kind", "[Kind] BETWEEN 1 AND 7");
+
+                            t.HasCheckConstraint("CK_Notifications_Sent", "([Status] = 2 AND [SentAtUtc] IS NOT NULL) OR ([Status] <> 2 AND [SentAtUtc] IS NULL)");
+
+                            t.HasCheckConstraint("CK_Notifications_Series", "([Kind] IN (6, 7) AND [SeriesId] IS NOT NULL) OR ([Kind] NOT IN (6, 7) AND [SeriesId] IS NULL)");
+
+                            t.HasCheckConstraint("CK_Notifications_Status", "[Status] BETWEEN 1 AND 5");
+
+                            t.HasCheckConstraint("CK_Notifications_Subject", "([Kind] = 5 AND [HomeworkId] IS NOT NULL AND [HomeworkAssignmentId] IS NOT NULL AND [LessonId] IS NULL) OR ([Kind] <> 5 AND [LessonId] IS NOT NULL AND [HomeworkId] IS NULL AND [HomeworkAssignmentId] IS NULL)");
+                        });
+                });
+
+            modelBuilder.Entity("ClassHub.Core.Modules.Notifications.Domain.NotificationPreference", b =>
+                {
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<bool>("HomeworkEmails")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("LessonReminders")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime>("UpdatedAtUtc")
+                        .HasPrecision(3)
+                        .HasColumnType("datetime2(3)");
+
+                    b.HasKey("UserId");
+
+                    b.ToTable("NotificationPreferences", (string)null);
+                });
+
             modelBuilder.Entity("ClassHub.Core.Modules.Offers.Domain.Offer", b =>
                 {
                     b.Property<Guid>("Id")
@@ -3972,6 +4098,31 @@ namespace ClassHub.Core.Infrastructure.Persistence.Migrations
                     b.HasOne("ClassHub.Core.Modules.Workspaces.Domain.Workspace", null)
                         .WithMany()
                         .HasForeignKey("WorkspaceId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("ClassHub.Core.Modules.Notifications.Domain.Notification", b =>
+                {
+                    b.HasOne("ClassHub.Core.Modules.Workspaces.Domain.Workspace", null)
+                        .WithMany()
+                        .HasForeignKey("WorkspaceId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.HasOne("ClassHub.Core.Modules.Students.Domain.Student", null)
+                        .WithMany()
+                        .HasForeignKey("WorkspaceId", "StudentId")
+                        .HasPrincipalKey("WorkspaceId", "Id")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("ClassHub.Core.Modules.Notifications.Domain.NotificationPreference", b =>
+                {
+                    b.HasOne("ClassHub.Core.Modules.Identity.Contracts.AppUser", null)
+                        .WithOne()
+                        .HasForeignKey("ClassHub.Core.Modules.Notifications.Domain.NotificationPreference", "UserId")
                         .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
                 });

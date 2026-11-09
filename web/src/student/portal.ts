@@ -3,6 +3,7 @@ import { api } from '../api/client.ts';
 import type { components } from '../api/schema';
 
 export type StudentTeacher = components['schemas']['StudentTeacherResponse'];
+export type NotificationPreferences = components['schemas']['NotificationPreferencesResponse'];
 export type InvitationPreview = components['schemas']['InvitationPreviewResponse'];
 
 /** The teachers the signed-in user is a student of (D-16: the portal groups everything per teacher). */
@@ -17,6 +18,23 @@ export function useMyStudentProfile(workspaceId: string) {
   return useQuery({
     queryKey: ['student', 'w', workspaceId, 'profile'],
     queryFn: async () => (await api.client.GET('/api/student/w/{workspaceId}/profile', { params: { path: { workspaceId } } })).data!,
+  });
+}
+
+/** The optional notifications of the signed-in user (R2-P11): lesson reminders and new homework. */
+export function useNotificationPreferences() {
+  return useQuery({
+    queryKey: ['me', 'notification-preferences'],
+    queryFn: async () => (await api.client.GET('/api/me/notification-preferences')).data!,
+  });
+}
+
+export function useSaveNotificationPreferences() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (body: Partial<NotificationPreferences>) =>
+      (await api.client.PUT('/api/me/notification-preferences', { body: { lessonReminders: body.lessonReminders ?? null, homeworkEmails: body.homeworkEmails ?? null } })).data!,
+    onSuccess: (saved) => queryClient.setQueryData(['me', 'notification-preferences'], saved),
   });
 }
 

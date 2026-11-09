@@ -281,6 +281,8 @@ export function fakeApi({ me = null as FakeMe | null, extra = [] as Handler[] } 
     if (route === `GET /api/w/${WORKSPACE_ID}/lessons/history`) return json(200, { items: [], total: 0, page: 1, pageSize: 10 });
     // The student portal (R2-P3): by default the account is nobody's student.
     if (route === 'GET /api/student/teachers') return state.me ? json(200, []) : problem(401, 'UNAUTHORIZED');
+    // Notification preferences (R2-P11): everything on by default.
+    if (route === 'GET /api/me/notification-preferences') return state.me ? json(200, { lessonReminders: true, homeworkEmails: true }) : problem(401, 'UNAUTHORIZED');
     // Portal materials (R2-P8): none shared by default.
     if (route === `GET /api/student/w/${WORKSPACE_ID}/materials`) return state.me ? json(200, []) : problem(401, 'UNAUTHORIZED');
     // Homework (R2-P9): none by default, for the portal and for a lesson.

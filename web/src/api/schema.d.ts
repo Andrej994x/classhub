@@ -1787,6 +1787,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/me/notification-preferences": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The optional notifications (lesson reminders, new homework) of the signed-in user; on unless switched off. */
+        get: operations["GetNotificationPreferences"];
+        put: operations["UpdateNotificationPreferences"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/w/{workspaceId}/offers": {
         parameters: {
             query?: never;
@@ -3303,6 +3320,10 @@ export interface components {
             name: string;
             role: string;
         };
+        NotificationPreferencesResponse: {
+            lessonReminders: boolean;
+            homeworkEmails: boolean;
+        };
         OfferResponse: {
             /** Format: uuid */
             id: string;
@@ -4044,6 +4065,10 @@ export interface components {
         UpdateMeRequest: {
             locale: null | string;
             timeZone: null | string;
+        };
+        UpdateNotificationPreferencesRequest: {
+            lessonReminders: null | boolean;
+            homeworkEmails: null | boolean;
         };
         UpdatePlanLimitsRequest: {
             limits: null | components["schemas"]["PlanLimitValue"][];
@@ -7648,6 +7673,50 @@ export interface operations {
                 };
                 content: {
                     "application/problem+json": components["schemas"]["HttpValidationProblemDetails"];
+                };
+            };
+        };
+    };
+    GetNotificationPreferences: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotificationPreferencesResponse"];
+                };
+            };
+        };
+    };
+    UpdateNotificationPreferences: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateNotificationPreferencesRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotificationPreferencesResponse"];
                 };
             };
         };

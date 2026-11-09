@@ -303,6 +303,22 @@ public interface ILessonLookup
 
     /// <summary>The lesson's current attendance (null when it is not a lesson of the current workspace).</summary>
     Task<LessonAttendanceFacts?> AttendanceAsync(Guid lessonId, CancellationToken cancellationToken);
+
+    /// <summary>The series' next scheduled lesson starting after <paramref name="afterUtc"/> that the student takes part in.</summary>
+    Task<LessonSummary?> NextInSeriesAsync(Guid seriesId, Guid studentId, DateTime afterUtc, CancellationToken cancellationToken);
+}
+
+/// <summary>A scheduled lesson starting soon, with its students (reminders, R2-P11).</summary>
+public sealed record UpcomingLesson(Guid LessonId, Guid WorkspaceId, Guid TeacherUserId, DateTime StartUtc, IReadOnlyList<Guid> StudentIds);
+
+/// <summary>Scheduled lessons across workspaces, for the reminder planner.</summary>
+public interface IUpcomingLessons
+{
+    /// <summary>
+    /// System scope (every workspace, identifiers only): scheduled lessons starting in [fromUtc, toUtc), in start order,
+    /// after <paramref name="after"/> (the last lesson of the previous page), at most <paramref name="max"/>.
+    /// </summary>
+    Task<IReadOnlyList<UpcomingLesson>> ScheduledBetweenAsync(DateTime fromUtc, DateTime toUtc, (DateTime StartUtc, Guid LessonId)? after, int max, CancellationToken cancellationToken);
 }
 
 /// <summary>An unprocessed lesson event (the Finance outbox, R2-P7/R2-P10).</summary>

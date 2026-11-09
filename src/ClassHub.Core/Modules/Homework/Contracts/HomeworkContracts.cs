@@ -1,5 +1,15 @@
 namespace ClassHub.Core.Modules.Homework.Contracts;
 
+/// <summary>An active assignment as a notification shows it (title and due date).</summary>
+public sealed record HomeworkNotice(Guid HomeworkId, Guid AssignmentId, string Title, DateOnly? DueDate);
+
+/// <summary>Homework of the current workspace, for other modules.</summary>
+public interface IHomeworkNotices
+{
+    /// <summary>The student's assignment of the homework while both are active (not archived, not removed); otherwise null.</summary>
+    Task<HomeworkNotice?> FindAsync(Guid homeworkId, Guid studentId, CancellationToken cancellationToken);
+}
+
 /// <summary>Create or change a homework; the version is the loaded one (null when creating).</summary>
 public sealed record SaveHomeworkRequest(string? Title, string? Description, DateOnly? DueDate, Guid? LessonId, int? Version);
 

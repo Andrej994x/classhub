@@ -231,12 +231,13 @@ internal sealed class BookingService(
     /// After a booked lesson was changed in the lesson editor (in the caller's unit of work): its confirmed booking takes
     /// the new time or the cancellation, and the visitor is told, as if it had been done on the booking.
     /// </summary>
-    public async Task OnLessonChangedAsync(Lesson lesson, CancellationToken cancellationToken)
+    /// <summary>Keeps a booked lesson's booking in step; true when the lesson is booked (its visitor is told by email).</summary>
+    public async Task<bool> OnLessonChangedAsync(Lesson lesson, CancellationToken cancellationToken)
     {
         var booking = await db.Set<BookingRequest>().SingleOrDefaultAsync(b => b.LessonId == lesson.Id && b.Status == BookingStatus.Confirmed, cancellationToken);
         if (booking is null)
         {
-            return;
+            return false;
         }
 
         var now = clock.GetUtcNow().UtcDateTime;
@@ -253,6 +254,8 @@ internal sealed class BookingService(
             Decide(booking, booking.Reason, now);
             await NotifyAsync(booking, BookingEmails.Kind.Rescheduled, cancellationToken);
         }
+
+        return true;
     }
 
     private async Task<Lesson> ScheduledLessonAsync(BookingRequest booking, CancellationToken cancellationToken)

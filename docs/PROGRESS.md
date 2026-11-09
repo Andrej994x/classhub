@@ -7,10 +7,10 @@ This is the live status of the autonomous implementation loop ([ROADMAP.md](ROAD
 | Field | Value |
 |---|---|
 | Release | R2 — Teaching operations (R0 and R1 complete) |
-| Current phase | R2-P10 — Packages & payment tracking |
-| Branch | `feature/r2-p10-finance` (from `main` @ `6c45831`) |
+| Current phase | R2-P11 — Notifications |
+| Branch | `feature/r2-p11-notifications` (from `main` @ `d1ac8a8`) |
 | Workflow step | 5 — signed Codex review, then PR |
-| Next action | R2-P10 PR; then R2-P11 (notifications) |
+| Next action | R2-P11 PR; then R2-P12 (dashboards) |
 | Open blockers | None. User actions (optional): direct-push probe (R0-P8); remove the now redundant required `pr-gate` check (see Decisions) |
 
 ## Phase status
@@ -51,8 +51,8 @@ Status values: `not started`, `in progress`, `in review` (PR open), `merged`, `b
 | R2-P7 | Attendance, notes & history | merged | `feature/r2-p7-attendance` | [#31](https://github.com/Andrej994x/classhub/pull/31) | `637aede` | 3 rounds: 3 × P2 fixed (backfill of earlier held lessons, attendance draft kept on notes save, cross-workspace history 404); round 3 clean | green | Migration applied to local `ClassHubDb` |
 | R2-P8 | Materials | merged | `feature/r2-p8-materials` | [#32](https://github.com/Andrej994x/classhub/pull/32) | `c9b3e36` | 3 rounds: 3 × P2 fixed (profile photos under the shared storage quota, Office packages in any entry order, subject filter); round 3 clean | green | Migration applied to local `ClassHubDb` |
 | R2-P9 | Homework | merged | `feature/r2-p9-homework` | [#33](https://github.com/Andrej994x/classhub/pull/33) | `6c45831` | 3 rounds: 2 × P2 fixed (archive racing an answer upload, stale form overwriting a newer answer); round 3 clean | green | Migration applied to local `ClassHubDb` |
-| R2-P10 | Packages & payments | in progress | `feature/r2-p10-finance` | | | | | Plan: packages with snapshotted terms, append-only lesson ledger fed by the lesson event outbox (consume once per held lesson and present student, reversals, unpaid lessons D-25), payments with reversals, balance and lesson corrections with reasons, balances per currency, overview and period report, audit |
-| R2-P11 | Notifications | not started | | | | | | |
+| R2-P10 | Packages & payments | merged | `feature/r2-p10-finance` | [#34](https://github.com/Andrej994x/classhub/pull/34) | `d1ac8a8` | 5 rounds: 1 × P1 + 6 × P2 fixed (lesson lock before attendance, correction bounds and waivers, safe validators, report counts corrections, paged history, closing under the student lock, typed currencies); round 5 clean | green | Migration applied to local `ClassHubDb` |
+| R2-P11 | Notifications | in progress | `feature/r2-p11-notifications` | | | | | Plan: student notifications by email (lesson scheduled/rescheduled/cancelled, reminders, new homework) with dedupe keys, reminders planned from the schedule, withdrawal on cancel/reschedule, a leased dispatcher (no double sends), recipients and preferences resolved at send time, preferences in the student portal |
 | R2-P12 | Dashboards (teacher + student) | not started | | | | | | |
 | R2-P13 | Release 2 hardening | not started | | | | | | |
 

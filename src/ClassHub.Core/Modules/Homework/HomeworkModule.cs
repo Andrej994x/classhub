@@ -23,6 +23,7 @@ public sealed class HomeworkModule : IModule
     {
         services.AddScoped<HomeworkQueries>();
         services.AddScoped<HomeworkService>();
+        services.AddScoped<IHomeworkNotices, HomeworkNotices>();
     }
 
     public void MapEndpoints(IEndpointRouteBuilder endpoints)

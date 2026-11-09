@@ -3,6 +3,7 @@ using ClassHub.Core.Modules.Catalog.Contracts;
 using ClassHub.Core.Modules.Lessons.Contracts;
 using ClassHub.Core.Modules.Lessons.Domain;
 using ClassHub.Core.Modules.Lessons.Persistence;
+using ClassHub.Core.Modules.Notifications.Contracts;
 using ClassHub.Core.Modules.Workspaces.Contracts;
 using ClassHub.Core.SharedKernel.Errors;
 using ClassHub.Core.SharedKernel.Tenancy;
@@ -23,6 +24,7 @@ internal sealed class LessonSeriesService(
     IWorkspaceSettings workspace,
     LessonParticipants participants,
     ICatalogLookup catalog,
+    INotificationScheduler notifications,
     TimeProvider clock)
 {
     public const string ThisAndFollowing = "ThisAndFollowing";
@@ -43,7 +45,7 @@ internal sealed class LessonSeriesService(
         var series = NewSeries(request, teacher, zoneId, now);
         db.Set<LessonSeries>().Add(series);
         await db.SaveChangesAsync(cancellationToken);
-        var (created, conflicts) = await MaterializeAsync(series, now, cancellationToken);
+        var (created, conflicts) = await MaterializeAsync(series, now, cancellationToken, announce: true);
         await transaction.CommitAsync(cancellationToken);
         return new SeriesResultResponse(await GetAsync(series.Id, cancellationToken), created, conflicts);
     }
@@ -101,7 +103,7 @@ internal sealed class LessonSeriesService(
         old.ReplacedBySeriesId = next.Id;
         Touch(old, now);
         await SaveAsync(cancellationToken);
-        var (created, conflicts) = await MaterializeAsync(next, now, cancellationToken);
+        var (created, conflicts) = await MaterializeAsync(next, now, cancellationToken, announce: true);
         await transaction.CommitAsync(cancellationToken);
         return new SeriesResultResponse(await GetAsync(next.Id, cancellationToken), created, conflicts);
     }
@@ -137,13 +139,21 @@ internal sealed class LessonSeriesService(
             return 0;
         }
 
-        var (created, _) = await MaterializeAsync(series, nowUtc, cancellationToken);
+        // A series that had no lesson yet (it started beyond the horizon, or its first dates were all taken) is announced
+        // with its first lesson (once per series and student, like at creation).
+        var firstLessons = !await db.Set<Lesson>().AnyAsync(l => l.SeriesId == series.Id, cancellationToken);
+        var (created, _) = await MaterializeAsync(series, nowUtc, cancellationToken, announce: firstLessons);
         await transaction.CommitAsync(cancellationToken);
         return created;
     }
 
     /// <summary>Creates (or skips) every occurrence from <c>NextIndex</c> whose date is within the horizon.</summary>
-    private async Task<(int Created, IReadOnlyList<SeriesSkipResponse> Conflicts)> MaterializeAsync(LessonSeries series, DateTime nowUtc, CancellationToken cancellationToken)
+    /// <summary>
+    /// Creates the series' lessons up to the horizon. <paramref name="announce"/>: a new or replaced series is announced to
+    /// its students once (each lesson then gets its reminder) when its first lesson is created; extending a series that
+    /// already has lessons announces nothing.
+    /// </summary>
+    private async Task<(int Created, IReadOnlyList<SeriesSkipResponse> Conflicts)> MaterializeAsync(LessonSeries series, DateTime nowUtc, CancellationToken cancellationToken, bool announce = false)
     {
         var zone = TimeZoneInfo.FindSystemTimeZoneById(series.TimeZone);
         var until = LessonSeries.HorizonEnd(zone, nowUtc);
@@ -155,6 +165,7 @@ internal sealed class LessonSeriesService(
 
         var (people, problem) = await participants.ResolveAsync(series.Kind, series.StudentId, series.GroupId, cancellationToken);
         var created = 0;
+        Lesson? first = null;
         var conflicts = new List<SeriesSkipResponse>();
         foreach (var (index, date, startUtc) in occurrences)
         {
@@ -192,10 +203,16 @@ internal sealed class LessonSeriesService(
                 };
                 db.Set<Lesson>().Add(lesson);
                 db.Set<LessonParticipant>().AddRange(people.Select(id => new LessonParticipant { WorkspaceId = series.WorkspaceId, LessonId = lesson.Id, StudentId = id }));
+                first ??= lesson;
                 created++;
             }
 
             series.NextIndex = index + 1;
+        }
+
+        if (announce && first is not null)
+        {
+            await notifications.SeriesScheduledAsync(series.Id, LessonService.Notice(first), people, cancellationToken);
         }
 
         await SaveAsync(cancellationToken);
@@ -213,7 +230,13 @@ internal sealed class LessonSeriesService(
             .Where(l => l.SeriesId == series.Id && l.Status == LessonStatus.Scheduled && !l.SeriesException && l.StartUtc >= fromUtc)
             .ToListAsync(cancellationToken);
         var ids = lessons.Select(l => l.Id).ToList();
-        db.Set<LessonParticipant>().RemoveRange(await db.Set<LessonParticipant>().Where(p => ids.Contains(p.LessonId)).ToListAsync(cancellationToken));
+        var removedParticipants = await db.Set<LessonParticipant>().Where(p => ids.Contains(p.LessonId)).ToListAsync(cancellationToken);
+        // Pending notices of the removed lessons are withdrawn; students told about them or the series hear they are off.
+        await notifications.SeriesEndedAsync(series.Id,
+            [.. lessons.Select(l => (LessonService.Notice(l, l.Version + 1), (IReadOnlyCollection<Guid>)[.. removedParticipants.Where(p => p.LessonId == l.Id).Select(p => p.StudentId)]))],
+            cancellationToken);
+
+        db.Set<LessonParticipant>().RemoveRange(removedParticipants);
         db.Set<Lesson>().RemoveRange(lessons);
         var fromDay = DateOnly.FromDateTime(LessonTime.ToLocal(fromUtc, zone));
         db.Set<LessonSeriesSkip>().RemoveRange(await db.Set<LessonSeriesSkip>().Where(s => s.SeriesId == series.Id && s.Date >= fromDay).ToListAsync(cancellationToken));

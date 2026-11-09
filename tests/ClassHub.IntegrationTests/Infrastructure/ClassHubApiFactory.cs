@@ -56,6 +56,8 @@ public sealed class ClassHubApiFactory : WebApplicationFactory<Program>
         builder.UseSetting("Files:RootPath", FileRoot);
         // Lesson consumption runs when a test asks for it (LessonConsumptionJob.RunOnceAsync), never in between.
         builder.UseSetting("Finance:ConsumptionIntervalSeconds", "86400");
+        // Notifications are planned and sent when a test asks for it (NotificationJob.RunAtAsync), never in between.
+        builder.UseSetting("Notifications:IntervalSeconds", "86400");
 
         builder.ConfigureTestServices(services =>
         {

@@ -22,6 +22,17 @@ internal sealed class LessonLookup(ClassHubDbContext db) : ILessonLookup
         return lessons.ToDictionary(l => l.Id, l => new LessonSummary(l.Id, l.Title, l.StartUtc, l.TimeZone, l.Status.ToString()));
     }
 
+    public async Task<LessonSummary?> NextInSeriesAsync(Guid seriesId, Guid studentId, DateTime afterUtc, CancellationToken cancellationToken)
+    {
+        var next = await db.Set<Lesson>().AsNoTracking()
+            .Where(l => l.SeriesId == seriesId && l.Status == LessonStatus.Scheduled && l.StartUtc > afterUtc
+                && db.Set<LessonParticipant>().Any(p => p.LessonId == l.Id && p.StudentId == studentId))
+            .OrderBy(l => l.StartUtc)
+            .Select(l => new { l.Id, l.Title, l.StartUtc, l.TimeZone, l.Status })
+            .FirstOrDefaultAsync(cancellationToken);
+        return next is null ? null : new LessonSummary(next.Id, next.Title, next.StartUtc, next.TimeZone, next.Status.ToString());
+    }
+
     public async Task<LessonAttendanceFacts?> AttendanceAsync(Guid lessonId, CancellationToken cancellationToken)
     {
         var lesson = await db.Set<Lesson>().AsNoTracking().Where(l => l.Id == lessonId)

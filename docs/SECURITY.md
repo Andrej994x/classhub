@@ -88,6 +88,11 @@ ASP.NET Core Identity with cookie sessions. See [ARCHITECTURE.md](ARCHITECTURE.m
 - Names, phones and guardian contacts are redacted in logs.
 - No duplicates by email within a workspace (unique index) and no limit overrun under parallel requests (intake lock; tested).
 
+## Notifications (R2-P11)
+
+- A notification goes only to the student's own address (their linked account, otherwise the email on their record), resolved when it is sent; archived students and students without an address get nothing. Emails contain the teacher's name, the lesson's title and time or the homework's title and due date, and a portal link only for account holders.
+- The dispatcher reads due rows across workspaces as identifiers only and sends in a scope bound to the row's workspace; preferences are per user (`/api/me/notification-preferences`, authenticated).
+
 ## Finance (R2-P10)
 
 - `ws:finance.read` / `ws:finance.manage`; other workspaces get 404 for every student, package, payment and ledger entry.

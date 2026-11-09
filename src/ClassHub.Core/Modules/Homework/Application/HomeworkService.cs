@@ -6,6 +6,7 @@ using ClassHub.Core.Modules.Homework.Contracts;
 using ClassHub.Core.Modules.Homework.Domain;
 using ClassHub.Core.Modules.Homework.Persistence;
 using ClassHub.Core.Modules.Lessons.Contracts;
+using ClassHub.Core.Modules.Notifications.Contracts;
 using ClassHub.Core.Modules.Students.Contracts;
 using ClassHub.Core.Modules.Subscriptions.Contracts;
 using ClassHub.Core.Modules.Workspaces.Contracts;
@@ -31,6 +32,7 @@ internal sealed class HomeworkService(
     IGroupLookup groups,
     ILessonLookup lessons,
     IWorkspaceSettings workspace,
+    INotificationScheduler notifications,
     TimeProvider clock)
 {
     public async Task<HomeworkListResponse> ListAsync(string? q, Guid? lessonId, bool archived, int page, int pageSize, CancellationToken cancellationToken)
@@ -152,17 +154,23 @@ internal sealed class HomeworkService(
         {
             var existing = await db.Set<HomeworkAssignment>().AsNoTracking().Where(a => a.HomeworkId == homework.Id).Select(a => a.StudentId).ToListAsync(cancellationToken);
             var now = clock.GetUtcNow().UtcDateTime;
+            var added = new List<HomeworkAssignmentRef>();
             foreach (var studentId in wanted.Except(existing))
             {
-                db.Set<HomeworkAssignment>().Add(new HomeworkAssignment
+                var assignment = new HomeworkAssignment
                 {
                     Id = Guid.CreateVersion7(),
                     WorkspaceId = homework.WorkspaceId,
                     HomeworkId = homework.Id,
                     StudentId = studentId,
                     AssignedAtUtc = now,
-                });
+                };
+                db.Set<HomeworkAssignment>().Add(assignment);
+                added.Add(new HomeworkAssignmentRef(studentId, assignment.Id));
             }
+
+            // The new students hear about it (R2-P11), in the same save as their assignment.
+            await notifications.HomeworkAssignedAsync(homework.Id, added, cancellationToken);
 
             try
             {
