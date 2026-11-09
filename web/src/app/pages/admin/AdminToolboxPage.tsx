@@ -87,6 +87,8 @@ function ToolForm({ entry, onDone }: { entry?: AdminTool; onDone?: () => void })
   const [isFeatured, setFeatured] = useState(tool?.isFeatured ?? false);
   const [isActive, setActive] = useState(entry?.isActive ?? true);
   const [saved, setSaved] = useState(false);
+  // The version the form's values came from: a refetch while editing must not make stale values look current.
+  const [version] = useState(entry ? entry.version : null);
   const id = tool?.id ?? 'new';
 
   const submit = (event: FormEvent) => {
@@ -111,7 +113,7 @@ function ToolForm({ entry, onDone }: { entry?: AdminTool; onDone?: () => void })
           isActive,
           isFeatured,
           sortOrder: Number(sortOrder),
-          version: entry ? entry.version : null,
+          version,
         },
       },
       {

@@ -56,7 +56,7 @@ On a machine with little free memory, many local workers can exhaust Chromium's 
   - **Only platform staff manage tools:** a teacher gets 403, an anonymous caller 401.
 - **Vitest:** `ToolboxPage.test.tsx`.
   - Cards, search and category filters, and the external link with `target` and `rel`.
-  - Admin: add an external tool, and edit one with its version.
+  - Admin: add an external tool, and edit one with the version the form was opened with: a refetch while editing never makes stale values look current (fails when the latest version is sent).
 - **E2E:** `toolbox.spec.ts` (desktop and phone). From the navigation, search for GeoGebra and open it. It opens in a new tab at the official URL, and `window.opener` is null. The site is answered by a local route, so the test never leaves the machine.
 
 ## Dashboard tests (R2-P12)

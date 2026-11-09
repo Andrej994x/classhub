@@ -68,17 +68,19 @@ describe('teacher toolbox', () => {
 });
 
 describe('admin toolbox', () => {
-  it('adds an external tool and edits one with its version', async () => {
+  it('adds an external tool and edits one with the version the form was opened with', async () => {
     const user = userEvent.setup();
     const posted: unknown[] = [];
     const put: unknown[] = [];
+    let gets = 0;
     const existing = { tool: tool('geogebra', { nameMk: 'GeoGebra', nameEn: 'GeoGebra' }), isActive: true, sortOrder: 10, updatedAtUtc: '2026-11-10T00:00:00Z', version: 3 };
     fakeApi({
       me: ADMIN,
       extra: [
         (call: FakeCall) => {
           if (call.path === '/api/auth/mfa') return json(200, MFA);
-          if (call.path === '/api/admin/toolbox' && call.method === 'GET') return json(200, [existing]);
+          // After the first load, another staff member's change makes the tool version 4.
+          if (call.path === '/api/admin/toolbox' && call.method === 'GET') return json(200, [{ ...existing, version: gets++ === 0 ? 3 : 4 }]);
           if (call.path === '/api/admin/toolbox' && call.method === 'POST') {
             posted.push(call.body);
             return json(200, existing);
@@ -93,7 +95,12 @@ describe('admin toolbox', () => {
     });
     await renderRoute('/admin/toolbox');
 
-    const form = await screen.findByRole('form', { name: 'Додај алатка' });
+    await user.click(await screen.findByRole('button', { name: 'Уреди GeoGebra' }));
+    const edit = screen.getByRole('form', { name: 'Уреди GeoGebra' });
+    await user.click(within(edit).getByRole('checkbox', { name: 'Активна' }));
+
+    // Adding another tool refetches the list while the edit form is open.
+    const form = screen.getByRole('form', { name: 'Додај алатка' });
     await user.type(within(form).getByLabelText('Код (траен)'), 'molview');
     await user.type(within(form).getByLabelText('Име (македонски)'), 'MolView');
     await user.type(within(form).getByLabelText('Име (англиски)'), 'MolView');
@@ -106,11 +113,9 @@ describe('admin toolbox', () => {
     await expect.poll(() => posted.length).toBe(1);
     expect(posted[0]).toMatchObject({ code: 'molview', nameMk: 'MolView', kind: 'External', category: 'Chemistry', url: 'https://molview.org/', builtInKey: null, version: null });
 
-    await user.click(screen.getByRole('button', { name: 'Уреди GeoGebra' }));
-    const edit = screen.getByRole('form', { name: 'Уреди GeoGebra' });
-    await user.click(within(edit).getByRole('checkbox', { name: 'Активна' }));
+    await expect.poll(() => gets).toBeGreaterThan(1);
     await user.click(within(edit).getByRole('button', { name: 'Зачувај' }));
     await expect.poll(() => put.length).toBe(1);
-    expect(put[0]).toMatchObject({ code: null, isActive: false, version: 3 });
+    expect(put[0]).toMatchObject({ code: null, isActive: false, version: 3 }); // not the refetched 4: the server answers with a conflict
   });
 });
