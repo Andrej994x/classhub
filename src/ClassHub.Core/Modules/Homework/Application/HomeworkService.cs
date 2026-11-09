@@ -154,17 +154,19 @@ internal sealed class HomeworkService(
         {
             var existing = await db.Set<HomeworkAssignment>().AsNoTracking().Where(a => a.HomeworkId == homework.Id).Select(a => a.StudentId).ToListAsync(cancellationToken);
             var now = clock.GetUtcNow().UtcDateTime;
-            var added = wanted.Except(existing).ToList();
-            foreach (var studentId in added)
+            var added = new List<HomeworkAssignmentRef>();
+            foreach (var studentId in wanted.Except(existing))
             {
-                db.Set<HomeworkAssignment>().Add(new HomeworkAssignment
+                var assignment = new HomeworkAssignment
                 {
                     Id = Guid.CreateVersion7(),
                     WorkspaceId = homework.WorkspaceId,
                     HomeworkId = homework.Id,
                     StudentId = studentId,
                     AssignedAtUtc = now,
-                });
+                };
+                db.Set<HomeworkAssignment>().Add(assignment);
+                added.Add(new HomeworkAssignmentRef(studentId, assignment.Id));
             }
 
             // The new students hear about it (R2-P11), in the same save as their assignment.

@@ -13,7 +13,7 @@ internal sealed class NotificationConfiguration : IEntityTypeConfiguration<Notif
     {
         builder.ToTable("Notifications", t =>
         {
-            t.HasCheckConstraint("CK_Notifications_Kind", "[Kind] BETWEEN 1 AND 5");
+            t.HasCheckConstraint("CK_Notifications_Kind", "[Kind] BETWEEN 1 AND 6");
             t.HasCheckConstraint("CK_Notifications_Status", "[Status] BETWEEN 1 AND 5");
             t.HasCheckConstraint("CK_Notifications_Subject",
                 "([Kind] = 5 AND [HomeworkId] IS NOT NULL AND [LessonId] IS NULL) OR ([Kind] <> 5 AND [LessonId] IS NOT NULL AND [HomeworkId] IS NULL)");
@@ -22,6 +22,8 @@ internal sealed class NotificationConfiguration : IEntityTypeConfiguration<Notif
         builder.HasKey(x => x.Id);
         builder.Property(x => x.DedupeKey).HasMaxLength(Notification.DedupeKeyMaxLength).IsUnicode(false).IsRequired();
         builder.Property(x => x.Outcome).HasMaxLength(Notification.OutcomeMaxLength);
+        builder.Property(x => x.LessonTitle).HasMaxLength(Notification.TitleMaxLength);
+        builder.Property(x => x.LessonTimeZone).HasMaxLength(Notification.TimeZoneMaxLength).IsUnicode(false);
         builder.Property(x => x.Version).IsConcurrencyToken();
         // Never two of the same notification.
         builder.HasIndex(x => x.DedupeKey).IsUnique();

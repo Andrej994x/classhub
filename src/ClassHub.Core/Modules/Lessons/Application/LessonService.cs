@@ -86,7 +86,7 @@ internal sealed class LessonService(
         Apply(lesson, request, startUtc, endUtc);
         db.Set<Lesson>().Add(lesson);
         db.Set<LessonParticipant>().AddRange(participants.Select(id => new LessonParticipant { WorkspaceId = lesson.WorkspaceId, LessonId = lesson.Id, StudentId = id }));
-        await notifications.LessonScheduledAsync(lesson.Id, lesson.StartUtc, participants, cancellationToken);
+        await notifications.LessonScheduledAsync(Notice(lesson), participants, cancellationToken);
         await db.SaveChangesAsync(cancellationToken);
         await transaction.CommitAsync(cancellationToken);
         return await GetAsync(lesson.Id, cancellationToken);
@@ -139,11 +139,11 @@ internal sealed class LessonService(
         // told (R2-P11): removed ones that it is off, new ones that it is on, the others of a new time.
         if (!await bookings.OnLessonChangedAsync(lesson, cancellationToken))
         {
-            await notifications.LessonCancelledAsync(lesson.Id, [.. before.Except(after)], cancellationToken);
-            await notifications.LessonScheduledAsync(lesson.Id, lesson.StartUtc, [.. after.Except(before)], cancellationToken);
+            await notifications.LessonCancelledAsync(Notice(lesson), [.. before.Except(after)], cancellationToken);
+            await notifications.LessonScheduledAsync(Notice(lesson), [.. after.Except(before)], cancellationToken);
             if (lesson.StartUtc != current.StartUtc)
             {
-                await notifications.LessonRescheduledAsync(lesson.Id, lesson.StartUtc, [.. after.Intersect(before)], cancellationToken);
+                await notifications.LessonRescheduledAsync(Notice(lesson), [.. after.Intersect(before)], cancellationToken);
             }
         }
 
@@ -316,7 +316,7 @@ internal sealed class LessonService(
         {
             // Pending reminders are withdrawn; students who were told about the lesson hear it is off.
             var participants = await db.Set<LessonParticipant>().Where(p => p.LessonId == lesson.Id).Select(p => p.StudentId).ToListAsync(cancellationToken);
-            await notifications.LessonCancelledAsync(lesson.Id, participants, cancellationToken);
+            await notifications.LessonCancelledAsync(Notice(lesson), participants, cancellationToken);
         }
 
         await SaveAsync(cancellationToken);
@@ -369,6 +369,10 @@ internal sealed class LessonService(
             throw new BusinessRuleException($"A {lesson.Status.ToString().ToLowerInvariant()} lesson cannot change any more.", ErrorCodes.InvalidStatusTransition);
         }
     }
+
+    /// <summary>The lesson as notifications record it; its version (after the change) tells changes apart.</summary>
+    internal static LessonNotice Notice(Lesson lesson, int? revision = null) =>
+        new(lesson.Id, revision ?? lesson.Version, lesson.Title, lesson.StartUtc, lesson.TimeZone);
 
     private void Touch(Lesson lesson)
     {

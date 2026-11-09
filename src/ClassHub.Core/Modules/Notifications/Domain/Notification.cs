@@ -10,6 +10,9 @@ public enum NotificationKind
     LessonCancelled = 3,
     LessonReminder = 4,
     HomeworkAssigned = 5,
+
+    /// <summary>Recurring lessons were scheduled (one email for the series; each lesson then gets its reminder).</summary>
+    SeriesScheduled = 6,
 }
 
 public enum NotificationStatus
@@ -34,6 +37,8 @@ public sealed class Notification : ITenantOwned
 {
     public const int DedupeKeyMaxLength = 200;
     public const int OutcomeMaxLength = 100;
+    public const int TitleMaxLength = 160;
+    public const int TimeZoneMaxLength = 64;
 
     public Guid Id { get; set; }
 
@@ -52,6 +57,11 @@ public sealed class Notification : ITenantOwned
 
     /// <summary>The lesson's start when planned (reminders and reschedules apply only while it still starts then).</summary>
     public DateTime? LessonStartUtc { get; set; }
+
+    /// <summary>The lesson's title and time zone when planned (a cancellation still names a lesson that was removed).</summary>
+    public string? LessonTitle { get; set; }
+
+    public string? LessonTimeZone { get; set; }
 
     public Guid? HomeworkId { get; set; }
 
@@ -95,15 +105,21 @@ public static class NotificationRules
     public static readonly TimeSpan MinimumReminderNotice = TimeSpan.FromHours(1);
 
     /// <summary>
-    /// One key per notification that may exist: per lesson and student, and for reminders and reschedules also per start
-    /// time (a moved lesson gets one new reminder, never two for the same time).
+    /// A lesson notice is one per lesson, student and lesson revision (its version after the change): retries of one
+    /// change are the same notice, every later change (a student added back, a lesson moved back) is a new one.
     /// </summary>
-    public static string DedupeKey(NotificationKind kind, Guid subjectId, Guid studentId, DateTime? startUtc = null) => kind switch
-    {
-        NotificationKind.LessonReminder or NotificationKind.LessonRescheduled =>
-            $"{Name(kind)}:{subjectId:N}:{studentId:N}:{(startUtc ?? throw new ArgumentNullException(nameof(startUtc))).Ticks.ToString(CultureInfo.InvariantCulture)}",
-        _ => $"{Name(kind)}:{subjectId:N}:{studentId:N}",
-    };
+    public static string LessonKey(NotificationKind kind, Guid lessonId, Guid studentId, int revision) =>
+        $"{Name(kind)}:{lessonId:N}:{studentId:N}:r{revision.ToString(CultureInfo.InvariantCulture)}";
+
+    /// <summary>
+    /// A reminder is one per lesson, student and start time; <paramref name="attempt"/> counts reminders for that time that
+    /// were withdrawn (a lesson moved away and back gets a new one, never two pending or sent for the same time).
+    /// </summary>
+    public static string ReminderKey(Guid lessonId, Guid studentId, DateTime startUtc, int attempt) =>
+        $"{Name(NotificationKind.LessonReminder)}:{lessonId:N}:{studentId:N}:{startUtc.Ticks.ToString(CultureInfo.InvariantCulture)}:{attempt.ToString(CultureInfo.InvariantCulture)}";
+
+    /// <summary>New homework is one per assignment (assigned again after being removed: a new assignment, a new notice).</summary>
+    public static string HomeworkKey(Guid assignmentId) => $"{Name(NotificationKind.HomeworkAssigned)}:{assignmentId:N}";
 
     /// <summary>
     /// When a lesson's reminder is due: <see cref="ReminderLead"/> before it starts; right away when that moment has
@@ -149,6 +165,7 @@ public static class NotificationRules
         NotificationKind.LessonCancelled => "lesson-cancelled",
         NotificationKind.LessonReminder => "lesson-reminder",
         NotificationKind.HomeworkAssigned => "homework-assigned",
+        NotificationKind.SeriesScheduled => "series-scheduled",
         _ => throw new ArgumentOutOfRangeException(nameof(kind)),
     };
 }

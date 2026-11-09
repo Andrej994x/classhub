@@ -7,59 +7,73 @@ using Microsoft.EntityFrameworkCore;
 namespace ClassHub.Core.Modules.Notifications.Application;
 
 /// <summary>
-/// Plans immediate notifications in the caller's unit of work (R2-P11). Rows are only added when their dedupe key is new
-/// (lesson changes are serialized per teacher by the schedule lock, homework assignments are unique per student), and
-/// a later change withdraws the pending rows it makes outdated.
+/// Plans immediate notifications in the caller's unit of work (R2-P11). A notice is keyed by the change it announces
+/// (the lesson's revision, the homework assignment): repeating one change adds nothing, every later change is told. A
+/// later change withdraws the pending rows it makes outdated.
 /// </summary>
 internal sealed class NotificationScheduler(ClassHubDbContext db, ITenantContext tenant, TimeProvider clock) : INotificationScheduler
 {
     private static readonly NotificationKind[] LessonKinds =
-        [NotificationKind.LessonScheduled, NotificationKind.LessonRescheduled, NotificationKind.LessonReminder];
+        [NotificationKind.LessonScheduled, NotificationKind.SeriesScheduled, NotificationKind.LessonRescheduled, NotificationKind.LessonReminder];
 
-    public async Task LessonScheduledAsync(Guid lessonId, DateTime startUtc, IReadOnlyCollection<Guid> studentIds, CancellationToken cancellationToken)
+    public async Task LessonScheduledAsync(LessonNotice lesson, IReadOnlyCollection<Guid> studentIds, CancellationToken cancellationToken)
     {
         foreach (var studentId in studentIds.Distinct())
         {
-            await AddAsync(NotificationKind.LessonScheduled, studentId, lessonId: lessonId, startUtc: startUtc, cancellationToken: cancellationToken);
+            await AddLessonAsync(NotificationKind.LessonScheduled, lesson, studentId, cancellationToken);
         }
     }
 
-    public async Task LessonRescheduledAsync(Guid lessonId, DateTime startUtc, IReadOnlyCollection<Guid> studentIds, CancellationToken cancellationToken)
+    public async Task SeriesScheduledAsync(LessonNotice firstLesson, IReadOnlyCollection<Guid> studentIds, CancellationToken cancellationToken)
     {
         foreach (var studentId in studentIds.Distinct())
         {
-            var pending = await PendingAsync(lessonId, studentId, cancellationToken);
+            await AddLessonAsync(NotificationKind.SeriesScheduled, firstLesson, studentId, cancellationToken);
+        }
+    }
+
+    public async Task LessonRescheduledAsync(LessonNotice lesson, IReadOnlyCollection<Guid> studentIds, CancellationToken cancellationToken)
+    {
+        foreach (var studentId in studentIds.Distinct())
+        {
+            var pending = await PendingAsync(lesson.LessonId, studentId, cancellationToken);
             // Reminders and earlier reschedules for the old time are withdrawn (a reminder for the new time follows).
             Withdraw(pending.Where(n => n.Kind is NotificationKind.LessonReminder or NotificationKind.LessonRescheduled), "rescheduled");
-            if (pending.Any(n => n.Kind == NotificationKind.LessonScheduled))
+            if (pending.Any(n => n.Kind is NotificationKind.LessonScheduled or NotificationKind.SeriesScheduled))
             {
                 continue; // the announcement has not gone out yet: it will name the new time
             }
 
-            await AddAsync(NotificationKind.LessonRescheduled, studentId, lessonId: lessonId, startUtc: startUtc, cancellationToken: cancellationToken);
+            await AddLessonAsync(NotificationKind.LessonRescheduled, lesson, studentId, cancellationToken);
         }
     }
 
-    public async Task LessonCancelledAsync(Guid lessonId, IReadOnlyCollection<Guid> studentIds, CancellationToken cancellationToken)
+    public async Task LessonCancelledAsync(LessonNotice lesson, IReadOnlyCollection<Guid> studentIds, CancellationToken cancellationToken)
     {
         foreach (var studentId in studentIds.Distinct())
         {
-            Withdraw(await PendingAsync(lessonId, studentId, cancellationToken), "cancelled");
-            // Only a student who was told about the lesson needs to hear it is off.
-            var told = await db.Set<Notification>().AnyAsync(n => n.LessonId == lessonId && n.StudentId == studentId && n.Status == NotificationStatus.Sent
+            Withdraw(await PendingAsync(lesson.LessonId, studentId, cancellationToken), "cancelled");
+            // Only a student who was told about this lesson (announcement, reschedule or reminder) needs to hear it is off.
+            var told = await db.Set<Notification>().AnyAsync(n => n.LessonId == lesson.LessonId && n.StudentId == studentId && n.Status == NotificationStatus.Sent
                 && n.Kind != NotificationKind.LessonCancelled, cancellationToken);
             if (told)
             {
-                await AddAsync(NotificationKind.LessonCancelled, studentId, lessonId: lessonId, cancellationToken: cancellationToken);
+                await AddLessonAsync(NotificationKind.LessonCancelled, lesson, studentId, cancellationToken);
             }
         }
     }
 
-    public async Task HomeworkAssignedAsync(Guid homeworkId, IReadOnlyCollection<Guid> studentIds, CancellationToken cancellationToken)
+    public async Task HomeworkAssignedAsync(Guid homeworkId, IReadOnlyCollection<HomeworkAssignmentRef> assignments, CancellationToken cancellationToken)
     {
-        foreach (var studentId in studentIds.Distinct())
+        foreach (var assignment in assignments)
         {
-            await AddAsync(NotificationKind.HomeworkAssigned, studentId, homeworkId: homeworkId, cancellationToken: cancellationToken);
+            await AddAsync(new Notification
+            {
+                Kind = NotificationKind.HomeworkAssigned,
+                DedupeKey = NotificationRules.HomeworkKey(assignment.AssignmentId),
+                StudentId = assignment.StudentId,
+                HomeworkId = homeworkId,
+            }, cancellationToken);
         }
     }
 
@@ -67,7 +81,7 @@ internal sealed class NotificationScheduler(ClassHubDbContext db, ITenantContext
         await db.Set<Notification>().Where(n => n.LessonId == lessonId && n.StudentId == studentId && n.Status == NotificationStatus.Pending
             && LessonKinds.Contains(n.Kind)).ToListAsync(cancellationToken);
 
-    private void Withdraw(IEnumerable<Notification> notifications, string why)
+    private static void Withdraw(IEnumerable<Notification> notifications, string why)
     {
         foreach (var notification in notifications)
         {
@@ -78,29 +92,33 @@ internal sealed class NotificationScheduler(ClassHubDbContext db, ITenantContext
         }
     }
 
-    private async Task AddAsync(NotificationKind kind, Guid studentId, Guid? lessonId = null, Guid? homeworkId = null, DateTime? startUtc = null, CancellationToken cancellationToken = default)
+    private Task AddLessonAsync(NotificationKind kind, LessonNotice lesson, Guid studentId, CancellationToken cancellationToken) =>
+        AddAsync(new Notification
+        {
+            Kind = kind,
+            DedupeKey = NotificationRules.LessonKey(kind, lesson.LessonId, studentId, lesson.Revision),
+            StudentId = studentId,
+            LessonId = lesson.LessonId,
+            LessonStartUtc = lesson.StartUtc,
+            LessonTitle = lesson.Title.Length > Notification.TitleMaxLength ? lesson.Title[..Notification.TitleMaxLength] : lesson.Title,
+            LessonTimeZone = lesson.TimeZone,
+        }, cancellationToken);
+
+    private async Task AddAsync(Notification notification, CancellationToken cancellationToken)
     {
-        var key = NotificationRules.DedupeKey(kind, lessonId ?? homeworkId!.Value, studentId, startUtc);
+        var key = notification.DedupeKey;
         if (await db.Set<Notification>().AnyAsync(n => n.DedupeKey == key, cancellationToken)
             || db.ChangeTracker.Entries<Notification>().Any(e => e.Entity.DedupeKey == key))
         {
-            return;
+            return; // the same change was planned already
         }
 
         var now = clock.GetUtcNow().UtcDateTime;
-        db.Set<Notification>().Add(new Notification
-        {
-            Id = Guid.CreateVersion7(),
-            WorkspaceId = tenant.RequireWorkspaceId(),
-            Kind = kind,
-            DedupeKey = key,
-            StudentId = studentId,
-            TeacherUserId = tenant.UserId ?? throw new InvalidOperationException("Notifications are planned on a teacher's behalf."),
-            LessonId = lessonId,
-            LessonStartUtc = kind is NotificationKind.LessonScheduled or NotificationKind.LessonRescheduled ? startUtc : null,
-            HomeworkId = homeworkId,
-            DueAtUtc = now,
-            CreatedAtUtc = now,
-        });
+        notification.Id = Guid.CreateVersion7();
+        notification.WorkspaceId = tenant.RequireWorkspaceId();
+        notification.TeacherUserId = tenant.UserId ?? throw new InvalidOperationException("Notifications are planned on a teacher's behalf.");
+        notification.DueAtUtc = now;
+        notification.CreatedAtUtc = now;
+        db.Set<Notification>().Add(notification);
     }
 }

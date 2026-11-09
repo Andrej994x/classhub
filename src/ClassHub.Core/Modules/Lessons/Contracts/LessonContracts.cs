@@ -311,8 +311,11 @@ public sealed record UpcomingLesson(Guid LessonId, Guid WorkspaceId, Guid Teache
 /// <summary>Scheduled lessons across workspaces, for the reminder planner.</summary>
 public interface IUpcomingLessons
 {
-    /// <summary>System scope (every workspace, identifiers only): scheduled lessons starting in [fromUtc, toUtc).</summary>
-    Task<IReadOnlyList<UpcomingLesson>> ScheduledBetweenAsync(DateTime fromUtc, DateTime toUtc, int max, CancellationToken cancellationToken);
+    /// <summary>
+    /// System scope (every workspace, identifiers only): scheduled lessons starting in [fromUtc, toUtc), in start order,
+    /// after <paramref name="after"/> (the last lesson of the previous page), at most <paramref name="max"/>.
+    /// </summary>
+    Task<IReadOnlyList<UpcomingLesson>> ScheduledBetweenAsync(DateTime fromUtc, DateTime toUtc, (DateTime StartUtc, Guid LessonId)? after, int max, CancellationToken cancellationToken);
 }
 
 /// <summary>An unprocessed lesson event (the Finance outbox, R2-P7/R2-P10).</summary>

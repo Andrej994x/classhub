@@ -18,6 +18,7 @@ internal static class NotificationEmails
         NotificationKind.LessonCancelled => "notify.lesson-cancelled",
         NotificationKind.LessonReminder => "notify.lesson-reminder",
         NotificationKind.HomeworkAssigned => "notify.homework-assigned",
+        NotificationKind.SeriesScheduled => "notify.series-scheduled",
         _ => throw new ArgumentOutOfRangeException(nameof(kind)),
     };
 
@@ -29,6 +30,11 @@ internal static class NotificationEmails
             NotificationKind.LessonScheduled => en
                 ? ($"New lesson with {content.TeacherName}: {content.Title}", $"{content.TeacherName} scheduled a lesson for you: {content.Title}, {content.When}.")
                 : ($"Нов час со {content.TeacherName}: {content.Title}", $"{content.TeacherName} ви закажа час: {content.Title}, {content.When}."),
+            NotificationKind.SeriesScheduled => en
+                ? ($"New recurring lessons with {content.TeacherName}: {content.Title}",
+                    $"{content.TeacherName} scheduled recurring lessons for you: {content.Title}, starting {content.When}. You will get a reminder before each lesson.")
+                : ($"Нови редовни часови со {content.TeacherName}: {content.Title}",
+                    $"{content.TeacherName} ви закажа редовни часови: {content.Title}, почнувајќи од {content.When}. Пред секој час ќе добиете потсетник."),
             NotificationKind.LessonRescheduled => en
                 ? ($"Lesson moved: {content.Title}", $"{content.TeacherName} moved your lesson {content.Title} to {content.When}.")
                 : ($"Часот е преместен: {content.Title}", $"{content.TeacherName} го премести часот {content.Title} за {content.When}."),

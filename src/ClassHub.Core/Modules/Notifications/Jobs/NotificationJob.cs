@@ -27,6 +27,9 @@ public sealed class NotificationOptions
 
     /// <summary>Reminders are planned for scheduled lessons starting within this many hours.</summary>
     public int PlanningHours { get; set; } = 26;
+
+    /// <summary>Lessons read per page while planning (every page of the window is read in each pass).</summary>
+    public int PlanningPageSize { get; set; } = 500;
 }
 
 /// <summary>
@@ -90,41 +93,67 @@ internal sealed partial class NotificationJob(IServiceScopeFactory scopes, IOpti
         return sent;
     }
 
-    /// <summary>A reminder for every student of every scheduled lesson starting soon (once: unique dedupe keys).</summary>
+    /// <summary>
+    /// A reminder for every student of every scheduled lesson starting soon: the whole window, page by page, so no lesson
+    /// waits behind others. One per lesson, student and start time while one is pending or sent; a withdrawn one (the
+    /// lesson moved away and back) is followed by a new attempt.
+    /// </summary>
     private async Task PlanRemindersAsync(DateTime nowUtc, CancellationToken cancellationToken)
     {
-        await using var scope = scopes.CreateAsyncScope();
-        var upcoming = await scope.ServiceProvider.GetRequiredService<IUpcomingLessons>()
-            .ScheduledBetweenAsync(nowUtc, nowUtc.AddHours(Math.Max(1, options.Value.PlanningHours)), 2_000, cancellationToken);
-        var wanted = upcoming
+        var until = nowUtc.AddHours(Math.Max(1, options.Value.PlanningHours));
+        var pageSize = Math.Max(1, options.Value.PlanningPageSize);
+        (DateTime, Guid)? after = null;
+        while (true)
+        {
+            IReadOnlyList<UpcomingLesson> page;
+            await using (var scope = scopes.CreateAsyncScope())
+            {
+                page = await scope.ServiceProvider.GetRequiredService<IUpcomingLessons>().ScheduledBetweenAsync(nowUtc, until, after, pageSize, cancellationToken);
+            }
+
+            if (page.Count == 0)
+            {
+                return;
+            }
+
+            await PlanPageAsync(page, nowUtc, cancellationToken);
+            if (page.Count < pageSize)
+            {
+                return;
+            }
+
+            after = (page[^1].StartUtc, page[^1].LessonId);
+        }
+    }
+
+    private async Task PlanPageAsync(IReadOnlyList<UpcomingLesson> page, DateTime nowUtc, CancellationToken cancellationToken)
+    {
+        var candidates = page
             .SelectMany(l => l.StudentIds.Select(s => (Lesson: l, StudentId: s, Due: NotificationRules.ReminderDueAtUtc(l.StartUtc, nowUtc))))
             .Where(r => r.Due is not null)
-            .Select(r => (r.Lesson, r.StudentId, Due: r.Due!.Value, Key: NotificationRules.DedupeKey(NotificationKind.LessonReminder, r.Lesson.LessonId, r.StudentId, r.Lesson.StartUtc)))
             .ToList();
-        if (wanted.Count == 0)
+        if (candidates.Count == 0)
         {
             return;
         }
 
+        await using var scope = scopes.CreateAsyncScope();
         var db = scope.ServiceProvider.GetRequiredService<ClassHubDbContext>();
-        var keys = wanted.Select(w => w.Key).ToList();
-        var existing = (await db.Set<Notification>().IgnoreQueryFilters().AsNoTracking().Where(n => keys.Contains(n.DedupeKey)).Select(n => n.DedupeKey).ToListAsync(cancellationToken))
-            .ToHashSet(StringComparer.Ordinal);
-        foreach (var (lesson, studentId, due, key) in wanted.Where(w => !existing.Contains(w.Key)))
+        var lessonIds = candidates.Select(c => c.Lesson.LessonId).Distinct().ToList();
+        var reminders = await db.Set<Notification>().IgnoreQueryFilters().AsNoTracking()
+            .Where(n => n.Kind == NotificationKind.LessonReminder && lessonIds.Contains(n.LessonId!.Value))
+            .Select(n => new { n.LessonId, n.StudentId, n.LessonStartUtc, n.Status })
+            .ToListAsync(cancellationToken);
+        foreach (var (lesson, studentId, due) in candidates)
         {
-            db.Set<Notification>().Add(new Notification
+            var forThisTime = reminders.Where(r => r.LessonId == lesson.LessonId && r.StudentId == studentId && r.LessonStartUtc == lesson.StartUtc).ToList();
+            if (forThisTime.Any(r => r.Status is NotificationStatus.Pending or NotificationStatus.Sent))
             {
-                Id = Guid.CreateVersion7(),
-                WorkspaceId = lesson.WorkspaceId,
-                Kind = NotificationKind.LessonReminder,
-                DedupeKey = key,
-                StudentId = studentId,
-                TeacherUserId = lesson.TeacherUserId,
-                LessonId = lesson.LessonId,
-                LessonStartUtc = lesson.StartUtc,
-                DueAtUtc = due,
-                CreatedAtUtc = nowUtc,
-            });
+                continue;
+            }
+
+            var key = NotificationRules.ReminderKey(lesson.LessonId, studentId, lesson.StartUtc, forThisTime.Count);
+            AddReminder(db, lesson, studentId, due!.Value, key, nowUtc);
             try
             {
                 await db.SaveChangesAsync(cancellationToken);
@@ -135,6 +164,21 @@ internal sealed partial class NotificationJob(IServiceScopeFactory scopes, IOpti
             }
         }
     }
+
+    private static void AddReminder(ClassHubDbContext db, UpcomingLesson lesson, Guid studentId, DateTime due, string key, DateTime nowUtc) =>
+        db.Set<Notification>().Add(new Notification
+        {
+            Id = Guid.CreateVersion7(),
+            WorkspaceId = lesson.WorkspaceId,
+            Kind = NotificationKind.LessonReminder,
+            DedupeKey = key,
+            StudentId = studentId,
+            TeacherUserId = lesson.TeacherUserId,
+            LessonId = lesson.LessonId,
+            LessonStartUtc = lesson.StartUtc,
+            DueAtUtc = due,
+            CreatedAtUtc = nowUtc,
+        });
 
     private sealed record Claim(Guid Id, Guid WorkspaceId, Guid TeacherUserId);
 

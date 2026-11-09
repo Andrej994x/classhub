@@ -11,10 +11,16 @@ namespace ClassHub.Core.Modules.Lessons.Persistence;
 /// </summary>
 internal sealed class LessonEventQueries(ClassHubDbContext db, TimeProvider clock) : ILessonEventFeed, IUpcomingLessons
 {
-    public async Task<IReadOnlyList<UpcomingLesson>> ScheduledBetweenAsync(DateTime fromUtc, DateTime toUtc, int max, CancellationToken cancellationToken)
+    public async Task<IReadOnlyList<UpcomingLesson>> ScheduledBetweenAsync(DateTime fromUtc, DateTime toUtc, (DateTime StartUtc, Guid LessonId)? after, int max, CancellationToken cancellationToken)
     {
-        var lessons = await db.Set<Lesson>().IgnoreQueryFilters().AsNoTracking()
-            .Where(l => l.Status == LessonStatus.Scheduled && l.StartUtc >= fromUtc && l.StartUtc < toUtc)
+        var query = db.Set<Lesson>().IgnoreQueryFilters().AsNoTracking()
+            .Where(l => l.Status == LessonStatus.Scheduled && l.StartUtc >= fromUtc && l.StartUtc < toUtc);
+        if (after is var (afterStart, afterId))
+        {
+            query = query.Where(l => l.StartUtc > afterStart || (l.StartUtc == afterStart && l.Id.CompareTo(afterId) > 0));
+        }
+
+        var lessons = await query
             .OrderBy(l => l.StartUtc).ThenBy(l => l.Id)
             .Take(max)
             .Select(l => new { l.Id, l.WorkspaceId, l.TeacherUserId, l.StartUtc })

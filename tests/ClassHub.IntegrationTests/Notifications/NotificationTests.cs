@@ -9,6 +9,7 @@ using ClassHub.Core.Modules.Notifications.Domain;
 using ClassHub.Core.Modules.Notifications.Jobs;
 using ClassHub.Core.Modules.Students.Contracts;
 using ClassHub.IntegrationTests.Infrastructure;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -96,6 +97,116 @@ public sealed class NotificationTests(ClassHubApiFixture fixture)
         (await EmailsAsync(ana.Email!, "notify.lesson-rescheduled", since)).ShouldBe(1);
         var reminders = (await StatusesAsync(lesson.Id)).Where(s => s.Kind == NotificationKind.LessonReminder).ToList();
         reminders.ShouldBe([(NotificationKind.LessonReminder, NotificationStatus.Cancelled), (NotificationKind.LessonReminder, NotificationStatus.Sent)], ignoreOrder: true);
+    }
+
+    [Fact]
+    public async Task A_student_taken_out_and_added_back_is_told_again()
+    {
+        using var teacher = await fixture.CreateTeacherAsync();
+        var ana = await StudentAsync(teacher, "Ана", ApiTestExtensions.UniqueEmail("ana"));
+        var boris = await StudentAsync(teacher, "Борис", ApiTestExtensions.UniqueEmail("boris"));
+        var since = DateTime.UtcNow.AddSeconds(-1);
+        var start = StartIn(TimeSpan.FromDays(3));
+        var lesson = await LessonAsync(teacher, ana.Id, start);
+        await RunAsync(DateTime.UtcNow);
+
+        var toBoris = await ReadAsync<LessonResponse>(await teacher.Client.PutAsync($"/api/w/{teacher.WorkspaceId}/lessons/{lesson.Id}", LessonBody(boris.Id, start, lesson.Version)));
+        await RunAsync(DateTime.UtcNow);
+        await ReadAsync<LessonResponse>(await teacher.Client.PutAsync($"/api/w/{teacher.WorkspaceId}/lessons/{lesson.Id}", LessonBody(ana.Id, start, toBoris.Version)));
+        await RunAsync(DateTime.UtcNow);
+
+        await fixture.WaitForEmailAsync(ana.Email!, "notify.lesson-cancelled", since);
+        await fixture.WaitForEmailAsync(boris.Email!, "notify.lesson-cancelled", since);
+        await Task.Delay(500, Ct); // the outbox delivers anything left
+        (await EmailsAsync(ana.Email!, "notify.lesson-scheduled", since)).ShouldBe(2); // she is in it again: told again
+        (await EmailsAsync(ana.Email!, "notify.lesson-cancelled", since)).ShouldBe(1);
+        (await EmailsAsync(boris.Email!, "notify.lesson-scheduled", since)).ShouldBe(1);
+        (await EmailsAsync(boris.Email!, "notify.lesson-cancelled", since)).ShouldBe(1);
+    }
+
+    [Fact]
+    public async Task A_lesson_moved_away_and_back_gets_a_reminder_for_its_time_again()
+    {
+        using var teacher = await fixture.CreateTeacherAsync();
+        var ana = await StudentAsync(teacher, "Ана", ApiTestExtensions.UniqueEmail("ana"));
+        var now = DateTime.UtcNow;
+        var since = now.AddSeconds(-1);
+        var start = StartIn(TimeSpan.FromHours(30));
+        var lesson = await LessonAsync(teacher, ana.Id, start);
+        await RunAsync(now.AddHours(5)); // announced; the reminder for this time is planned
+
+        var away = await ReadAsync<LessonResponse>(await teacher.Client.PutAsync($"/api/w/{teacher.WorkspaceId}/lessons/{lesson.Id}", LessonBody(ana.Id, start.AddHours(10), lesson.Version)));
+        await RunAsync(now.AddHours(5));
+        await ReadAsync<LessonResponse>(await teacher.Client.PutAsync($"/api/w/{teacher.WorkspaceId}/lessons/{lesson.Id}", LessonBody(ana.Id, start, away.Version)));
+        await RunAsync(now.AddHours(7)); // back at the first time: told, and a new reminder for it
+        await RunAsync(now.AddHours(8));
+
+        await fixture.WaitForEmailAsync(ana.Email!, "notify.lesson-reminder", since);
+        await Task.Delay(500, Ct); // the outbox delivers anything left
+        (await EmailsAsync(ana.Email!, "notify.lesson-reminder", since)).ShouldBe(1);
+        (await EmailsAsync(ana.Email!, "notify.lesson-rescheduled", since)).ShouldBe(2);
+        (await StatusesAsync(lesson.Id)).Where(s => s.Kind == NotificationKind.LessonReminder).ToList()
+            .ShouldBe([(NotificationKind.LessonReminder, NotificationStatus.Cancelled), (NotificationKind.LessonReminder, NotificationStatus.Sent)], ignoreOrder: true);
+    }
+
+    [Fact]
+    public async Task A_series_is_announced_once_and_ending_it_tells_who_was_reminded()
+    {
+        using var teacher = await fixture.CreateTeacherAsync();
+        var ana = await StudentAsync(teacher, "Ана", ApiTestExtensions.UniqueEmail("ana"));
+        var since = DateTime.UtcNow.AddSeconds(-1);
+        var tomorrow = DateOnly.FromDateTime(TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, Skopje)).AddDays(1);
+        using var created = await teacher.Client.PostAsync($"/api/w/{teacher.WorkspaceId}/lesson-series", new
+        {
+            kind = "Individual", studentId = ana.Id, title = "Англиски", startDate = tomorrow, startTime = "17:00:00", durationMinutes = 60, intervalWeeks = 1, count = 3, mode = "Online",
+        });
+        created.StatusCode.ShouldBe(HttpStatusCode.Created, await created.Content.ReadAsStringAsync(Ct));
+        var series = (await created.Content.ReadFromJsonAsync<SeriesResultResponse>(Ct))!;
+        series.Created.ShouldBe(3);
+        await RunAsync(DateTime.UtcNow);
+        var announcement = await fixture.WaitForEmailAsync(ana.Email!, "notify.series-scheduled", since);
+        announcement.Subject.ShouldContain("Англиски");
+
+        // The first lesson's reminder goes out; then the series ends from tomorrow (all three lessons are removed).
+        var first = TimeZoneInfo.ConvertTimeToUtc(tomorrow.ToDateTime(new TimeOnly(17, 0)), Skopje);
+        var remindAt = first.AddHours(-23) > DateTime.UtcNow ? first.AddHours(-23) : DateTime.UtcNow;
+        await RunAsync(remindAt);
+        await fixture.WaitForEmailAsync(ana.Email!, "notify.lesson-reminder", since);
+        await ReadAsync<SeriesResponse>(await teacher.Client.PostAsync($"/api/w/{teacher.WorkspaceId}/lesson-series/{series.Series.Id}/end",
+            new { fromDate = tomorrow, version = series.Series.Version }));
+        await RunAsync(remindAt.AddMinutes(1));
+
+        // Told it is off: that first lesson (removed, named as it was); the others were never announced one by one.
+        var cancelled = await fixture.WaitForEmailAsync(ana.Email!, "notify.lesson-cancelled", since);
+        cancelled.Subject.ShouldContain("Англиски");
+        await Task.Delay(500, Ct); // the outbox delivers anything left
+        (await EmailsAsync(ana.Email!, "notify.lesson-cancelled", since)).ShouldBe(1);
+        (await EmailsAsync(ana.Email!, "notify.series-scheduled", since)).ShouldBe(1);
+        (await EmailsAsync(ana.Email!, "notify.lesson-reminder", since)).ShouldBe(1);
+    }
+
+    [Fact]
+    public async Task Reminders_are_planned_for_the_whole_window_page_by_page()
+    {
+        using var teacher = await fixture.CreateTeacherAsync();
+        var students = new List<StudentResponse>();
+        var lessons = new List<LessonResponse>();
+        var now = DateTime.UtcNow;
+        for (var i = 0; i < 3; i++)
+        {
+            var student = await StudentAsync(teacher, $"Ученик {i}", ApiTestExtensions.UniqueEmail($"p{i}"));
+            students.Add(student);
+            lessons.Add(await LessonAsync(teacher, student.Id, StartIn(TimeSpan.FromHours(30 + i))));
+        }
+
+        // One lesson per page: every page of the window is read in the same pass.
+        using var factory = fixture.Factory.WithWebHostBuilder(builder => builder.UseSetting("Notifications:PlanningPageSize", "1"));
+        await factory.Services.GetRequiredService<NotificationJob>().RunAtAsync(now.AddHours(10), Ct);
+
+        foreach (var lesson in lessons)
+        {
+            (await StatusesAsync(lesson.Id)).ShouldContain((NotificationKind.LessonReminder, NotificationStatus.Sent));
+        }
     }
 
     [Fact]

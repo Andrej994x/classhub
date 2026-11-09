@@ -10,20 +10,27 @@ public sealed class NotificationRulesTests
     private static readonly DateTime Start = new(2026, 11, 20, 16, 0, 0, DateTimeKind.Utc);
 
     [Fact]
-    public void Keys_are_one_per_lesson_and_student_and_for_reminders_also_per_start_time()
+    public void Keys_tell_changes_apart_and_repeat_for_the_same_change()
     {
-        NotificationRules.DedupeKey(NotificationKind.LessonScheduled, Lesson, Student)
-            .ShouldBe("lesson-scheduled:11111111000000000000000000000001:22222222000000000000000000000002");
-        NotificationRules.DedupeKey(NotificationKind.LessonReminder, Lesson, Student, Start)
-            .ShouldBe(NotificationRules.DedupeKey(NotificationKind.LessonReminder, Lesson, Student, Start)); // the same reminder twice: one key
-        NotificationRules.DedupeKey(NotificationKind.LessonReminder, Lesson, Student, Start.AddHours(2))
-            .ShouldNotBe(NotificationRules.DedupeKey(NotificationKind.LessonReminder, Lesson, Student, Start)); // moved: a new reminder
-        NotificationRules.DedupeKey(NotificationKind.LessonReminder, Lesson, Guid.NewGuid(), Start)
-            .ShouldNotBe(NotificationRules.DedupeKey(NotificationKind.LessonReminder, Lesson, Student, Start));
-        NotificationRules.DedupeKey(NotificationKind.LessonCancelled, Lesson, Student)
-            .ShouldNotBe(NotificationRules.DedupeKey(NotificationKind.LessonScheduled, Lesson, Student));
-        Should.Throw<ArgumentNullException>(() => NotificationRules.DedupeKey(NotificationKind.LessonReminder, Lesson, Student));
-        NotificationRules.DedupeKey(NotificationKind.LessonReminder, Lesson, Student, Start).Length.ShouldBeLessThanOrEqualTo(Notification.DedupeKeyMaxLength);
+        NotificationRules.LessonKey(NotificationKind.LessonScheduled, Lesson, Student, 0)
+            .ShouldBe("lesson-scheduled:11111111000000000000000000000001:22222222000000000000000000000002:r0");
+        // The same change twice: one key. A later change of the lesson (a student added back, a lesson moved back): a new key.
+        NotificationRules.LessonKey(NotificationKind.LessonScheduled, Lesson, Student, 3).ShouldBe(NotificationRules.LessonKey(NotificationKind.LessonScheduled, Lesson, Student, 3));
+        NotificationRules.LessonKey(NotificationKind.LessonScheduled, Lesson, Student, 4).ShouldNotBe(NotificationRules.LessonKey(NotificationKind.LessonScheduled, Lesson, Student, 3));
+        NotificationRules.LessonKey(NotificationKind.LessonCancelled, Lesson, Student, 3).ShouldNotBe(NotificationRules.LessonKey(NotificationKind.LessonScheduled, Lesson, Student, 3));
+        NotificationRules.LessonKey(NotificationKind.SeriesScheduled, Lesson, Student, 0).ShouldStartWith("series-scheduled:");
+
+        // Reminders: per start time, and a new attempt after a withdrawn one.
+        NotificationRules.ReminderKey(Lesson, Student, Start, 0).ShouldBe(NotificationRules.ReminderKey(Lesson, Student, Start, 0));
+        NotificationRules.ReminderKey(Lesson, Student, Start.AddHours(2), 0).ShouldNotBe(NotificationRules.ReminderKey(Lesson, Student, Start, 0));
+        NotificationRules.ReminderKey(Lesson, Student, Start, 1).ShouldNotBe(NotificationRules.ReminderKey(Lesson, Student, Start, 0));
+        NotificationRules.ReminderKey(Lesson, Guid.NewGuid(), Start, 0).ShouldNotBe(NotificationRules.ReminderKey(Lesson, Student, Start, 0));
+        NotificationRules.ReminderKey(Lesson, Student, Start, int.MaxValue).Length.ShouldBeLessThanOrEqualTo(Notification.DedupeKeyMaxLength);
+
+        // New homework: one per assignment.
+        var assignment = Guid.NewGuid();
+        NotificationRules.HomeworkKey(assignment).ShouldBe(NotificationRules.HomeworkKey(assignment));
+        NotificationRules.HomeworkKey(Guid.NewGuid()).ShouldNotBe(NotificationRules.HomeworkKey(assignment));
     }
 
     [Fact]

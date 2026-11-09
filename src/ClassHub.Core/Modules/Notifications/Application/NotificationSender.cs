@@ -105,6 +105,12 @@ internal sealed class NotificationSender(
 
             content = new NotificationContent(teacher, contact.FirstName, notice.Title, null, notice.DueDate, portal is null ? null : $"{portal}/homework/{notice.AssignmentId}");
         }
+        else if (n.Kind == NotificationKind.LessonCancelled)
+        {
+            // Always worth telling, also when the lesson was removed: named as it was when cancelled.
+            content = new NotificationContent(teacher, contact.FirstName, n.LessonTitle ?? string.Empty,
+                NotificationRules.LocalTime(n.LessonStartUtc!.Value, n.LessonTimeZone!, locale), null, portal);
+        }
         else
         {
             var lessonId = n.LessonId!.Value;
@@ -119,10 +125,10 @@ internal sealed class NotificationSender(
             var takesPart = facts.Participants.Any(p => p.StudentId == n.StudentId);
             var stillTrue = n.Kind switch
             {
-                NotificationKind.LessonScheduled => scheduled && takesPart,
+                NotificationKind.LessonScheduled or NotificationKind.SeriesScheduled => scheduled && takesPart,
                 NotificationKind.LessonRescheduled => scheduled && takesPart && lesson.StartUtc == n.LessonStartUtc,
                 NotificationKind.LessonReminder => scheduled && takesPart && lesson.StartUtc == n.LessonStartUtc && lesson.StartUtc > nowUtc,
-                _ => true, // a cancellation is always worth telling
+                _ => false,
             };
             if (!stillTrue)
             {

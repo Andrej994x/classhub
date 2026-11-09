@@ -8,20 +8,32 @@ namespace ClassHub.Core.Modules.Notifications.Contracts;
 public interface INotificationScheduler
 {
     /// <summary>A new lesson for these students.</summary>
-    Task LessonScheduledAsync(Guid lessonId, DateTime startUtc, IReadOnlyCollection<Guid> studentIds, CancellationToken cancellationToken);
+    Task LessonScheduledAsync(LessonNotice lesson, IReadOnlyCollection<Guid> studentIds, CancellationToken cancellationToken);
+
+    /// <summary>Recurring lessons for these students (one email for the series, about its first lesson).</summary>
+    Task SeriesScheduledAsync(LessonNotice firstLesson, IReadOnlyCollection<Guid> studentIds, CancellationToken cancellationToken);
 
     /// <summary>The lesson moved: pending reminders are withdrawn and the students are told the new time.</summary>
-    Task LessonRescheduledAsync(Guid lessonId, DateTime startUtc, IReadOnlyCollection<Guid> studentIds, CancellationToken cancellationToken);
+    Task LessonRescheduledAsync(LessonNotice lesson, IReadOnlyCollection<Guid> studentIds, CancellationToken cancellationToken);
 
     /// <summary>
-    /// The lesson is cancelled (or these students no longer take part): everything pending is withdrawn, and students who
-    /// were already told about it are told it is off.
+    /// The lesson is cancelled or removed (or these students no longer take part): everything pending is withdrawn, and
+    /// students who were already told about it are told it is off.
     /// </summary>
-    Task LessonCancelledAsync(Guid lessonId, IReadOnlyCollection<Guid> studentIds, CancellationToken cancellationToken);
+    Task LessonCancelledAsync(LessonNotice lesson, IReadOnlyCollection<Guid> studentIds, CancellationToken cancellationToken);
 
-    /// <summary>New homework for these students.</summary>
-    Task HomeworkAssignedAsync(Guid homeworkId, IReadOnlyCollection<Guid> studentIds, CancellationToken cancellationToken);
+    /// <summary>New homework for these students (one notice per assignment).</summary>
+    Task HomeworkAssignedAsync(Guid homeworkId, IReadOnlyCollection<HomeworkAssignmentRef> assignments, CancellationToken cancellationToken);
 }
+
+/// <summary>
+/// A lesson as a notification records it: its revision (version after the change) and what a cancellation names even
+/// after the lesson is gone.
+/// </summary>
+public sealed record LessonNotice(Guid LessonId, int Revision, string Title, DateTime StartUtc, string TimeZone);
+
+/// <summary>A student's new assignment of a homework.</summary>
+public sealed record HomeworkAssignmentRef(Guid StudentId, Guid AssignmentId);
 
 /// <summary>The signed-in user's choices for optional notifications.</summary>
 public sealed record NotificationPreferencesResponse(bool LessonReminders, bool HomeworkEmails);
