@@ -139,7 +139,8 @@ internal sealed class LessonService(
         // told (R2-P11): removed ones that it is off, new ones that it is on, the others of a new time.
         if (!await bookings.OnLessonChangedAsync(lesson, cancellationToken))
         {
-            await notifications.LessonCancelledAsync(Notice(lesson), [.. before.Except(after)], cancellationToken);
+            // Removed students hear about the lesson as they knew it (title and time before this edit), as this change.
+            await notifications.LessonCancelledAsync(Notice(current, lesson.Version), [.. before.Except(after)], cancellationToken);
             await notifications.LessonScheduledAsync(Notice(lesson), [.. after.Except(before)], cancellationToken);
             if (lesson.StartUtc != current.StartUtc)
             {

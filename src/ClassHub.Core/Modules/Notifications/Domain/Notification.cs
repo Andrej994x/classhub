@@ -55,6 +55,9 @@ public sealed class Notification : ITenantOwned
 
     public Guid? LessonId { get; set; }
 
+    /// <summary>Series announcements: the series (they name its next lesson when sent, whatever happened to the first).</summary>
+    public Guid? SeriesId { get; set; }
+
     /// <summary>The lesson's start when planned (reminders and reschedules apply only while it still starts then).</summary>
     public DateTime? LessonStartUtc { get; set; }
 

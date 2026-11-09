@@ -41,6 +41,7 @@ namespace ClassHub.Core.Infrastructure.Persistence.Migrations
                     StudentId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
                     TeacherUserId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
                     LessonId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    SeriesId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
                     LessonStartUtc = table.Column<DateTime>(type: "datetime2(3)", precision: 3, nullable: true),
                     LessonTitle = table.Column<string>(type: "nvarchar(160)", maxLength: 160, nullable: true),
                     LessonTimeZone = table.Column<string>(type: "varchar(64)", unicode: false, maxLength: 64, nullable: true),
@@ -60,6 +61,7 @@ namespace ClassHub.Core.Infrastructure.Persistence.Migrations
                     table.PrimaryKey("PK_Notifications", x => x.Id);
                     table.CheckConstraint("CK_Notifications_Kind", "[Kind] BETWEEN 1 AND 6");
                     table.CheckConstraint("CK_Notifications_Sent", "([Status] = 2 AND [SentAtUtc] IS NOT NULL) OR ([Status] <> 2 AND [SentAtUtc] IS NULL)");
+                    table.CheckConstraint("CK_Notifications_Series", "([Kind] = 6 AND [SeriesId] IS NOT NULL) OR ([Kind] <> 6 AND [SeriesId] IS NULL)");
                     table.CheckConstraint("CK_Notifications_Status", "[Status] BETWEEN 1 AND 5");
                     table.CheckConstraint("CK_Notifications_Subject", "([Kind] = 5 AND [HomeworkId] IS NOT NULL AND [HomeworkAssignmentId] IS NOT NULL AND [LessonId] IS NULL) OR ([Kind] <> 5 AND [LessonId] IS NOT NULL AND [HomeworkId] IS NULL AND [HomeworkAssignmentId] IS NULL)");
                     table.ForeignKey(

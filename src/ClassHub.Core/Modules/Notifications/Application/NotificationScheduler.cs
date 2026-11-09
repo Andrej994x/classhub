@@ -13,8 +13,9 @@ namespace ClassHub.Core.Modules.Notifications.Application;
 /// </summary>
 internal sealed class NotificationScheduler(ClassHubDbContext db, ITenantContext tenant, TimeProvider clock) : INotificationScheduler
 {
+    /// <summary>The notices about one lesson (a series announcement is about the series, not its first lesson).</summary>
     private static readonly NotificationKind[] LessonKinds =
-        [NotificationKind.LessonScheduled, NotificationKind.SeriesScheduled, NotificationKind.LessonRescheduled, NotificationKind.LessonReminder];
+        [NotificationKind.LessonScheduled, NotificationKind.LessonRescheduled, NotificationKind.LessonReminder];
 
     public async Task LessonScheduledAsync(LessonNotice lesson, IReadOnlyCollection<Guid> studentIds, CancellationToken cancellationToken)
     {
@@ -27,11 +28,21 @@ internal sealed class NotificationScheduler(ClassHubDbContext db, ITenantContext
         }
     }
 
-    public async Task SeriesScheduledAsync(LessonNotice firstLesson, IReadOnlyCollection<Guid> studentIds, CancellationToken cancellationToken)
+    public async Task SeriesScheduledAsync(Guid seriesId, LessonNotice firstLesson, IReadOnlyCollection<Guid> studentIds, CancellationToken cancellationToken)
     {
         foreach (var studentId in studentIds.Distinct())
         {
-            await AddLessonAsync(NotificationKind.SeriesScheduled, firstLesson, studentId, cancellationToken);
+            await AddAsync(new Notification
+            {
+                Kind = NotificationKind.SeriesScheduled,
+                DedupeKey = NotificationRules.LessonKey(NotificationKind.SeriesScheduled, seriesId, studentId, 0),
+                StudentId = studentId,
+                LessonId = firstLesson.LessonId,
+                SeriesId = seriesId,
+                LessonStartUtc = firstLesson.StartUtc,
+                LessonTitle = Title(firstLesson.Title),
+                LessonTimeZone = firstLesson.TimeZone,
+            }, cancellationToken);
         }
     }
 
@@ -42,7 +53,7 @@ internal sealed class NotificationScheduler(ClassHubDbContext db, ITenantContext
             var pending = await PendingAsync(lesson.LessonId, studentId, cancellationToken);
             // Reminders and earlier reschedules for the old time are withdrawn (a reminder for the new time follows).
             Withdraw(pending.Where(n => n.Kind is NotificationKind.LessonReminder or NotificationKind.LessonRescheduled), "rescheduled");
-            if (pending.Any(n => n.Kind is NotificationKind.LessonScheduled or NotificationKind.SeriesScheduled))
+            if (pending.Any(n => n.Kind == NotificationKind.LessonScheduled))
             {
                 continue; // the announcement has not gone out yet: it will name the new time
             }
@@ -104,9 +115,11 @@ internal sealed class NotificationScheduler(ClassHubDbContext db, ITenantContext
             StudentId = studentId,
             LessonId = lesson.LessonId,
             LessonStartUtc = lesson.StartUtc,
-            LessonTitle = lesson.Title.Length > Notification.TitleMaxLength ? lesson.Title[..Notification.TitleMaxLength] : lesson.Title,
+            LessonTitle = Title(lesson.Title),
             LessonTimeZone = lesson.TimeZone,
         }, cancellationToken);
+
+    private static string Title(string title) => title.Length > Notification.TitleMaxLength ? title[..Notification.TitleMaxLength] : title;
 
     private async Task AddAsync(Notification notification, CancellationToken cancellationToken)
     {

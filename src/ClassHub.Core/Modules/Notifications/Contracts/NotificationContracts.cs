@@ -10,8 +10,11 @@ public interface INotificationScheduler
     /// <summary>A new lesson for these students.</summary>
     Task LessonScheduledAsync(LessonNotice lesson, IReadOnlyCollection<Guid> studentIds, CancellationToken cancellationToken);
 
-    /// <summary>Recurring lessons for these students (one email for the series, about its first lesson).</summary>
-    Task SeriesScheduledAsync(LessonNotice firstLesson, IReadOnlyCollection<Guid> studentIds, CancellationToken cancellationToken);
+    /// <summary>
+    /// Recurring lessons for these students: one email for the series, naming its next lesson when sent (cancelling one
+    /// lesson of the series does not withdraw it).
+    /// </summary>
+    Task SeriesScheduledAsync(Guid seriesId, LessonNotice firstLesson, IReadOnlyCollection<Guid> studentIds, CancellationToken cancellationToken);
 
     /// <summary>The lesson moved: pending reminders are withdrawn and the students are told the new time.</summary>
     Task LessonRescheduledAsync(LessonNotice lesson, IReadOnlyCollection<Guid> studentIds, CancellationToken cancellationToken);

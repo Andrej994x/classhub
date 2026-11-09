@@ -303,6 +303,9 @@ public interface ILessonLookup
 
     /// <summary>The lesson's current attendance (null when it is not a lesson of the current workspace).</summary>
     Task<LessonAttendanceFacts?> AttendanceAsync(Guid lessonId, CancellationToken cancellationToken);
+
+    /// <summary>The series' next scheduled lesson starting after <paramref name="afterUtc"/> that the student takes part in.</summary>
+    Task<LessonSummary?> NextInSeriesAsync(Guid seriesId, Guid studentId, DateTime afterUtc, CancellationToken cancellationToken);
 }
 
 /// <summary>A scheduled lesson starting soon, with its students (reminders, R2-P11).</summary>

@@ -106,6 +106,17 @@ internal sealed class NotificationSender(
 
             content = new NotificationContent(teacher, contact.FirstName, notice.Title, null, notice.DueDate, portal is null ? null : $"{portal}/homework/{notice.AssignmentId}");
         }
+        else if (n.Kind == NotificationKind.SeriesScheduled)
+        {
+            // About the series: its next lesson for this student when sent; none left (all cancelled or ended): outdated.
+            var next = await lessons.NextInSeriesAsync(n.SeriesId!.Value, n.StudentId, nowUtc, cancellationToken);
+            if (next is null)
+            {
+                return Suppressed("outdated");
+            }
+
+            content = new NotificationContent(teacher, contact.FirstName, next.Title, NotificationRules.LocalTime(next.StartUtc, next.TimeZone, locale), null, portal);
+        }
         else if (n.Kind == NotificationKind.LessonCancelled)
         {
             // Told unless it is no longer true: the student is (again) in the lesson and it is still scheduled. Also when
@@ -135,7 +146,7 @@ internal sealed class NotificationSender(
             var takesPart = facts.Participants.Any(p => p.StudentId == n.StudentId);
             var stillTrue = n.Kind switch
             {
-                NotificationKind.LessonScheduled or NotificationKind.SeriesScheduled => scheduled && takesPart,
+                NotificationKind.LessonScheduled => scheduled && takesPart,
                 NotificationKind.LessonRescheduled => scheduled && takesPart && lesson.StartUtc == n.LessonStartUtc,
                 NotificationKind.LessonReminder => scheduled && takesPart && lesson.StartUtc == n.LessonStartUtc && lesson.StartUtc > nowUtc,
                 _ => false,

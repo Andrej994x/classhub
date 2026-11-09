@@ -210,6 +210,54 @@ public sealed class NotificationTests(ClassHubApiFixture fixture)
     }
 
     [Fact]
+    public async Task Cancelling_the_first_lesson_of_a_series_keeps_its_announcement()
+    {
+        using var teacher = await fixture.CreateTeacherAsync();
+        var ana = await StudentAsync(teacher, "Ана", ApiTestExtensions.UniqueEmail("ana"));
+        var since = DateTime.UtcNow.AddSeconds(-1);
+        var tomorrow = DateOnly.FromDateTime(TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, Skopje)).AddDays(1);
+        using var created = await teacher.Client.PostAsync($"/api/w/{teacher.WorkspaceId}/lesson-series", new
+        {
+            kind = "Individual", studentId = ana.Id, title = "Германски", startDate = tomorrow, startTime = "17:00:00", durationMinutes = 60, intervalWeeks = 1, count = 3, mode = "Online",
+        });
+        created.StatusCode.ShouldBe(HttpStatusCode.Created);
+        var lessons = await teacher.Client.GetJsonAsync<List<LessonResponse>>($"/api/w/{teacher.WorkspaceId}/lessons?from={tomorrow:yyyy-MM-dd}&to={tomorrow.AddDays(20):yyyy-MM-dd}");
+        var first = lessons.OrderBy(l => l.StartUtc).First();
+
+        // The first lesson is cancelled before anything is sent: the series is still announced, naming its next lesson.
+        (await teacher.Client.PostAsync($"/api/w/{teacher.WorkspaceId}/lessons/{first.Id}/cancel", new { version = first.Version, reason = "Празник" })).StatusCode.ShouldBe(HttpStatusCode.OK);
+        await RunAsync(DateTime.UtcNow);
+
+        var announcement = await fixture.WaitForEmailAsync(ana.Email!, "notify.series-scheduled", since);
+        var second = lessons.OrderBy(l => l.StartUtc).Skip(1).First();
+        announcement.TextBody.ShouldContain(TimeZoneInfo.ConvertTimeFromUtc(second.StartUtc, Skopje).ToString("yyyy", CultureInfo.InvariantCulture));
+        announcement.TextBody.ShouldContain(NotificationRules.LocalTime(second.StartUtc, "Europe/Skopje", "mk"));
+    }
+
+    [Fact]
+    public async Task A_removed_student_hears_about_the_lesson_as_they_knew_it()
+    {
+        using var teacher = await fixture.CreateTeacherAsync();
+        var ana = await StudentAsync(teacher, "Ана", ApiTestExtensions.UniqueEmail("ana"));
+        var boris = await StudentAsync(teacher, "Борис", ApiTestExtensions.UniqueEmail("boris"));
+        var since = DateTime.UtcNow.AddSeconds(-1);
+        var start = StartIn(TimeSpan.FromDays(3));
+        var lesson = await LessonAsync(teacher, ana.Id, start);
+        await RunAsync(DateTime.UtcNow); // Ana is told about "Час по математика" at the first time
+
+        // Boris replaces Ana, and the lesson gets a new title and time in the same edit.
+        var moved = start.AddHours(3);
+        await ReadAsync<LessonResponse>(await teacher.Client.PutAsync($"/api/w/{teacher.WorkspaceId}/lessons/{lesson.Id}",
+            new { kind = "Individual", studentId = boris.Id, title = "Физика", startLocal = Local(moved), durationMinutes = 60, mode = "Online", version = lesson.Version }));
+        await RunAsync(DateTime.UtcNow);
+
+        var cancelled = await fixture.WaitForEmailAsync(ana.Email!, "notify.lesson-cancelled", since);
+        cancelled.Subject.ShouldContain("Час по математика");
+        cancelled.TextBody.ShouldContain(NotificationRules.LocalTime(start, "Europe/Skopje", "mk"));
+        cancelled.TextBody.ShouldNotContain("Физика");
+    }
+
+    [Fact]
     public async Task Reminders_are_planned_for_the_whole_window_page_by_page()
     {
         using var teacher = await fixture.CreateTeacherAsync();

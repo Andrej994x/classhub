@@ -208,7 +208,7 @@ internal sealed class LessonSeriesService(
 
         if (announce && first is not null)
         {
-            await notifications.SeriesScheduledAsync(LessonService.Notice(first), people, cancellationToken);
+            await notifications.SeriesScheduledAsync(series.Id, LessonService.Notice(first), people, cancellationToken);
         }
 
         await SaveAsync(cancellationToken);

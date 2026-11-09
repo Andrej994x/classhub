@@ -17,6 +17,7 @@ internal sealed class NotificationConfiguration : IEntityTypeConfiguration<Notif
             t.HasCheckConstraint("CK_Notifications_Status", "[Status] BETWEEN 1 AND 5");
             t.HasCheckConstraint("CK_Notifications_Subject",
                 "([Kind] = 5 AND [HomeworkId] IS NOT NULL AND [HomeworkAssignmentId] IS NOT NULL AND [LessonId] IS NULL) OR ([Kind] <> 5 AND [LessonId] IS NOT NULL AND [HomeworkId] IS NULL AND [HomeworkAssignmentId] IS NULL)");
+            t.HasCheckConstraint("CK_Notifications_Series", "([Kind] = 6 AND [SeriesId] IS NOT NULL) OR ([Kind] <> 6 AND [SeriesId] IS NULL)");
             t.HasCheckConstraint("CK_Notifications_Sent", "([Status] = 2 AND [SentAtUtc] IS NOT NULL) OR ([Status] <> 2 AND [SentAtUtc] IS NULL)");
         });
         builder.HasKey(x => x.Id);

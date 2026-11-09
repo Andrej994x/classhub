@@ -507,6 +507,9 @@ public sealed class FinanceTests(ClassHubApiFixture fixture)
         {
             public Task<IReadOnlyDictionary<Guid, LessonSummary>> FindAsync(IReadOnlyCollection<Guid> ids, CancellationToken cancellationToken) => inner.FindAsync(ids, cancellationToken);
 
+            public Task<LessonSummary?> NextInSeriesAsync(Guid seriesId, Guid studentId, DateTime afterUtc, CancellationToken cancellationToken) =>
+                inner.NextInSeriesAsync(seriesId, studentId, afterUtc, cancellationToken);
+
             public async Task<LessonAttendanceFacts?> AttendanceAsync(Guid lessonId, CancellationToken cancellationToken)
             {
                 var facts = await inner.AttendanceAsync(lessonId, cancellationToken);

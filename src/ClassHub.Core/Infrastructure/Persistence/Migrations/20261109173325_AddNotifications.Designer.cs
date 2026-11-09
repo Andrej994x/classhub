@@ -12,7 +12,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace ClassHub.Core.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(ClassHubDbContext))]
-    [Migration("20261109151634_AddNotifications")]
+    [Migration("20261109173325_AddNotifications")]
     partial class AddNotifications
     {
         /// <inheritdoc />
@@ -2538,6 +2538,9 @@ namespace ClassHub.Core.Infrastructure.Persistence.Migrations
                         .HasPrecision(3)
                         .HasColumnType("datetime2(3)");
 
+                    b.Property<Guid?>("SeriesId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<int>("Status")
                         .HasColumnType("int");
 
@@ -2572,6 +2575,8 @@ namespace ClassHub.Core.Infrastructure.Persistence.Migrations
                             t.HasCheckConstraint("CK_Notifications_Kind", "[Kind] BETWEEN 1 AND 6");
 
                             t.HasCheckConstraint("CK_Notifications_Sent", "([Status] = 2 AND [SentAtUtc] IS NOT NULL) OR ([Status] <> 2 AND [SentAtUtc] IS NULL)");
+
+                            t.HasCheckConstraint("CK_Notifications_Series", "([Kind] = 6 AND [SeriesId] IS NOT NULL) OR ([Kind] <> 6 AND [SeriesId] IS NULL)");
 
                             t.HasCheckConstraint("CK_Notifications_Status", "[Status] BETWEEN 1 AND 5");
 
