@@ -89,6 +89,23 @@ Details and tests: [SECURITY.md](SECURITY.md#tenant-isolation-r0-p5).
 - API access: `src/api/client.ts` wraps `openapi-fetch` with the generated types. It sends cookies, keeps the antiforgery request token in memory, fetches it from `GET /api/auth/antiforgery` before the first unsafe request, adopts tokens re-issued in the `X-XSRF-TOKEN` response header, retries once on `ANTIFORGERY_INVALID`, and turns ProblemDetails into `ApiError`. `errorMessage()` shows only translated messages for error codes, never server text. TanStack Query is provided in `src/app/Providers.tsx`.
 - Hosting: `npm run build` writes to `src/ClassHub.Api/wwwroot/dist` (git-ignored, base `/dist/`). `Platform/SpaHosting.cs` serves static files before routing (hashed `/dist/assets` immutable, everything else `no-cache`) and maps `dist/index.html` as the fallback for the SPA prefixes only (`/` is the Razor landing page since R1-P4; the SPA's `/` route hands over with a full page load). `/api`, health checks and unknown paths never get the SPA, and the deny-by-default policy still applies to them.
 
+## Teaching Toolbox catalog (R3-P1)
+
+- **Module:** `Modules/Toolbox`. The tools are global reference data (like the catalog), not tenant-owned.
+  - A tool has a permanent code, mk/en names and descriptions, a kind (`External` with an official link, or `BuiltIn` with a board key: `drawing-board`, `geometry-board`), a category (Geometry, Graphing, Simulations, Chemistry, Drawing, Other), subjects (none means any, so a subject filter also shows them), a license note in mk and en, and active, featured and order flags. Kinds and categories are accepted by name only. A built-in board can be active only once it has shipped (`ToolRules.AvailableBuiltInKeys`; teachers never see an unshipped board).
+  - Tools are deactivated, never deleted.
+- **Teachers:** `GET /api/w/{id}/toolbox?q=&subjectId=&category=` (`ws:workspace.read`).
+  - Returns active tools only, featured first.
+  - The search covers names and descriptions in both languages (case-insensitive collation); the query is limited to 100 characters, and an unknown category is a 400.
+- **Platform staff:** `/api/admin/toolbox` (`PlatformStaff`).
+  - List all tools, create, and update with the loaded version (409 when stale).
+  - The code never changes; a code or board used twice is a 409.
+  - Audited as `toolbox.tool.created` and `toolbox.tool.updated`.
+- **Official links only:** `ToolRules.IsAllowedUrl` accepts an absolute HTTPS URL on the default port, with no credentials and a DNS host that is an approved domain or one of its subdomains. The approved domains are set in `Toolbox:AllowedHosts` (default: geogebra.org, desmos.com, phet.colorado.edu, molview.org). A database CHECK also requires `https://`. External tools are never embedded.
+- **SPA:**
+  - `/app/w/{id}/toolbox`: search, subject and category filters, and tool cards. An external tool opens with `target="_blank" rel="noopener noreferrer"`; a built-in board opens its route (R3-P3/P4). A note says external work is not graded.
+  - `/admin/toolbox`: list, edit and add.
+
 ## Dashboards (R2-P12)
 
 - **Teacher:** `GET /api/w/{id}/dashboard/teaching` needs `ws:lessons.read`, `ws:students.read` and `ws:finance.read` (all three). `TeachingDashboardService` (Dashboard module) reads other modules' contracts, all tenant-filtered:

@@ -101,6 +101,7 @@ function TeacherShell() {
               { to: `/app/w/${first.id}/materials`, labelKey: 'nav.materials' },
               { to: `/app/w/${first.id}/homework`, labelKey: 'nav.homework' },
               { to: `/app/w/${first.id}/finance`, labelKey: 'nav.finance' },
+              { to: `/app/w/${first.id}/toolbox`, labelKey: 'nav.toolbox' },
               { to: `/app/w/${first.id}/offers`, labelKey: 'nav.offers' },
               { to: `/app/w/${first.id}/site`, labelKey: 'nav.site' },
               { to: `/app/w/${first.id}/tests`, labelKey: 'nav.tests' },
@@ -143,6 +144,7 @@ export const AdminLayout = () => (
         { to: '/admin/reports', labelKey: 'nav.adminReports' },
         { to: '/admin/moderation', labelKey: 'nav.adminHidden' },
         { to: '/admin/catalog', labelKey: 'nav.adminCatalog' },
+        { to: '/admin/toolbox', labelKey: 'nav.adminToolbox' },
         { to: '/admin/security', labelKey: 'nav.adminSecurity' },
       ]}
     >

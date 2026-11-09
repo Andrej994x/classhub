@@ -7590,6 +7590,174 @@
         }
       }
     },
+    "/api/w/{workspaceId}/toolbox": {
+      "get": {
+        "tags": [
+          "Toolbox"
+        ],
+        "summary": "Active tools matching a search (names and descriptions in both languages), a subject and a category; featured first.",
+        "operationId": "SearchToolbox",
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "subjectId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "category",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "workspaceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ToolboxResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/toolbox": {
+      "get": {
+        "tags": [
+          "Admin"
+        ],
+        "operationId": "ListAdminTools",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AdminToolResponse"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Admin"
+        ],
+        "summary": "Add a tool (its code is permanent).",
+        "operationId": "CreateTool",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SaveToolRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminToolResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpValidationProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/toolbox/{toolId}": {
+      "put": {
+        "tags": [
+          "Admin"
+        ],
+        "summary": "Change, feature, activate or deactivate a tool (tools are never deleted).",
+        "operationId": "UpdateTool",
+        "parameters": [
+          {
+            "name": "toolId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SaveToolRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminToolResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpValidationProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/w/{workspaceId}": {
       "get": {
         "tags": [
@@ -8367,6 +8535,44 @@
             "items": {
               "$ref": "#/components/schemas/SubscriptionEventResponse"
             }
+          }
+        }
+      },
+      "AdminToolResponse": {
+        "required": [
+          "tool",
+          "isActive",
+          "sortOrder",
+          "updatedAtUtc",
+          "version"
+        ],
+        "type": "object",
+        "properties": {
+          "tool": {
+            "$ref": "#/components/schemas/ToolResponse"
+          },
+          "isActive": {
+            "type": "boolean"
+          },
+          "sortOrder": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "updatedAtUtc": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "version": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
           }
         }
       },
@@ -13696,6 +13902,135 @@
           }
         }
       },
+      "SaveToolRequest": {
+        "required": [
+          "code",
+          "nameMk",
+          "nameEn",
+          "descriptionMk",
+          "descriptionEn",
+          "kind",
+          "category",
+          "url",
+          "builtInKey",
+          "subjectIds",
+          "licenseNoteMk",
+          "licenseNoteEn",
+          "isActive",
+          "isFeatured",
+          "sortOrder",
+          "version"
+        ],
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "nameMk": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "nameEn": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "descriptionMk": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "descriptionEn": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "kind": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "category": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "url": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "builtInKey": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "subjectIds": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "licenseNoteMk": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "licenseNoteEn": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "isActive": {
+            "type": [
+              "null",
+              "boolean"
+            ]
+          },
+          "isFeatured": {
+            "type": [
+              "null",
+              "boolean"
+            ]
+          },
+          "sortOrder": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "version": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
       "SeriesResponse": {
         "required": [
           "id",
@@ -15522,6 +15857,107 @@
           }
         }
       },
+      "ToolboxResponse": {
+        "required": [
+          "tools",
+          "categories"
+        ],
+        "type": "object",
+        "properties": {
+          "tools": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ToolResponse"
+            }
+          },
+          "categories": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "ToolResponse": {
+        "required": [
+          "id",
+          "code",
+          "nameMk",
+          "nameEn",
+          "descriptionMk",
+          "descriptionEn",
+          "kind",
+          "category",
+          "url",
+          "builtInKey",
+          "subjectIds",
+          "isFeatured",
+          "licenseNoteMk",
+          "licenseNoteEn"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "code": {
+            "type": "string"
+          },
+          "nameMk": {
+            "type": "string"
+          },
+          "nameEn": {
+            "type": "string"
+          },
+          "descriptionMk": {
+            "type": "string"
+          },
+          "descriptionEn": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "string"
+          },
+          "category": {
+            "type": "string"
+          },
+          "url": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "builtInKey": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "subjectIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "isFeatured": {
+            "type": "boolean"
+          },
+          "licenseNoteMk": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "licenseNoteEn": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
       "TwoFactorLoginRequest": {
         "required": [
           "code",
@@ -15981,6 +16417,9 @@
     },
     {
       "name": "Teacher profile"
+    },
+    {
+      "name": "Toolbox"
     }
   ]
 }

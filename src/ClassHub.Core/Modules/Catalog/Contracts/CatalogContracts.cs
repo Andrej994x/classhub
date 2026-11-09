@@ -8,6 +8,9 @@ public static class CatalogForeignKeyTargets
 {
     public static readonly Type Subject = typeof(Domain.Subject);
     public static readonly Type EducationLevel = typeof(Domain.EducationLevel);
+
+    /// <summary>The fixed id of a seeded subject (for other modules' seed data, e.g. the toolbox).</summary>
+    public static Guid SeededSubjectId(string code) => Persistence.CatalogSeed.IdFor("subject", code);
 }
 
 /// <summary>A catalog entry with both UI languages (the SPA shows the one matching the UI language).</summary>

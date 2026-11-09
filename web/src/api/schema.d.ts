@@ -2322,6 +2322,57 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/w/{workspaceId}/toolbox": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Active tools matching a search (names and descriptions in both languages), a subject and a category; featured first. */
+        get: operations["SearchToolbox"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/toolbox": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["ListAdminTools"];
+        put?: never;
+        /** Add a tool (its code is permanent). */
+        post: operations["CreateTool"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/toolbox/{toolId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Change, feature, activate or deactivate a tool (tools are never deleted). */
+        put: operations["UpdateTool"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/w/{workspaceId}": {
         parameters: {
             query?: never;
@@ -2500,6 +2551,16 @@ export interface components {
             /** Format: date-time */
             paidUntilUtc: null | string;
             history: components["schemas"]["SubscriptionEventResponse"][];
+        };
+        AdminToolResponse: {
+            tool: components["schemas"]["ToolResponse"];
+            isActive: boolean;
+            /** Format: int32 */
+            sortOrder: number | string;
+            /** Format: date-time */
+            updatedAtUtc: string;
+            /** Format: int32 */
+            version: number | string;
         };
         AdminUserDetail: {
             user: components["schemas"]["AdminUserSummary"];
@@ -3746,6 +3807,26 @@ export interface components {
             points: number | string;
             options: null | components["schemas"]["SaveTestOption"][];
         };
+        SaveToolRequest: {
+            code: null | string;
+            nameMk: null | string;
+            nameEn: null | string;
+            descriptionMk: null | string;
+            descriptionEn: null | string;
+            kind: null | string;
+            category: null | string;
+            url: null | string;
+            builtInKey: null | string;
+            subjectIds: null | string[];
+            licenseNoteMk: null | string;
+            licenseNoteEn: null | string;
+            isActive: null | boolean;
+            isFeatured: null | boolean;
+            /** Format: int32 */
+            sortOrder: null | number | string;
+            /** Format: int32 */
+            version: null | number | string;
+        };
         SeriesResponse: {
             /** Format: uuid */
             id: string;
@@ -4163,6 +4244,27 @@ export interface components {
             /** Format: date */
             endDate: string;
             note: null | string;
+        };
+        ToolboxResponse: {
+            tools: components["schemas"]["ToolResponse"][];
+            categories: string[];
+        };
+        ToolResponse: {
+            /** Format: uuid */
+            id: string;
+            code: string;
+            nameMk: string;
+            nameEn: string;
+            descriptionMk: string;
+            descriptionEn: string;
+            kind: string;
+            category: string;
+            url: null | string;
+            builtInKey: null | string;
+            subjectIds: string[];
+            isFeatured: boolean;
+            licenseNoteMk: null | string;
+            licenseNoteEn: null | string;
         };
         TwoFactorLoginRequest: {
             code: null | string;
@@ -8950,6 +9052,120 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["OnboardingResponse"];
+                };
+            };
+        };
+    };
+    SearchToolbox: {
+        parameters: {
+            query?: {
+                q?: string;
+                subjectId?: string;
+                category?: string;
+            };
+            header?: never;
+            path: {
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ToolboxResponse"];
+                };
+            };
+        };
+    };
+    ListAdminTools: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminToolResponse"][];
+                };
+            };
+        };
+    };
+    CreateTool: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SaveToolRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminToolResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["HttpValidationProblemDetails"];
+                };
+            };
+        };
+    };
+    UpdateTool: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                toolId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SaveToolRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminToolResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["HttpValidationProblemDetails"];
                 };
             };
         };

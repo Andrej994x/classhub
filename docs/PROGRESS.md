@@ -6,11 +6,11 @@ This is the live status of the autonomous implementation loop ([ROADMAP.md](ROAD
 
 | Field | Value |
 |---|---|
-| Release | R2 — Teaching operations (R0 and R1 complete) |
-| Current phase | R2-P13 — Release 2 hardening |
-| Branch | `chore/r2-p13-hardening` (from `main` @ `9d69d02`) |
+| Release | R3 — Teaching Toolbox (R0, R1 and R2 complete) |
+| Current phase | R3-P1 — Toolbox catalog |
+| Branch | `feature/r3-p1-toolbox-catalog` (from `main` @ `3881062`) |
 | Workflow step | 3 — implementation and local checks |
-| Next action | R2-P13 checks, Codex review and PR; then R3-P1 (toolbox catalog) |
+| Next action | R3-P1 checks, Codex review and PR; then R3-P2 (Activity Library) |
 | Open blockers | None. User actions (optional): direct-push probe (R0-P8); remove the now redundant required `pr-gate` check (see Decisions) |
 
 ## Phase status
@@ -54,8 +54,8 @@ Status values: `not started`, `in progress`, `in review` (PR open), `merged`, `b
 | R2-P10 | Packages & payments | merged | `feature/r2-p10-finance` | [#34](https://github.com/Andrej994x/classhub/pull/34) | `d1ac8a8` | 5 rounds: 1 × P1 + 6 × P2 fixed (lesson lock before attendance, correction bounds and waivers, safe validators, report counts corrections, paged history, closing under the student lock, typed currencies); round 5 clean | green | Migration applied to local `ClassHubDb` |
 | R2-P11 | Notifications | merged | `feature/r2-p11-notifications` | [#35](https://github.com/Andrej994x/classhub/pull/35) | `939e059` | 15 rounds: 1 × P1 + 16 × P2 fixed (keys per change, series announcements and endings, paged reminder planning, reminder replacement rules, READCOMMITTEDLOCK, re-added students, removed students told as they knew it, last-hour rule at send time, told-per-series, preference save race, horizon series, cancellations of lessons known without our email, send time per notice, kept series lessons named); round 15 clean | green after 2 CI fixes (oldest-first multi-batch dispatch; a test backlog) | Migration applied to local `ClassHubDb` |
 | R2-P12 | Dashboards (teacher + student) | merged | `feature/r2-p12-dashboards` | [#36](https://github.com/Andrej994x/classhub/pull/36) | `9d69d02` | 2 rounds: 1 × P2 fixed (running-low count before the list cap); round 2 clean | green | No migration |
-| R2-P13 | Release 2 hardening | in progress | `chore/r2-p13-hardening` | | | | | Plan: Release 2 journey in Playwright (booking → student → package → held lesson → payment → homework → the student sees it), isolation sweep over the student portal routes, concurrency matrix, release-level Codex review, docs; fixes what the journey finds |
-| R3-P1 | Toolbox catalog | not started | | | | | | |
+| R2-P13 | Release 2 hardening | merged | `chore/r2-p13-hardening` | [#37](https://github.com/Andrej994x/classhub/pull/37) | `3881062` | Release-level review of all R2 changes: 1 × P2 fixed (series edits with referenced lessons); phase round 1 clean | green | Release 2 complete |
+| R3-P1 | Toolbox catalog | in progress | `feature/r3-p1-toolbox-catalog` | | | | | Plan: global tool catalog (mk/en, subjects, categories, external or built-in, featured, active), teacher search and filters, external tools only by official HTTPS links on approved domains opened with noopener, staff admin with audit and versions, seeded GeoGebra/Desmos/PhET/MolView |
 | R3-P2 | Activity Library | not started | | | | | | |
 | R3-P3 | Drawing Board | not started | | | | | | |
 | R3-P4 | Geometry Board — constructions | not started | | | | | | |
@@ -67,7 +67,7 @@ Status values: `not started`, `in progress`, `in review` (PR open), `merged`, `b
 
 Release 3 and Beta come from [ROADMAP.md](ROADMAP.md) section D.
 
-## Release 2 — complete with R2-P13 (2026-11-09)
+## Release 2 — complete (2026-11-09, PR #37, `3881062`)
 
 Definition of Done (ROADMAP D, R2-P1…P13) demonstrated:
 - **The whole journey**, through the UI in Playwright on desktop and phone (`release2.spec.ts`):

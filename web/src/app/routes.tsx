@@ -3,6 +3,7 @@ import { AdminLayout, AuthLayout, StudentLayout, TeacherLayout } from './layouts
 import { AdminAuditPage } from './pages/admin/AdminAuditPage.tsx';
 import { AdminOverviewPage } from './pages/admin/AdminOverviewPage.tsx';
 import { AdminCatalogPage } from './pages/admin/AdminCatalogPage.tsx';
+import { AdminToolboxPage } from './pages/admin/AdminToolboxPage.tsx';
 import { AdminHiddenPage, AdminReportsPage } from './pages/admin/AdminModerationPages.tsx';
 import { AdminPlansPage } from './pages/admin/AdminPlansPage.tsx';
 import { AdminSecurityPage } from './pages/admin/AdminSecurityPage.tsx';
@@ -19,6 +20,7 @@ import { OffersPage } from './pages/offers/OffersPage.tsx';
 import { PlanPage } from './pages/plan/PlanPage.tsx';
 import { GroupEditPage, GroupsPage } from './pages/groups/GroupsPages.tsx';
 import { MaterialPage, MaterialsPage } from './pages/materials/MaterialsPages.tsx';
+import { ToolboxPage } from './pages/toolbox/ToolboxPage.tsx';
 import { HomeworkEditPage, HomeworkPage, StudentHomeworkPage } from './pages/homework/HomeworkPages.tsx';
 import { FinancePage } from './pages/finance/FinancePages.tsx';
 import { BookingPage } from './pages/booking/BookingPage.tsx';
@@ -83,6 +85,7 @@ export const routes: RouteObject[] = [
       { path: 'w/:workspaceId/homework/new', element: <HomeworkEditPage /> },
       { path: 'w/:workspaceId/homework/:homeworkId', element: <HomeworkEditPage /> },
       { path: 'w/:workspaceId/finance', element: <FinancePage /> },
+      { path: 'w/:workspaceId/toolbox', element: <ToolboxPage /> },
       { path: 'w/:workspaceId/offers', element: <OffersPage /> },
       { path: 'w/:workspaceId/offers/new', element: <OfferEditPage /> },
       { path: 'w/:workspaceId/offers/:offerId', element: <OfferEditPage /> },
@@ -117,6 +120,7 @@ export const routes: RouteObject[] = [
       { path: 'reports', element: <AdminReportsPage /> },
       { path: 'moderation', element: <AdminHiddenPage /> },
       { path: 'catalog', element: <AdminCatalogPage /> },
+      { path: 'toolbox', element: <AdminToolboxPage /> },
       { path: 'security', element: <AdminSecurityPage /> },
       { path: '*', element: <NotFoundContent /> },
     ],
