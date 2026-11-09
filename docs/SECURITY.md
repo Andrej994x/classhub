@@ -88,6 +88,12 @@ ASP.NET Core Identity with cookie sessions. See [ARCHITECTURE.md](ARCHITECTURE.m
 - Names, phones and guardian contacts are redacted in logs.
 - No duplicates by email within a workspace (unique index) and no limit overrun under parallel requests (intake lock; tested).
 
+## Finance (R2-P10)
+
+- `ws:finance.read` / `ws:finance.manage`; other workspaces get 404 for every student, package, payment and ledger entry.
+- The ledger is append-only (interceptor + architecture test + database CHECKs: no negative payment except a linked reversal, no zero corrections, lesson entries and reversals unique), and every change is audited with its actor; payments are records of what happened outside ClassHub (no payment data is handled).
+- The consumption job reads pending events across workspaces as identifiers only and writes only in a scope bound to the event's workspace.
+
 ## Homework (R2-P9)
 
 - Students reach only their own assignments (by `student:self` and the student id, never by the URL alone); another student's assignment, answer or file is 404. Teachers see only their workspace's homework.

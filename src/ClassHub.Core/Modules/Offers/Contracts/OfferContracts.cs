@@ -60,7 +60,16 @@ public interface IOfferLookup
 
     /// <summary>Active offers of the current workspace, and how many of them show on the public site.</summary>
     Task<(int Active, int Public)> CountActiveAsync(CancellationToken cancellationToken);
+
+    /// <summary>
+    /// The terms a package copies from an offer (R2-P10): title, lessons (1 for a single lesson), price and currency;
+    /// null when the offer is not a non-archived offer of the current workspace.
+    /// </summary>
+    Task<OfferTerms?> TermsAsync(Guid offerId, CancellationToken cancellationToken);
 }
+
+/// <summary>An offer's terms at this moment (packages keep them; later price changes never alter a package).</summary>
+public sealed record OfferTerms(Guid Id, string Title, int LessonCount, long PriceMinor, string Currency);
 
 /// <summary>
 /// The public fields of an offer (public site, JSON-LD, lead form). Kind and mode are the API's enum names. The id lets

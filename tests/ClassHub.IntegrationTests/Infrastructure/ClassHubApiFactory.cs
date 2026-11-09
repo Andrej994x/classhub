@@ -54,6 +54,8 @@ public sealed class ClassHubApiFactory : WebApplicationFactory<Program>
         builder.UseSetting("Identity:SecurityStampValidationIntervalSeconds", "0");
         // Uploaded files go to a per-run temporary folder, never into the repository's App_Data.
         builder.UseSetting("Files:RootPath", FileRoot);
+        // Lesson consumption runs when a test asks for it (LessonConsumptionJob.RunOnceAsync), never in between.
+        builder.UseSetting("Finance:ConsumptionIntervalSeconds", "86400");
 
         builder.ConfigureTestServices(services =>
         {

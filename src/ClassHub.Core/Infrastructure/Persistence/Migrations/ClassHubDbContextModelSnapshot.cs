@@ -975,6 +975,258 @@ namespace ClassHub.Core.Infrastructure.Persistence.Migrations
                         });
                 });
 
+            modelBuilder.Entity("ClassHub.Core.Modules.Finance.Domain.BalanceAdjustment", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<long>("AmountMinor")
+                        .HasColumnType("bigint");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasPrecision(3)
+                        .HasColumnType("datetime2(3)");
+
+                    b.Property<Guid?>("CreatedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Currency")
+                        .IsRequired()
+                        .HasMaxLength(3)
+                        .IsUnicode(false)
+                        .HasColumnType("char(3)")
+                        .IsFixedLength();
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<Guid>("StudentId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("WorkspaceId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("WorkspaceId");
+
+                    b.HasIndex("WorkspaceId", "StudentId", "CreatedAtUtc");
+
+                    b.ToTable("BalanceAdjustments", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_BalanceAdjustments_Amount", "[AmountMinor] <> 0");
+
+                            t.HasCheckConstraint("CK_BalanceAdjustments_Reason", "LEN([Reason]) >= 1");
+                        });
+                });
+
+            modelBuilder.Entity("ClassHub.Core.Modules.Finance.Domain.LessonLedgerEntry", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasPrecision(3)
+                        .HasColumnType("datetime2(3)");
+
+                    b.Property<Guid?>("CreatedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("Kind")
+                        .HasColumnType("int");
+
+                    b.Property<Guid?>("LessonId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int?>("Occurrence")
+                        .HasColumnType("int");
+
+                    b.Property<Guid?>("PackageId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("Quantity")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Reason")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<Guid?>("ReversesId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("StudentId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("WorkspaceId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ReversesId")
+                        .IsUnique()
+                        .HasFilter("[ReversesId] IS NOT NULL");
+
+                    b.HasIndex("WorkspaceId");
+
+                    b.HasIndex("WorkspaceId", "LessonId");
+
+                    b.HasIndex("WorkspaceId", "PackageId");
+
+                    b.HasIndex("WorkspaceId", "ReversesId");
+
+                    b.HasIndex("LessonId", "StudentId", "Occurrence")
+                        .IsUnique()
+                        .HasFilter("[Kind] = 1");
+
+                    b.HasIndex("WorkspaceId", "StudentId", "CreatedAtUtc");
+
+                    b.ToTable("LessonLedger", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_LessonLedger_Kind", "[Kind] BETWEEN 1 AND 3");
+
+                            t.HasCheckConstraint("CK_LessonLedger_Shape", "([Kind] = 1 AND [Quantity] = 1 AND [LessonId] IS NOT NULL AND [Occurrence] IS NOT NULL AND [ReversesId] IS NULL) OR ([Kind] = 2 AND [Quantity] <> 0 AND [PackageId] IS NOT NULL AND [Reason] IS NOT NULL AND [Occurrence] IS NULL AND [ReversesId] IS NULL) OR ([Kind] = 3 AND [Quantity] <> 0 AND [ReversesId] IS NOT NULL AND [Occurrence] IS NULL)");
+                        });
+                });
+
+            modelBuilder.Entity("ClassHub.Core.Modules.Finance.Domain.Payment", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<long>("AmountMinor")
+                        .HasColumnType("bigint");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasPrecision(3)
+                        .HasColumnType("datetime2(3)");
+
+                    b.Property<Guid?>("CreatedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Currency")
+                        .IsRequired()
+                        .HasMaxLength(3)
+                        .IsUnicode(false)
+                        .HasColumnType("char(3)")
+                        .IsFixedLength();
+
+                    b.Property<int>("Method")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Note")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<Guid?>("PackageId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateOnly>("PaidOn")
+                        .HasColumnType("date");
+
+                    b.Property<Guid?>("ReversesPaymentId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("StudentId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("WorkspaceId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ReversesPaymentId")
+                        .IsUnique()
+                        .HasFilter("[ReversesPaymentId] IS NOT NULL");
+
+                    b.HasIndex("WorkspaceId");
+
+                    b.HasIndex("WorkspaceId", "PackageId");
+
+                    b.HasIndex("WorkspaceId", "PaidOn");
+
+                    b.HasIndex("WorkspaceId", "ReversesPaymentId");
+
+                    b.HasIndex("WorkspaceId", "StudentId", "PaidOn");
+
+                    b.ToTable("Payments", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_Payments_Amount", "([AmountMinor] > 0 AND [ReversesPaymentId] IS NULL) OR ([AmountMinor] < 0 AND [ReversesPaymentId] IS NOT NULL)");
+
+                            t.HasCheckConstraint("CK_Payments_Method", "[Method] BETWEEN 1 AND 4");
+                        });
+                });
+
+            modelBuilder.Entity("ClassHub.Core.Modules.Finance.Domain.StudentPackage", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("ClosedAtUtc")
+                        .HasPrecision(3)
+                        .HasColumnType("datetime2(3)");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasPrecision(3)
+                        .HasColumnType("datetime2(3)");
+
+                    b.Property<Guid?>("CreatedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Currency")
+                        .IsRequired()
+                        .HasMaxLength(3)
+                        .IsUnicode(false)
+                        .HasColumnType("char(3)")
+                        .IsFixedLength();
+
+                    b.Property<int>("LessonCount")
+                        .HasColumnType("int");
+
+                    b.Property<Guid?>("OfferId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<long>("PriceMinor")
+                        .HasColumnType("bigint");
+
+                    b.Property<Guid>("StudentId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(160)
+                        .HasColumnType("nvarchar(160)");
+
+                    b.Property<int>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("int");
+
+                    b.Property<Guid>("WorkspaceId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("WorkspaceId");
+
+                    b.HasIndex("WorkspaceId", "OfferId");
+
+                    b.HasIndex("WorkspaceId", "StudentId", "CreatedAtUtc");
+
+                    b.ToTable("StudentPackages", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_StudentPackages_Lessons", "[LessonCount] BETWEEN 1 AND 500");
+
+                            t.HasCheckConstraint("CK_StudentPackages_Price", "[PriceMinor] BETWEEN 0 AND 100000000000");
+
+                            t.HasCheckConstraint("CK_StudentPackages_Title", "LEN([Title]) >= 1");
+                        });
+                });
+
             modelBuilder.Entity("ClassHub.Core.Modules.Groups.Domain.Group", b =>
                 {
                     b.Property<Guid>("Id")
@@ -3317,6 +3569,88 @@ namespace ClassHub.Core.Infrastructure.Persistence.Migrations
                     b.HasOne("ClassHub.Core.Modules.DiagnosticTests.Domain.DiagnosticTest", null)
                         .WithMany()
                         .HasForeignKey("WorkspaceId", "TestId")
+                        .HasPrincipalKey("WorkspaceId", "Id")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("ClassHub.Core.Modules.Finance.Domain.BalanceAdjustment", b =>
+                {
+                    b.HasOne("ClassHub.Core.Modules.Students.Domain.Student", null)
+                        .WithMany()
+                        .HasForeignKey("WorkspaceId", "StudentId")
+                        .HasPrincipalKey("WorkspaceId", "Id")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("ClassHub.Core.Modules.Finance.Domain.LessonLedgerEntry", b =>
+                {
+                    b.HasOne("ClassHub.Core.Modules.Lessons.Domain.Lesson", null)
+                        .WithMany()
+                        .HasForeignKey("WorkspaceId", "LessonId")
+                        .HasPrincipalKey("WorkspaceId", "Id")
+                        .OnDelete(DeleteBehavior.NoAction);
+
+                    b.HasOne("ClassHub.Core.Modules.Finance.Domain.StudentPackage", null)
+                        .WithMany()
+                        .HasForeignKey("WorkspaceId", "PackageId")
+                        .HasPrincipalKey("WorkspaceId", "Id")
+                        .OnDelete(DeleteBehavior.NoAction);
+
+                    b.HasOne("ClassHub.Core.Modules.Finance.Domain.LessonLedgerEntry", null)
+                        .WithMany()
+                        .HasForeignKey("WorkspaceId", "ReversesId")
+                        .HasPrincipalKey("WorkspaceId", "Id")
+                        .OnDelete(DeleteBehavior.NoAction);
+
+                    b.HasOne("ClassHub.Core.Modules.Students.Domain.Student", null)
+                        .WithMany()
+                        .HasForeignKey("WorkspaceId", "StudentId")
+                        .HasPrincipalKey("WorkspaceId", "Id")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("ClassHub.Core.Modules.Finance.Domain.Payment", b =>
+                {
+                    b.HasOne("ClassHub.Core.Modules.Finance.Domain.StudentPackage", null)
+                        .WithMany()
+                        .HasForeignKey("WorkspaceId", "PackageId")
+                        .HasPrincipalKey("WorkspaceId", "Id")
+                        .OnDelete(DeleteBehavior.NoAction);
+
+                    b.HasOne("ClassHub.Core.Modules.Finance.Domain.Payment", null)
+                        .WithMany()
+                        .HasForeignKey("WorkspaceId", "ReversesPaymentId")
+                        .HasPrincipalKey("WorkspaceId", "Id")
+                        .OnDelete(DeleteBehavior.NoAction);
+
+                    b.HasOne("ClassHub.Core.Modules.Students.Domain.Student", null)
+                        .WithMany()
+                        .HasForeignKey("WorkspaceId", "StudentId")
+                        .HasPrincipalKey("WorkspaceId", "Id")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("ClassHub.Core.Modules.Finance.Domain.StudentPackage", b =>
+                {
+                    b.HasOne("ClassHub.Core.Modules.Workspaces.Domain.Workspace", null)
+                        .WithMany()
+                        .HasForeignKey("WorkspaceId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.HasOne("ClassHub.Core.Modules.Offers.Domain.Offer", null)
+                        .WithMany()
+                        .HasForeignKey("WorkspaceId", "OfferId")
+                        .HasPrincipalKey("WorkspaceId", "Id")
+                        .OnDelete(DeleteBehavior.NoAction);
+
+                    b.HasOne("ClassHub.Core.Modules.Students.Domain.Student", null)
+                        .WithMany()
+                        .HasForeignKey("WorkspaceId", "StudentId")
                         .HasPrincipalKey("WorkspaceId", "Id")
                         .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();

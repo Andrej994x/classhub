@@ -41,6 +41,14 @@ public sealed class TenantSaveChangesInterceptor : SaveChangesInterceptor
         var current = tenant?.WorkspaceId;
         var readOnly = tenant?.IsReadOnly == true;
 
+        foreach (var entry in context.ChangeTracker.Entries<IAppendOnly>())
+        {
+            if (entry.State is EntityState.Modified or EntityState.Deleted)
+            {
+                throw new AppendOnlyViolationException($"{entry.Metadata.ClrType.Name} is append-only: add a correcting entry instead of changing or deleting one.");
+            }
+        }
+
         foreach (var entry in context.ChangeTracker.Entries<ITenantOwned>())
         {
             if (readOnly && entry.State is EntityState.Added or EntityState.Modified or EntityState.Deleted)
@@ -92,6 +100,9 @@ public sealed class TenantSaveChangesInterceptor : SaveChangesInterceptor
     private static TenantIsolationException Violation(EntityEntry entry, string reason) =>
         new($"Tenant isolation violation: {entry.Metadata.ClrType.Name} {reason}.");
 }
+
+/// <summary>An append-only record would be changed or deleted. Always a programming error, never user input.</summary>
+public sealed class AppendOnlyViolationException(string message) : InvalidOperationException(message);
 
 /// <summary>A write would cross workspace boundaries. Always a programming error, never user input.</summary>
 public sealed class TenantIsolationException(string message) : InvalidOperationException(message);

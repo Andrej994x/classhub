@@ -20,6 +20,7 @@ import { PlanPage } from './pages/plan/PlanPage.tsx';
 import { GroupEditPage, GroupsPage } from './pages/groups/GroupsPages.tsx';
 import { MaterialPage, MaterialsPage } from './pages/materials/MaterialsPages.tsx';
 import { HomeworkEditPage, HomeworkPage, StudentHomeworkPage } from './pages/homework/HomeworkPages.tsx';
+import { FinancePage } from './pages/finance/FinancePages.tsx';
 import { BookingPage } from './pages/booking/BookingPage.tsx';
 import { CalendarPage } from './pages/lessons/CalendarPage.tsx';
 import { LessonEditPage } from './pages/lessons/LessonEditPage.tsx';
@@ -81,6 +82,7 @@ export const routes: RouteObject[] = [
       { path: 'w/:workspaceId/homework', element: <HomeworkPage /> },
       { path: 'w/:workspaceId/homework/new', element: <HomeworkEditPage /> },
       { path: 'w/:workspaceId/homework/:homeworkId', element: <HomeworkEditPage /> },
+      { path: 'w/:workspaceId/finance', element: <FinancePage /> },
       { path: 'w/:workspaceId/offers', element: <OffersPage /> },
       { path: 'w/:workspaceId/offers/new', element: <OfferEditPage /> },
       { path: 'w/:workspaceId/offers/:offerId', element: <OfferEditPage /> },
