@@ -41,7 +41,8 @@
     "groups": "Groups",
     "studentSettings": "Settings",
     "calendar": "Calendar",
-    "booking": "Booking"
+    "booking": "Booking",
+    "materials": "Materials"
   },
   "layout": {
     "teacherArea": "Teacher workspace",
@@ -381,7 +382,8 @@
       "STUDENT_ALREADY_LINKED": "This student already has an account.",
       "ACCOUNT_ALREADY_LINKED": "Your account is already linked to a student of this teacher.",
       "EMAIL_REGISTERED": "An account with this email already exists. Sign in to accept the invitation.",
-      "LESSON_OVERLAP": "You already have a lesson at this time."
+      "LESSON_OVERLAP": "You already have a lesson at this time.",
+      "FILE_NOT_ALLOWED": "This file type is not allowed. Upload a PDF, image (PNG, JPEG, WebP), Word, Excel, PowerPoint or text file."
     }
   },
   "auth": {
@@ -1008,6 +1010,72 @@
     "ofStudent": "Groups",
     "noneForStudent": "Not in any group."
   },
+  "materials": {
+    "title": "Materials",
+    "lead": "Your teaching files. Only you and the students or groups you assign a material to can open it.",
+    "storageUsed": "Storage used: {{size}}",
+    "search": "Search materials",
+    "showArchived": "Show archived materials",
+    "filterSubject": "Filter by subject",
+    "allSubjects": "All subjects",
+    "empty": "No materials yet. Upload your first file above.",
+    "noArchived": "No archived materials.",
+    "noMatches": "No materials match the search or the subject.",
+    "assignedCount_one": "assigned to {{count}}",
+    "assignedCount_other": "assigned to {{count}}",
+    "pages": "Material pages",
+    "back": "Back to materials",
+    "file": "File",
+    "download": "Download",
+    "details": "Details",
+    "save": "Save changes",
+    "saved": "Changes saved.",
+    "changedElsewhere": "This material was changed in another window. Reload the page and apply your changes again.",
+    "archivedLead": "Archived: students no longer see this material.",
+    "fields": {
+      "title": "Title",
+      "description": "Description (optional)",
+      "subject": "Subject",
+      "noSubject": "No subject"
+    },
+    "validation": {
+      "title": "Enter a title."
+    },
+    "upload": {
+      "title": "Upload a material",
+      "lead": "Allowed: {{types}}. Up to 20 MB. The file counts towards your plan storage.",
+      "file": "File",
+      "missing": "Choose a file.",
+      "type": "This file type is not allowed.",
+      "size": "The file must not be empty and may be at most 20 MB.",
+      "submit": "Upload",
+      "uploading": "Uploading…"
+    },
+    "assignments": {
+      "title": "Who can open it",
+      "lead": "Assign the material to students or to groups. Group members see it while they are in the group.",
+      "none": "Not assigned yet: only you can open it.",
+      "student": "student",
+      "group": "group",
+      "remove": "Remove {{name}}",
+      "removeShort": "Remove",
+      "toStudent": "Assign to a student",
+      "toGroup": "Assign to a group",
+      "chooseGroup": "Choose a group",
+      "assign": "Assign",
+      "archived": "Restore the material to assign it."
+    },
+    "archiveTitle": "Archive the material",
+    "archiveLead": "Students no longer see it; the file and the assignments are kept.",
+    "archive": "Archive",
+    "restoreTitle": "Restore the material",
+    "restoreLead": "Students it is assigned to see it again.",
+    "restore": "Restore",
+    "deleteTitle": "Delete the material",
+    "deleteLead": "Deletes the file and its assignments for good and frees the storage. This cannot be undone.",
+    "delete": "Delete…",
+    "deleteConfirm": "Delete for good"
+  },
   "studentPortal": {
     "teachers": "Your teachers",
     "noTeachers": "You are not linked to a teacher yet. Open the invitation link your teacher sent you.",
@@ -1034,6 +1102,11 @@
       "languageLead": "Used in the app and in emails from ClassHub.",
       "notifications": "Notifications",
       "notificationsLater": "Lesson reminders and notification choices arrive in a later version."
+    },
+    "materials": {
+      "title": "Materials",
+      "none": "Your teacher has not shared materials with you yet.",
+      "download": "Download {{title}}"
     }
   },
   "lessons": {

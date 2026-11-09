@@ -4,6 +4,7 @@ using ClassHub.Core.Infrastructure.Persistence;
 using ClassHub.Core.Modules.Catalog.Contracts;
 using ClassHub.Core.Modules.Offers.Contracts;
 using ClassHub.Core.Modules.Sites.Contracts;
+using ClassHub.Core.Modules.Subscriptions.Contracts;
 using ClassHub.Core.Modules.Teachers.Contracts;
 using ClassHub.Core.Modules.Teachers.Domain;
 using ClassHub.Core.Modules.Workspaces.Contracts;
@@ -26,6 +27,7 @@ internal sealed partial class TeacherProfileService(
     ISiteStatus site,
     IPublicSiteCache siteCache,
     IFileStorage files,
+    IStorageQuota storage,
     TimeProvider clock,
     ILogger<TeacherProfileService> logger) : ITeacherSummary, ITeacherPhoto, ITeacherPublicProfile, IOnboardingProgress
 {
@@ -153,6 +155,12 @@ internal sealed partial class TeacherProfileService(
             await files.WriteAsync(file.StorageKey, image.Content, cancellationToken);
             // The new file row, the profile pointer and the removal of the old file row commit together.
             await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
+            // The plan storage counts every stored file; the new photo replaces the current one, read under the lock
+            // that parallel photo uploads and material uploads share.
+            await storage.EnsureRoomAsync(file.SizeBytes, async ct => await db.Set<TeacherProfile>().AsNoTracking()
+                .Where(p => p.PhotoFileId != null)
+                .Select(p => db.Set<StoredFile>().Where(f => f.Id == p.PhotoFileId).Select(f => (long?)f.SizeBytes).FirstOrDefault())
+                .FirstOrDefaultAsync(ct) ?? 0, cancellationToken);
             db.Set<StoredFile>().Add(file);
             await db.SaveChangesAsync(cancellationToken);
             oldKey = await SwapPhotoAsync(file.Id, now, cancellationToken);

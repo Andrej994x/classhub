@@ -31,6 +31,7 @@ public sealed class SubscriptionsModule : IModule
         services.AddScoped<IEntitlementService>(sp => sp.GetRequiredService<EntitlementService>());
         services.AddScoped<ISubscriptionStats>(sp => sp.GetRequiredService<EntitlementService>());
         services.AddScoped<SubscriptionAdminService>();
+        services.AddScoped<IStorageQuota, StorageQuota>();
         services.AddSingleton<SubscriptionExpiryJob>();
         services.AddHostedService(sp => sp.GetRequiredService<SubscriptionExpiryJob>());
     }

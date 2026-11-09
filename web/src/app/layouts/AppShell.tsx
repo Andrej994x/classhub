@@ -98,6 +98,7 @@ function TeacherShell() {
               { to: `/app/w/${first.id}/leads`, labelKey: 'nav.leads' },
               { to: `/app/w/${first.id}/students`, labelKey: 'nav.students' },
               { to: `/app/w/${first.id}/groups`, labelKey: 'nav.groups' },
+              { to: `/app/w/${first.id}/materials`, labelKey: 'nav.materials' },
               { to: `/app/w/${first.id}/offers`, labelKey: 'nav.offers' },
               { to: `/app/w/${first.id}/site`, labelKey: 'nav.site' },
               { to: `/app/w/${first.id}/tests`, labelKey: 'nav.tests' },

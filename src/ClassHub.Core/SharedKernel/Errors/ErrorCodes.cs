@@ -63,6 +63,9 @@ public static class ErrorCodes
     // Lessons (R2-P4)
     public const string LessonOverlap = "LESSON_OVERLAP";
 
+    // Materials (R2-P8)
+    public const string FileNotAllowed = "FILE_NOT_ALLOWED";
+
     /// <summary>Default code for an HTTP status when no specific code was set.</summary>
     public static string ForStatus(int statusCode) => statusCode switch
     {

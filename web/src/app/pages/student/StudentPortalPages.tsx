@@ -17,6 +17,7 @@ import { pendingInvitation, useAcceptInvitation, useAcceptWithAccount, useInvita
 import { useCatalog } from '../../../teacher/queries.ts';
 import { applyServerFieldErrors } from '../auth/serverErrors.ts';
 import { NotFoundContent } from '../Pages.tsx';
+import { MyMaterials } from '../materials/MaterialsPages.tsx';
 
 const linkClass = 'text-primary underline-offset-4 hover:underline';
 
@@ -215,7 +216,7 @@ export function StudentHomePage() {
   );
 }
 
-/** `/student/w/:workspaceId`: the student's own page with one teacher (lessons and materials arrive in later phases). */
+/** `/student/w/:workspaceId`: the student's own page with one teacher: subjects and materials (lessons arrive in a later phase). */
 export function StudentTeacherPage() {
   const { t, i18n } = useTranslation();
   const { workspaceId = '' } = useParams();
@@ -258,6 +259,7 @@ export function StudentTeacherPage() {
           </CardContent>
         </Card>
       )}
+      <MyMaterials workspaceId={workspaceId} />
       <Card>
         <CardHeader>
           <CardTitle className="text-lg">{t('studentPortal.lessonsTitle')}</CardTitle>

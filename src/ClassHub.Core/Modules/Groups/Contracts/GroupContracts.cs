@@ -36,4 +36,7 @@ public sealed record GroupSummary(Guid Id, string Name, bool Archived, IReadOnly
 public interface IGroupLookup
 {
     Task<IReadOnlyDictionary<Guid, GroupSummary>> FindAsync(IReadOnlyCollection<Guid> ids, CancellationToken cancellationToken);
+
+    /// <summary>The groups (not archived) the student is currently a member of.</summary>
+    Task<IReadOnlyList<Guid>> ActiveGroupsOfStudentAsync(Guid studentId, CancellationToken cancellationToken);
 }

@@ -1148,6 +1148,170 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/w/{workspaceId}/materials": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Materials (active or archived), newest change first; with the storage the workspace uses. */
+        get: operations["ListMaterials"];
+        put?: never;
+        /** Upload a material (PDF, PNG, JPEG, WebP, DOCX, XLSX, PPTX or TXT, at most 20 MB); counts towards the plan storage. */
+        post: operations["CreateMaterial"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/w/{workspaceId}/materials/{materialId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetMaterial"];
+        put: operations["UpdateMaterial"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/w/{workspaceId}/materials/{materialId}/archive": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["ArchiveMaterial"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/w/{workspaceId}/materials/{materialId}/restore": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["RestoreMaterial"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/w/{workspaceId}/materials/{materialId}/delete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Delete the material, its assignments and its file (frees the storage). */
+        post: operations["DeleteMaterial"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/w/{workspaceId}/materials/{materialId}/assignments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["AssignMaterial"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/w/{workspaceId}/materials/{materialId}/assignments/{assignmentId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["UnassignMaterial"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/w/{workspaceId}/materials/{materialId}/file": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["DownloadMaterial"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/student/w/{workspaceId}/materials": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["ListMyMaterials"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/student/w/{workspaceId}/materials/{materialId}/file": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Only a material assigned to the student or to one of their groups; anything else is 404. */
+        get: operations["DownloadMyMaterial"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/public/sites/{slug}/reports": {
         parameters: {
             query?: never;
@@ -1968,6 +2132,12 @@ export interface components {
         AntiforgeryTokenResponse: {
             requestToken: string;
         };
+        AssignMaterialRequest: {
+            /** Format: uuid */
+            studentId: null | string;
+            /** Format: uuid */
+            groupId: null | string;
+        };
         AttemptAnswer: {
             /** Format: uuid */
             questionId: string;
@@ -2511,6 +2681,68 @@ export interface components {
             password: null | string;
             rememberMe: boolean;
         };
+        MaterialAssignmentResponse: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            studentId: null | string;
+            /** Format: uuid */
+            groupId: null | string;
+            name: string;
+            /** Format: date-time */
+            assignedAtUtc: string;
+        };
+        MaterialListItem: {
+            /** Format: uuid */
+            id: string;
+            title: string;
+            /** Format: uuid */
+            subjectId: null | string;
+            fileName: string;
+            contentType: string;
+            /** Format: int64 */
+            sizeBytes: number | string;
+            /** Format: int32 */
+            assignmentCount: number | string;
+            archived: boolean;
+            /** Format: date-time */
+            updatedAtUtc: string;
+        };
+        MaterialListResponse: {
+            items: components["schemas"]["MaterialListItem"][];
+            /** Format: int32 */
+            total: number | string;
+            /** Format: int32 */
+            page: number | string;
+            /** Format: int32 */
+            pageSize: number | string;
+            /** Format: int64 */
+            storageUsedBytes: number | string;
+        };
+        MaterialResponse: {
+            /** Format: uuid */
+            id: string;
+            title: string;
+            description: null | string;
+            /** Format: uuid */
+            subjectId: null | string;
+            fileName: string;
+            contentType: string;
+            /** Format: int64 */
+            sizeBytes: number | string;
+            archived: boolean;
+            assignments: components["schemas"]["MaterialAssignmentResponse"][];
+            /** Format: date-time */
+            createdAtUtc: string;
+            /** Format: date-time */
+            updatedAtUtc: string;
+            /** Format: int32 */
+            version: number | string;
+        };
+        MaterialVersionRequest: {
+            /** Format: int32 */
+            version: null | number | string;
+        };
         MeResponse: {
             /** Format: uuid */
             id: string;
@@ -2981,6 +3213,20 @@ export interface components {
             /** Format: int32 */
             activeCount: number | string;
         };
+        StudentMaterialResponse: {
+            /** Format: uuid */
+            id: string;
+            title: string;
+            description: null | string;
+            /** Format: uuid */
+            subjectId: null | string;
+            fileName: string;
+            contentType: string;
+            /** Format: int64 */
+            sizeBytes: number | string;
+            /** Format: date-time */
+            assignedAtUtc: string;
+        };
         StudentNoteResponse: {
             /** Format: uuid */
             id: string;
@@ -3158,6 +3404,14 @@ export interface components {
         };
         TwoFactorRequiredResponse: {
             requiresTwoFactor: boolean;
+        };
+        UpdateMaterialRequest: {
+            title: null | string;
+            description: null | string;
+            /** Format: uuid */
+            subjectId: null | string;
+            /** Format: int32 */
+            version: null | number | string;
         };
         UpdateMeRequest: {
             locale: null | string;
@@ -5548,6 +5802,322 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["PublicSlotsResponse"];
                 };
+            };
+        };
+    };
+    ListMaterials: {
+        parameters: {
+            query?: {
+                q?: string;
+                subjectId?: string;
+                archived?: boolean;
+                page?: number | string;
+                pageSize?: number | string;
+            };
+            header?: never;
+            path: {
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MaterialListResponse"];
+                };
+            };
+        };
+    };
+    CreateMaterial: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["IFormFile"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MaterialResponse"];
+                };
+            };
+        };
+    };
+    GetMaterial: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                materialId: string;
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MaterialResponse"];
+                };
+            };
+        };
+    };
+    UpdateMaterial: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                materialId: string;
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateMaterialRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MaterialResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["HttpValidationProblemDetails"];
+                };
+            };
+        };
+    };
+    ArchiveMaterial: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                materialId: string;
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MaterialVersionRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MaterialResponse"];
+                };
+            };
+        };
+    };
+    RestoreMaterial: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                materialId: string;
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MaterialVersionRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MaterialResponse"];
+                };
+            };
+        };
+    };
+    DeleteMaterial: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                materialId: string;
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MaterialVersionRequest"];
+            };
+        };
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AssignMaterial: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                materialId: string;
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AssignMaterialRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MaterialResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["HttpValidationProblemDetails"];
+                };
+            };
+        };
+    };
+    UnassignMaterial: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                materialId: string;
+                assignmentId: string;
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MaterialResponse"];
+                };
+            };
+        };
+    };
+    DownloadMaterial: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                materialId: string;
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ListMyMaterials: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StudentMaterialResponse"][];
+                };
+            };
+        };
+    };
+    DownloadMyMaterial: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                materialId: string;
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };
