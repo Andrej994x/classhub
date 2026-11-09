@@ -27,14 +27,12 @@ internal sealed class MaterialService(
     MaterialQueries queries,
     ITenantContext tenant,
     IFileStorage files,
-    IEntitlementService entitlements,
+    IStorageQuota storage,
     ICatalogLookup catalog,
     IStudentLookup students,
     IGroupLookup groups,
     TimeProvider clock)
 {
-    private const long Megabyte = 1024 * 1024;
-
     public async Task<MaterialListResponse> ListAsync(string? q, Guid? subjectId, bool archived, int page, int pageSize, CancellationToken cancellationToken)
     {
         if (page is < 1 or > 10_000 || pageSize is < 1 or > 100)
@@ -58,7 +56,7 @@ internal sealed class MaterialService(
             .Select(m => new MaterialListItem(m.Id, m.Title, m.SubjectId, m.FileName, m.ContentType, m.SizeBytes,
                 db.Set<MaterialAssignment>().Count(a => a.MaterialId == m.Id), m.ArchivedAtUtc != null, m.UpdatedAtUtc))
             .ToListAsync(cancellationToken);
-        return new MaterialListResponse(rows, total, page, pageSize, await StorageUsedAsync(cancellationToken));
+        return new MaterialListResponse(rows, total, page, pageSize, await storage.UsedBytesAsync(cancellationToken));
     }
 
     public async Task<MaterialResponse> GetAsync(Guid materialId, CancellationToken cancellationToken) =>
@@ -118,9 +116,8 @@ internal sealed class MaterialService(
         try
         {
             await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
-            // Storage in whole megabytes, rounded up, of everything the workspace stores including this file.
-            await entitlements.EnsureWithinLimitAsync(PlanLimits.StorageMb,
-                async ct => (int)Math.Ceiling((await StorageUsedAsync(ct) + content.Length) / (double)Megabyte), 0, cancellationToken);
+            // Everything the workspace stores plus this file, under the plan lock shared with every file writer.
+            await storage.EnsureRoomAsync(content.Length, null, cancellationToken);
             db.Set<StoredFile>().Add(new StoredFile
             {
                 Id = fileId,
@@ -310,10 +307,6 @@ internal sealed class MaterialService(
         // Only images may be shown in the browser; everything else is downloaded (never rendered inline).
         return new MaterialFile(stream, material.ContentType, material.FileName, material.ContentType.StartsWith("image/", StringComparison.Ordinal));
     }
-
-    /// <summary>Bytes of everything the current workspace stores (materials, profile photo, …).</summary>
-    private async Task<long> StorageUsedAsync(CancellationToken cancellationToken) =>
-        await db.Set<StoredFile>().AsNoTracking().SumAsync(f => (long?)f.SizeBytes, cancellationToken) ?? 0;
 
     private async Task ThrowIfUnknownSubjectAsync(Guid? wanted, Guid? saved, CancellationToken cancellationToken)
     {

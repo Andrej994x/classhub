@@ -1,3 +1,4 @@
+using ClassHub.Core.Infrastructure.Files;
 using ClassHub.Core.Infrastructure.Persistence;
 using ClassHub.Core.Modules.DiagnosticTests.Contracts;
 using ClassHub.Core.Modules.Subscriptions.Contracts;
@@ -83,4 +84,20 @@ internal sealed class EntitlementService(ClassHubDbContext db, ITenantContext te
 
     private Guid CurrentWorkspace() =>
         tenant.WorkspaceId ?? throw new InvalidOperationException("Plan limits apply to a workspace request.");
+}
+
+/// <summary>The storage limit over all of the workspace's stored files, under the plan-limit lock.</summary>
+internal sealed class StorageQuota(ClassHubDbContext db, IEntitlementService entitlements) : IStorageQuota
+{
+    private const double Megabyte = 1024 * 1024;
+
+    public Task EnsureRoomAsync(long addingBytes, Func<CancellationToken, Task<long>>? freeingBytes, CancellationToken cancellationToken) =>
+        entitlements.EnsureWithinLimitAsync(PlanLimits.StorageMb, async ct =>
+        {
+            var freeing = freeingBytes is null ? 0 : await freeingBytes(ct);
+            return (int)Math.Ceiling(Math.Max(0, await UsedBytesAsync(ct) + addingBytes - freeing) / Megabyte);
+        }, 0, cancellationToken);
+
+    public async Task<long> UsedBytesAsync(CancellationToken cancellationToken) =>
+        await db.Set<StoredFile>().AsNoTracking().SumAsync(f => (long?)f.SizeBytes, cancellationToken) ?? 0;
 }

@@ -38,6 +38,25 @@ public interface IEntitlementService
     Task EnsureWithinLimitAsync(string limit, Func<CancellationToken, Task<int>> countInUse, int adding, CancellationToken cancellationToken);
 }
 
+/// <summary>
+/// The plan's storage (<see cref="PlanLimits.StorageMb"/>) for the current workspace: every stored file counts, whoever
+/// writes it (materials, profile photo, …). Every writer of stored files checks here, inside the transaction that adds
+/// the file, so all of them are serialized by the same plan-limit lock.
+/// </summary>
+public interface IStorageQuota
+{
+    /// <summary>
+    /// Inside the caller's transaction: throws 422 <c>PLAN_LIMIT_REACHED</c> when the workspace's stored bytes plus
+    /// <paramref name="addingBytes"/>, minus what <paramref name="freeingBytes"/> says the same transaction removes,
+    /// exceed the plan (whole megabytes, rounded up). <paramref name="freeingBytes"/> runs under the lock, so a file
+    /// replaced by a parallel writer is never counted as freed twice.
+    /// </summary>
+    Task EnsureRoomAsync(long addingBytes, Func<CancellationToken, Task<long>>? freeingBytes, CancellationToken cancellationToken);
+
+    /// <summary>The bytes the current workspace stores.</summary>
+    Task<long> UsedBytesAsync(CancellationToken cancellationToken);
+}
+
 /// <summary>Plan numbers for the platform overview.</summary>
 public sealed record MoneyTotal(string Currency, long AmountMinor);
 

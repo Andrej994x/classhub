@@ -418,6 +418,57 @@ public sealed class TeacherProfileTests(ClassHubApiFixture fixture)
         return new MultipartFormDataContent { { file, "file", name } };
     }
 
+    [Fact]
+    public async Task A_photo_counts_towards_the_plan_storage_shared_with_materials()
+    {
+        using var teacher = await fixture.CreateTeacherAsync();
+        // Materials (or anything else) filled the free plan's 500 MB.
+        await AddStoredBytesAsync(teacher.WorkspaceId, (500L * 1024 * 1024) - 10);
+
+        using var refused = await UploadPhotoAsync(teacher, TestImages.Png(300, 300));
+
+        refused.StatusCode.ShouldBe(HttpStatusCode.UnprocessableEntity);
+        (await refused.ErrorCodeAsync()).ShouldBe(ErrorCodes.PlanLimitReached);
+        await using var db = fixture.CreateDbContext();
+        (await db.Set<StoredFile>().IgnoreQueryFilters().CountAsync(f => f.WorkspaceId == teacher.WorkspaceId, Ct)).ShouldBe(1); // only the filler
+        (await teacher.Client.GetJsonAsync<TeacherProfileResponse>(ProfilePath(teacher.WorkspaceId))).HasPhoto.ShouldBeFalse();
+    }
+
+    [Fact]
+    public async Task Replacing_the_photo_at_the_storage_limit_counts_the_replaced_photo_as_freed()
+    {
+        using var teacher = await fixture.CreateTeacherAsync();
+        var image = TestImages.Png(300, 300);
+        (await UploadPhotoAsync(teacher, image)).Dispose();
+        var first = await StoredFileAsync(teacher.WorkspaceId);
+        // Exactly full: the photo plus the rest make 500 MB.
+        await AddStoredBytesAsync(teacher.WorkspaceId, (500L * 1024 * 1024) - first.SizeBytes);
+
+        // The same image again: as large as the photo it replaces, so the storage stays at the limit.
+        using var replaced = await UploadPhotoAsync(teacher, image);
+
+        replaced.StatusCode.ShouldBe(HttpStatusCode.OK, await replaced.Content.ReadAsStringAsync(Ct));
+        await using var db = fixture.CreateDbContext();
+        (await db.Set<StoredFile>().IgnoreQueryFilters().Where(f => f.WorkspaceId == teacher.WorkspaceId).SumAsync(f => f.SizeBytes, Ct)).ShouldBe(500L * 1024 * 1024);
+    }
+
+    private async Task AddStoredBytesAsync(Guid workspaceId, long bytes)
+    {
+        await using var db = fixture.CreateDbContext();
+        db.Set<StoredFile>().Add(new StoredFile
+        {
+            Id = Guid.CreateVersion7(),
+            WorkspaceId = workspaceId,
+            Purpose = "material",
+            ContentType = "application/pdf",
+            SizeBytes = bytes,
+            Sha256 = new string('0', 64),
+            StorageKey = $"{workspaceId:N}/materials/{Guid.NewGuid():N}.pdf",
+            CreatedAtUtc = DateTime.UtcNow,
+        });
+        await db.SaveChangesAsync(Ct);
+    }
+
     private async Task<StoredFile> StoredFileAsync(Guid workspaceId)
     {
         await using var db = fixture.CreateDbContext();
