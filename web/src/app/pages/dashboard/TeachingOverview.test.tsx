@@ -23,6 +23,8 @@ const teaching = {
     studentsOwing: 2,
     remainingLessons: 9,
     unpaidLessons: 1,
+    // More students run low than the list shows: the tile counts them all.
+    studentsRunningLow: 12,
     runningLow: [{ studentId: 's2', name: 'Борис', remainingLessons: 1 }],
     income: months.map((month) => ({ month, received: month === '2026-11' ? [{ currency: 'MKD', amountMinor: 200_000 }] : month === '2026-10' ? [{ currency: 'EUR', amountMinor: 4000 }] : [] })),
   },
@@ -36,7 +38,7 @@ describe('teacher dashboard: teaching', () => {
     const tiles = await screen.findByRole('list', { name: 'Настава' });
     expect(within(tiles).getByRole('link', { name: /Часови во наредните 7 дена\s*3/ })).toHaveAttribute('href', `/app/w/${WORKSPACE_ID}/calendar`);
     expect(within(tiles).getByRole('link', { name: /Активни ученици\s*12/ })).toHaveAttribute('href', `/app/w/${WORKSPACE_ID}/students`);
-    expect(tiles).toHaveTextContent('Преостанати часови од пакети91 ученик при крај на пакетот');
+    expect(tiles).toHaveTextContent('Преостанати часови од пакети912 ученици при крај на пакетот');
     expect(tiles).toHaveTextContent('Часови без пакет1');
 
     const next = screen.getByRole('list', { name: 'Следни часови' });

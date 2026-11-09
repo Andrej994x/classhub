@@ -402,6 +402,7 @@ internal sealed class FinanceService(
             debts.Select(d => d.StudentId).Distinct().Count(),
             open.Sum(o => Math.Max(0, o.Remaining)),
             ledger.Where(e => e.PackageId is null).Sum(e => e.Quantity),
+            open.Count(o => o.Remaining <= 1), // all of them: the list below shows only the first few
             [.. open.Where(o => o.Remaining <= 1)
                 .Select(o => new PackageRunningLowResponse(o.StudentId, Name(names[o.StudentId]), Math.Max(0, o.Remaining)))
                 .OrderBy(o => o.RemainingLessons).ThenBy(o => o.Name, StringComparer.CurrentCulture).Take(RunningLowMax)],

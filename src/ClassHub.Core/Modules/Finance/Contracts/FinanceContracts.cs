@@ -77,7 +77,7 @@ public sealed record CurrencyAmountResponse(string Currency, long AmountMinor);
 /// <summary>Payments received in one month (<c>yyyy-MM</c>, by the day they were paid), per currency.</summary>
 public sealed record MonthlyIncomeResponse(string Month, IReadOnlyList<CurrencyAmountResponse> Received);
 
-/// <summary>An active student whose open packages have at most one lesson left.</summary>
+/// <summary>An active student whose open packages have at most one lesson left (the snapshot lists the first few; <c>StudentsRunningLow</c> counts all).</summary>
 public sealed record PackageRunningLowResponse(Guid StudentId, string Name, int RemainingLessons);
 
 /// <summary>
@@ -89,6 +89,7 @@ public sealed record FinanceSnapshotResponse(
     int StudentsOwing,
     int RemainingLessons,
     int UnpaidLessons,
+    int StudentsRunningLow,
     IReadOnlyList<PackageRunningLowResponse> RunningLow,
     IReadOnlyList<MonthlyIncomeResponse> Income);
 

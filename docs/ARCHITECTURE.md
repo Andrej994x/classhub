@@ -94,7 +94,7 @@ Details and tests: [SECURITY.md](SECURITY.md#tenant-isolation-r0-p5).
 - **Teacher:** `GET /api/w/{id}/dashboard/teaching` needs `ws:lessons.read`, `ws:students.read` and `ws:finance.read` (all three). `TeachingDashboardService` (Dashboard module) reads other modules' contracts, all tenant-filtered:
   - `ILessonOutlook` (Lessons): scheduled lessons not over yet that start within 7 days; the count and the first five with their students' names (`IStudentLookup`).
   - `IStudentLookup.CountActiveAsync`: active (not archived) students.
-  - `IFinanceStats` (Finance, `FinanceService.SnapshotAsync`): what students owe per currency (only debts: one student's credit never lowers another's debt), how many owe; lessons left in open packages of active students and who has at most one left; lessons held without a package; payments received per month for the last 6 months by the day they were paid (reversals included).
+  - `IFinanceStats` (Finance, `FinanceService.SnapshotAsync`): what students owe per currency (only debts: one student's credit never lowers another's debt), how many owe; lessons left in open packages of active students and who has at most one left (all counted, the first 10 listed); lessons held without a package; payments received per month for the last 6 months by the day they were paid (reversals included).
   - Money is the teacher's own income from lessons and is always per currency; ClassHub's subscription revenue is not part of it.
   - Conversions stay in the R1-P8 funnel.
 - **Student:** `GET /api/student/w/{id}/lessons` (`StudentSelf`) → `StudentLessons`, only lessons the student takes part in:

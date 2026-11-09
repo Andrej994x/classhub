@@ -48,6 +48,7 @@ On a machine with little free memory, many local workers can exhaust Chromium's 
 - Integration: `TeachingDashboardTests`:
   - zeros and six empty months for a new teacher;
   - **the numbers match a fixture**: lessons in and outside the 7 days, a cancelled one, an archived student with a lesson held without a package, debts in two currencies, a running-low package, payments this month and last month;
+  - **every student running low is counted** although only the first 10 are listed (a Pro workspace with 12);
   - **another teacher sees none of it** and gets the cross-tenant 404;
   - **a student sees only their own lessons**: no other student's lesson, no cancelled one, the meeting link only ahead, attendance and the shared summary once held, never the private note; their attendance counts; 404 for another workspace's portal and for a teacher on the student route.
 - Vitest:

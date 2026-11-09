@@ -10184,6 +10184,7 @@
           "studentsOwing",
           "remainingLessons",
           "unpaidLessons",
+          "studentsRunningLow",
           "runningLow",
           "income"
         ],
@@ -10212,6 +10213,14 @@
             "format": "int32"
           },
           "unpaidLessons": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "studentsRunningLow": {
             "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": [
               "integer",

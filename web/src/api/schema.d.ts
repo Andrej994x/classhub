@@ -2941,6 +2941,8 @@ export interface components {
             remainingLessons: number | string;
             /** Format: int32 */
             unpaidLessons: number | string;
+            /** Format: int32 */
+            studentsRunningLow: number | string;
             runningLow: components["schemas"]["PackageRunningLowResponse"][];
             income: components["schemas"]["MonthlyIncomeResponse"][];
         };

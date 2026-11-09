@@ -66,7 +66,7 @@ function Teaching({ workspaceId, data }: { workspaceId: string; data: TeachingDa
           <Tile
             label={t('dashboard.teaching.remainingLessons')}
             value={n(finance.remainingLessons)}
-            hint={t('dashboard.teaching.runningLowCount', { count: finance.runningLow.length })}
+            hint={t('dashboard.teaching.runningLowCount', { count: n(finance.studentsRunningLow) })}
             to={`${base}/finance`}
           />
         </li>

@@ -6,6 +6,7 @@ using ClassHub.Core.Modules.Finance.Contracts;
 using ClassHub.Core.Modules.Finance.Jobs;
 using ClassHub.Core.Modules.Lessons.Contracts;
 using ClassHub.Core.Modules.Students.Contracts;
+using ClassHub.Core.SharedKernel.Security;
 using ClassHub.IntegrationTests.Infrastructure;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -75,6 +76,7 @@ public sealed class TeachingDashboardTests(ClassHubApiFixture fixture)
         dashboard.Finance.StudentsOwing.ShouldBe(2);
         dashboard.Finance.RemainingLessons.ShouldBe(5);
         dashboard.Finance.RunningLow.ShouldBe([new PackageRunningLowResponse(boris.Id, "Борис", 1)]);
+        dashboard.Finance.StudentsRunningLow.ShouldBe(1);
         dashboard.Finance.UnpaidLessons.ShouldBe(1);
         dashboard.Finance.Income[^1].Received.ShouldBe([new CurrencyAmountResponse("MKD", 200_000)]);
         dashboard.Finance.Income[^2].Month.ShouldBe(lastMonth.ToString("yyyy-MM", CultureInfo.InvariantCulture));
@@ -85,6 +87,32 @@ public sealed class TeachingDashboardTests(ClassHubApiFixture fixture)
         var theirs = await TeachingAsync(other);
         (theirs.Lessons.Next7Days, theirs.ActiveStudents, theirs.Finance.Outstanding.Count, theirs.Finance.RemainingLessons).ShouldBe((0, 0, 0, 0));
         await TenantIsolationKit.AssertCrossTenantDeniedAsync(other.Client, HttpMethod.Get, $"/api/w/{teacher.WorkspaceId}/dashboard/teaching");
+    }
+
+    [Fact]
+    public async Task Every_student_running_low_is_counted_although_only_the_first_are_listed()
+    {
+        using var teacher = await fixture.CreateTeacherAsync();
+        using var admin = await fixture.CreatePlatformStaffAsync(PlatformRoles.Admin);
+        using (var pro = await admin.Client.PostAsync($"/api/admin/workspaces/{teacher.WorkspaceId}/subscription/pro", new
+        {
+            months = 1, amountMinor = 60_000, currency = "MKD", paymentMethod = "bank-transfer", paymentReference = "INV-DASH", paidOn = Today(), note = "Test",
+        }))
+        {
+            pro.StatusCode.ShouldBe(HttpStatusCode.OK, await pro.Content.ReadAsStringAsync(Ct));
+        }
+
+        // More students with one lesson left than the dashboard lists.
+        const int students = 12;
+        for (var i = 0; i < students; i++)
+        {
+            var student = await StudentAsync(teacher, $"Ученик {i:D2}", null);
+            await AssignAsync(teacher, student.Id, new { title = "Час", lessonCount = 1, priceMinor = 1_000, currency = "MKD" });
+        }
+
+        var finance = (await TeachingAsync(teacher)).Finance;
+        finance.StudentsRunningLow.ShouldBe(students);
+        finance.RunningLow.Count.ShouldBe(10);
     }
 
     [Fact]
