@@ -11,6 +11,7 @@ using ClassHub.Core.Modules.Notifications.Jobs;
 using ClassHub.Core.Modules.Students.Contracts;
 using ClassHub.IntegrationTests.Infrastructure;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.TestHost;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -392,6 +393,31 @@ public sealed class NotificationTests(ClassHubApiFixture fixture)
         (await StatusesAsync(lesson.Id)).Single(s => s.Kind == NotificationKind.LessonReminder).Status.ShouldBe(NotificationStatus.Suppressed);
         await Task.Delay(500, Ct); // the outbox delivers anything left
         (await EmailsAsync(ana.Email!, "notify.lesson-reminder", since)).ShouldBe(0);
+    }
+
+    [Fact]
+    public async Task A_reminder_reaching_the_last_hour_during_a_long_pass_is_not_sent()
+    {
+        using var teacher = await fixture.CreateTeacherAsync();
+        var ana = await StudentAsync(teacher, "Ана", ApiTestExtensions.UniqueEmail("ana"));
+        var since = DateTime.UtcNow.AddSeconds(-1);
+        var lesson = await LessonAsync(teacher, ana.Id, StartIn(TimeSpan.FromMinutes(95)));
+
+        // The pass plans the reminder at its start (95 minutes ahead), but by the time it is sent 40 minutes have gone by.
+        using var factory = fixture.Factory.WithWebHostBuilder(builder => builder.ConfigureTestServices(services => services.AddSingleton<TimeProvider>(new SlowPassClock())));
+        await factory.Services.GetRequiredService<NotificationJob>().RunAtAsync(DateTime.UtcNow, Ct);
+
+        (await StatusesAsync(lesson.Id)).ShouldContain((NotificationKind.LessonReminder, NotificationStatus.Suppressed));
+        await fixture.WaitForEmailAsync(ana.Email!, "notify.lesson-scheduled", since);
+        (await EmailsAsync(ana.Email!, "notify.lesson-reminder", since)).ShouldBe(0);
+    }
+
+    /// <summary>Every look at the elapsed time finds 40 more minutes gone: a pass that takes long.</summary>
+    private sealed class SlowPassClock : TimeProvider
+    {
+        private long looks;
+
+        public override long GetTimestamp() => base.GetTimestamp() + (Interlocked.Increment(ref looks) * TimestampFrequency * 60 * 40);
     }
 
     [Fact]

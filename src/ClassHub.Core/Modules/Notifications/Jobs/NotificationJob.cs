@@ -64,27 +64,33 @@ internal sealed partial class NotificationJob(IServiceScopeFactory scopes, IOpti
     /// <summary>One pass; returns how many notifications were sent.</summary>
     public Task<int> RunOnceAsync(CancellationToken cancellationToken) => RunAtAsync(clock.GetUtcNow().UtcDateTime, cancellationToken);
 
-    /// <summary>One pass as of <paramref name="nowUtc"/> (tests move time forward with it).</summary>
+    /// <summary>
+    /// One pass starting at <paramref name="nowUtc"/> (tests move time forward with it). The pass's clock runs on from there:
+    /// every claim and every send-time decision uses the time it is made, never a time the pass has left behind.
+    /// </summary>
     internal async Task<int> RunAtAsync(DateTime nowUtc, CancellationToken cancellationToken)
     {
+        var started = clock.GetTimestamp();
+        DateTime Now() => nowUtc + clock.GetElapsedTime(started);
+
         await PlanRemindersAsync(nowUtc, cancellationToken);
         var sent = 0;
         // Batch after batch, oldest due first, until nothing is due: a backlog never leaves a notice waiting for a later pass.
         for (var batches = 0; batches < Math.Max(1, options.Value.MaxBatchesPerPass); batches++)
         {
-            var claims = await ClaimAsync(nowUtc, cancellationToken);
-            sent += await SendAllAsync(claims, nowUtc, cancellationToken);
+            var claims = await ClaimAsync(Now(), cancellationToken);
+            sent += await SendAllAsync(claims, Now, cancellationToken);
             if (claims.Count < Math.Max(1, options.Value.BatchSize))
             {
                 break;
             }
         }
 
-        await FailExhaustedAsync(nowUtc, cancellationToken);
+        await FailExhaustedAsync(Now(), cancellationToken);
         return sent;
     }
 
-    private async Task<int> SendAllAsync(IReadOnlyList<Claim> claims, DateTime nowUtc, CancellationToken cancellationToken)
+    private async Task<int> SendAllAsync(IReadOnlyList<Claim> claims, Func<DateTime> now, CancellationToken cancellationToken)
     {
         var sent = 0;
         foreach (var claim in claims)
@@ -100,7 +106,7 @@ internal sealed partial class NotificationJob(IServiceScopeFactory scopes, IOpti
                 }
 
                 services.GetRequiredService<TenantContext>().Set(claim.WorkspaceId, claim.TeacherUserId, role);
-                if (await services.GetRequiredService<NotificationSender>().SendAsync(claim.Id, nowUtc, cancellationToken) == NotificationStatus.Sent)
+                if (await services.GetRequiredService<NotificationSender>().SendAsync(claim.Id, now(), cancellationToken) == NotificationStatus.Sent)
                 {
                     sent++;
                 }
