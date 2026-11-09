@@ -4,6 +4,7 @@ using ClassHub.Core.Modules.Groups.Contracts;
 using ClassHub.Core.Modules.Lessons.Contracts;
 using ClassHub.Core.Modules.Lessons.Domain;
 using ClassHub.Core.Modules.Lessons.Persistence;
+using ClassHub.Core.Modules.Notifications.Contracts;
 using ClassHub.Core.Modules.Students.Contracts;
 using ClassHub.Core.Modules.Workspaces.Contracts;
 using ClassHub.Core.SharedKernel.Errors;
@@ -26,6 +27,7 @@ internal sealed class LessonService(
     LessonParticipants participantResolver,
     ICatalogLookup catalog,
     BookingService bookings,
+    INotificationScheduler notifications,
     TimeProvider clock)
 {
     /// <summary>The longest calendar range one request may read.</summary>
@@ -84,6 +86,7 @@ internal sealed class LessonService(
         Apply(lesson, request, startUtc, endUtc);
         db.Set<Lesson>().Add(lesson);
         db.Set<LessonParticipant>().AddRange(participants.Select(id => new LessonParticipant { WorkspaceId = lesson.WorkspaceId, LessonId = lesson.Id, StudentId = id }));
+        await notifications.LessonScheduledAsync(lesson.Id, lesson.StartUtc, participants, cancellationToken);
         await db.SaveChangesAsync(cancellationToken);
         await transaction.CommitAsync(cancellationToken);
         return await GetAsync(lesson.Id, cancellationToken);
@@ -115,9 +118,12 @@ internal sealed class LessonService(
         var sameParticipants = kind == lesson.Kind && (lesson.Kind == LessonKind.Group
             ? who == lesson.GroupId
             : await db.Set<LessonParticipant>().AnyAsync(p => p.LessonId == lesson.Id && p.StudentId == who, cancellationToken));
+        var before = await db.Set<LessonParticipant>().Where(p => p.LessonId == lesson.Id).Select(p => p.StudentId).ToListAsync(cancellationToken);
+        var after = before;
         if (!sameParticipants)
         {
             var participants = await ParticipantsAsync(request, cancellationToken);
+            after = [.. participants];
             db.Set<LessonParticipant>().RemoveRange(await db.Set<LessonParticipant>().Where(p => p.LessonId == lesson.Id).ToListAsync(cancellationToken));
             db.Set<LessonParticipant>().AddRange(participants.Select(id => new LessonParticipant { WorkspaceId = lesson.WorkspaceId, LessonId = lesson.Id, StudentId = id }));
         }
@@ -129,8 +135,18 @@ internal sealed class LessonService(
         lesson.SeriesException = lesson.SeriesId is not null;
         Apply(lesson, request, startUtc, endUtc);
         Touch(lesson);
-        // A booked lesson keeps its booking in step (new time, visitor told) in the same save.
-        await bookings.OnLessonChangedAsync(lesson, cancellationToken);
+        // A booked lesson keeps its booking in step (new time, visitor told) in the same save; otherwise the students are
+        // told (R2-P11): removed ones that it is off, new ones that it is on, the others of a new time.
+        if (!await bookings.OnLessonChangedAsync(lesson, cancellationToken))
+        {
+            await notifications.LessonCancelledAsync(lesson.Id, [.. before.Except(after)], cancellationToken);
+            await notifications.LessonScheduledAsync(lesson.Id, lesson.StartUtc, [.. after.Except(before)], cancellationToken);
+            if (lesson.StartUtc != current.StartUtc)
+            {
+                await notifications.LessonRescheduledAsync(lesson.Id, lesson.StartUtc, [.. after.Intersect(before)], cancellationToken);
+            }
+        }
+
         await SaveAsync(cancellationToken);
         await transaction.CommitAsync(cancellationToken);
         return await GetAsync(lesson.Id, cancellationToken);
@@ -296,7 +312,13 @@ internal sealed class LessonService(
         lesson.CancellationReason = request.Reason!.Trim();
         lesson.CancelledAtUtc = clock.GetUtcNow().UtcDateTime;
         Touch(lesson);
-        await bookings.OnLessonChangedAsync(lesson, cancellationToken);
+        if (!await bookings.OnLessonChangedAsync(lesson, cancellationToken))
+        {
+            // Pending reminders are withdrawn; students who were told about the lesson hear it is off.
+            var participants = await db.Set<LessonParticipant>().Where(p => p.LessonId == lesson.Id).Select(p => p.StudentId).ToListAsync(cancellationToken);
+            await notifications.LessonCancelledAsync(lesson.Id, participants, cancellationToken);
+        }
+
         await SaveAsync(cancellationToken);
         return await GetAsync(lesson.Id, cancellationToken);
     }

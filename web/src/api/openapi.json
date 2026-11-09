@@ -5828,6 +5828,55 @@
         }
       }
     },
+    "/api/me/notification-preferences": {
+      "get": {
+        "tags": [
+          "Notifications"
+        ],
+        "summary": "The optional notifications (lesson reminders, new homework) of the signed-in user; on unless switched off.",
+        "operationId": "GetNotificationPreferences",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotificationPreferencesResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Notifications"
+        ],
+        "operationId": "UpdateNotificationPreferences",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateNotificationPreferencesRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotificationPreferencesResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/w/{workspaceId}/offers": {
       "get": {
         "tags": [
@@ -11770,6 +11819,21 @@
           }
         }
       },
+      "NotificationPreferencesResponse": {
+        "required": [
+          "lessonReminders",
+          "homeworkEmails"
+        ],
+        "type": "object",
+        "properties": {
+          "lessonReminders": {
+            "type": "boolean"
+          },
+          "homeworkEmails": {
+            "type": "boolean"
+          }
+        }
+      },
       "OfferResponse": {
         "required": [
           "id",
@@ -15134,6 +15198,27 @@
           }
         }
       },
+      "UpdateNotificationPreferencesRequest": {
+        "required": [
+          "lessonReminders",
+          "homeworkEmails"
+        ],
+        "type": "object",
+        "properties": {
+          "lessonReminders": {
+            "type": [
+              "null",
+              "boolean"
+            ]
+          },
+          "homeworkEmails": {
+            "type": [
+              "null",
+              "boolean"
+            ]
+          }
+        }
+      },
       "UpdatePlanLimitsRequest": {
         "required": [
           "limits",
@@ -15455,6 +15540,9 @@
     },
     {
       "name": "Public reports"
+    },
+    {
+      "name": "Notifications"
     },
     {
       "name": "Offers"

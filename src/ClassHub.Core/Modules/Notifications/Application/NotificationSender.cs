@@ -1,0 +1,139 @@
+using ClassHub.Core.Infrastructure.Email;
+using ClassHub.Core.Infrastructure.Persistence;
+using ClassHub.Core.Modules.Homework.Contracts;
+using ClassHub.Core.Modules.Identity.Contracts;
+using ClassHub.Core.Modules.Lessons.Contracts;
+using ClassHub.Core.Modules.Notifications.Domain;
+using ClassHub.Core.Modules.Students.Contracts;
+using ClassHub.Core.Modules.Workspaces.Contracts;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
+
+namespace ClassHub.Core.Modules.Notifications.Application;
+
+/// <summary>
+/// Sends one claimed notification in its workspace's scope (R2-P11). Everything is decided at send time: the student and
+/// their address (their linked account's email and language, otherwise their own email), their preferences, and whether
+/// the lesson or homework still is what the notification says. The email joins the outbox in the same save as the
+/// "sent" mark; the version check makes a second dispatcher's attempt fail instead of sending twice.
+/// </summary>
+internal sealed class NotificationSender(
+    ClassHubDbContext db,
+    IStudentLookup students,
+    ILessonLookup lessons,
+    IHomeworkNotices homework,
+    IWorkspaceNames workspaces,
+    IEmailOutbox outbox,
+    IOptions<AppLinkOptions> links)
+{
+    public async Task<NotificationStatus?> SendAsync(Guid notificationId, DateTime nowUtc, CancellationToken cancellationToken)
+    {
+        var notification = await db.Set<Notification>().SingleOrDefaultAsync(n => n.Id == notificationId, cancellationToken);
+        if (notification is null || notification.Status != NotificationStatus.Pending)
+        {
+            return notification?.Status;
+        }
+
+        var (status, outcome, message) = await DecideAsync(notification, nowUtc, cancellationToken);
+        if (message is not null)
+        {
+            outbox.Enqueue(message);
+        }
+
+        notification.Status = status;
+        notification.Outcome = outcome;
+        notification.SentAtUtc = status == NotificationStatus.Sent ? nowUtc : null;
+        notification.LockedUntilUtc = null;
+        notification.Version++;
+        try
+        {
+            await db.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            db.ChangeTracker.Clear();
+            return null; // changed meanwhile (withdrawn, or handled elsewhere): nothing of ours is kept
+        }
+
+        return status;
+    }
+
+    private async Task<(NotificationStatus Status, string? Outcome, EmailMessage? Message)> DecideAsync(Notification n, DateTime nowUtc, CancellationToken cancellationToken)
+    {
+        var contact = await students.ContactAsync(n.StudentId, cancellationToken);
+        if (contact is null || contact.Archived)
+        {
+            return Suppressed("student");
+        }
+
+        var workspaceName = (await workspaces.FindAsync([n.WorkspaceId], cancellationToken)).GetValueOrDefault(n.WorkspaceId);
+        string? address = null;
+        string locale = workspaceName?.Locale ?? SupportedLocales.Macedonian;
+        NotificationPreference? preference = null;
+        var hasAccount = false;
+        if (contact.UserId is { } userId)
+        {
+            var account = await db.Set<AppUser>().AsNoTracking().Where(u => u.Id == userId).Select(u => new { u.Email, u.Locale, u.Status }).SingleOrDefaultAsync(cancellationToken);
+            if (account is { Status: UserStatus.Active, Email: not null })
+            {
+                (address, locale, hasAccount) = (account.Email, account.Locale, true);
+                preference = await db.Set<NotificationPreference>().AsNoTracking().SingleOrDefaultAsync(p => p.UserId == userId, cancellationToken);
+            }
+        }
+
+        address ??= contact.Email;
+        if (string.IsNullOrWhiteSpace(address))
+        {
+            return Suppressed("no-address");
+        }
+
+        if (!NotificationRules.Wanted(n.Kind, preference))
+        {
+            return Suppressed("preference");
+        }
+
+        var portal = hasAccount ? $"{links.Value.PublicBaseUrl.TrimEnd('/')}/student/w/{n.WorkspaceId}" : null;
+        var teacher = workspaceName?.Name ?? "ClassHub";
+        NotificationContent content;
+        if (n.Kind == NotificationKind.HomeworkAssigned)
+        {
+            var notice = await homework.FindAsync(n.HomeworkId!.Value, n.StudentId, cancellationToken);
+            if (notice is null)
+            {
+                return Suppressed("homework");
+            }
+
+            content = new NotificationContent(teacher, contact.FirstName, notice.Title, null, notice.DueDate, portal is null ? null : $"{portal}/homework/{notice.AssignmentId}");
+        }
+        else
+        {
+            var lessonId = n.LessonId!.Value;
+            var lesson = (await lessons.FindAsync([lessonId], cancellationToken)).GetValueOrDefault(lessonId);
+            var facts = await lessons.AttendanceAsync(lessonId, cancellationToken);
+            if (lesson is null || facts is null)
+            {
+                return Suppressed("lesson");
+            }
+
+            var scheduled = lesson.Status == "Scheduled";
+            var takesPart = facts.Participants.Any(p => p.StudentId == n.StudentId);
+            var stillTrue = n.Kind switch
+            {
+                NotificationKind.LessonScheduled => scheduled && takesPart,
+                NotificationKind.LessonRescheduled => scheduled && takesPart && lesson.StartUtc == n.LessonStartUtc,
+                NotificationKind.LessonReminder => scheduled && takesPart && lesson.StartUtc == n.LessonStartUtc && lesson.StartUtc > nowUtc,
+                _ => true, // a cancellation is always worth telling
+            };
+            if (!stillTrue)
+            {
+                return Suppressed("outdated");
+            }
+
+            content = new NotificationContent(teacher, contact.FirstName, lesson.Title, NotificationRules.LocalTime(lesson.StartUtc, lesson.TimeZone, locale), null, portal);
+        }
+
+        return (NotificationStatus.Sent, null, NotificationEmails.Create(n.Kind, address, locale, content));
+    }
+
+    private static (NotificationStatus, string?, EmailMessage?) Suppressed(string why) => (NotificationStatus.Suppressed, why, null);
+}

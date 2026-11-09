@@ -1300,7 +1300,9 @@
       "language": "Language",
       "languageLead": "Used in the app and in emails from ClassHub.",
       "notifications": "Notifications",
-      "notificationsLater": "Lesson reminders and notification choices arrive in a later version."
+      "notificationsLead": "Changes to your lessons always arrive by email. You can switch these off:",
+      "lessonReminders": "Reminders a day before each lesson",
+      "homeworkEmails": "Emails about new homework"
     },
     "materials": {
       "title": "Materials",

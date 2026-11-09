@@ -13,7 +13,13 @@ public sealed record StudentSummary(Guid Id, string FirstName, string? LastName,
 public interface IStudentLookup
 {
     Task<IReadOnlyDictionary<Guid, StudentSummary>> FindAsync(IReadOnlyCollection<Guid> ids, CancellationToken cancellationToken);
+
+    /// <summary>How to reach the student (notifications, R2-P11): their own email and linked account, if any.</summary>
+    Task<StudentContact?> ContactAsync(Guid studentId, CancellationToken cancellationToken);
 }
+
+/// <summary>A student's own contact for notifications (never the guardian's: the student's record decides).</summary>
+public sealed record StudentContact(Guid Id, string FirstName, string? Email, Guid? UserId, bool Archived);
 
 /// <summary>
 /// A student for the teacher. Private notes are not part of it (they have their own endpoint and are never part of any

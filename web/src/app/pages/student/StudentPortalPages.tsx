@@ -13,7 +13,7 @@ import { Button } from '../../../components/ui/button.tsx';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../../components/ui/card.tsx';
 import { FormField } from '../../../components/ui/form-field.tsx';
 import { isLanguage } from '../../../i18n/index.ts';
-import { pendingInvitation, useAcceptInvitation, useAcceptWithAccount, useInvitationPreview, useMyStudentProfile, useMyTeachers, type InvitationPreview } from '../../../student/portal.ts';
+import { pendingInvitation, useAcceptInvitation, useAcceptWithAccount, useInvitationPreview, useMyStudentProfile, useMyTeachers, useNotificationPreferences, useSaveNotificationPreferences, type InvitationPreview } from '../../../student/portal.ts';
 import { useCatalog } from '../../../teacher/queries.ts';
 import { applyServerFieldErrors } from '../auth/serverErrors.ts';
 import { NotFoundContent } from '../Pages.tsx';
@@ -287,12 +287,42 @@ export function StudentSettingsPage() {
           <LanguageSwitcher />
         </CardContent>
       </Card>
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">{t('studentPortal.settings.notifications')}</CardTitle>
-          <CardDescription>{t('studentPortal.settings.notificationsLater')}</CardDescription>
-        </CardHeader>
-      </Card>
+      <NotificationSettings />
     </section>
+  );
+}
+
+/** Lesson changes always arrive by email; reminders and new homework can be switched off (R2-P11). */
+function NotificationSettings() {
+  const { t } = useTranslation();
+  const preferences = useNotificationPreferences();
+  const save = useSaveNotificationPreferences();
+  const toggle = (key: 'lessonReminders' | 'homeworkEmails', value: boolean) => save.mutate({ [key]: value });
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-lg">{t('studentPortal.settings.notifications')}</CardTitle>
+        <CardDescription>{t('studentPortal.settings.notificationsLead')}</CardDescription>
+      </CardHeader>
+      <CardContent className="flex flex-col gap-3">
+        {preferences.isError ? (
+          <Alert variant="error">{errorMessage(preferences.error, t)}</Alert>
+        ) : !preferences.data ? (
+          <output className="block text-sm">{t('common.loading')}</output>
+        ) : (
+          <>
+            <label className="flex items-center gap-2 text-sm">
+              <input type="checkbox" className="h-4 w-4" checked={preferences.data.lessonReminders} disabled={save.isPending} onChange={(e) => toggle('lessonReminders', e.target.checked)} />
+              {t('studentPortal.settings.lessonReminders')}
+            </label>
+            <label className="flex items-center gap-2 text-sm">
+              <input type="checkbox" className="h-4 w-4" checked={preferences.data.homeworkEmails} disabled={save.isPending} onChange={(e) => toggle('homeworkEmails', e.target.checked)} />
+              {t('studentPortal.settings.homeworkEmails')}
+            </label>
+            {save.error && <Alert variant="error">{errorMessage(save.error, t)}</Alert>}
+          </>
+        )}
+      </CardContent>
+    </Card>
   );
 }

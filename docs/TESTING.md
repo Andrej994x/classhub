@@ -43,6 +43,12 @@ Flows (each in **mk and en**, on **desktop and mobile**): register → dev mailb
 
 On a machine with little free memory, many local workers can exhaust Chromium's blob storage: a request then fails in the browser (`net::ERR_BLOB_OUT_OF_MEMORY` in the trace's network log) and the app shows "no connection to the server", in any test. Run with fewer workers (`npx playwright test --workers=3`; CI uses 2) rather than retrying.
 
+## Notification tests (R2-P11)
+
+- Unit: `NotificationRulesTests` (dedupe keys per lesson and student and per start for reminders, reminder timing incl. late planning and the last hour, optional kinds and preferences, lesson times local to the lesson's zone in summer and winter and in another zone).
+- Integration: `NotificationTests` (a new lesson announced once to the account; **cancel → the pending reminder is withdrawn, only who was told hears it is off, never a reminder**; **reschedule → exactly one new reminder** with the new time; preferences switch off reminders and homework emails but not lesson changes; **recipients resolved at send time** (changed email, archived student, no address); **five parallel dispatchers send every notification exactly once**; group lessons: a student taken out hears it is off, the others are not told twice; homework emails link to the portal). The test host runs the dispatcher only when a test calls it.
+- Vitest: `StudentPortalPages.test.tsx` (notification choices saved with the antiforgery header).
+
 ## Finance tests (R2-P10)
 
 - Unit: `FinanceRulesTests` (balances per currency incl. reversals and credit, the consumption policy table, oldest open package with a lesson left, corrections within the package); `AppendOnlyTests` (architecture: no bulk or tracked changes of ledger rows, with detector cases).

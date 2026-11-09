@@ -12,4 +12,9 @@ internal sealed class StudentLookup(StudentQueries queries) : IStudentLookup
             : await queries.WithArchived().Where(s => ids.Contains(s.Id))
                 .Select(s => new StudentSummary(s.Id, s.FirstName, s.LastName, s.ArchivedAtUtc != null))
                 .ToDictionaryAsync(s => s.Id, cancellationToken);
+
+    public async Task<StudentContact?> ContactAsync(Guid studentId, CancellationToken cancellationToken) =>
+        await queries.WithArchived().Where(s => s.Id == studentId)
+            .Select(s => new StudentContact(s.Id, s.FirstName, s.Email, s.UserId, s.ArchivedAtUtc != null))
+            .SingleOrDefaultAsync(cancellationToken);
 }

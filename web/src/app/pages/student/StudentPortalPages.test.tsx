@@ -148,3 +148,35 @@ describe('student portal', () => {
     await expect.poll(() => router.state.location.pathname).toBe(`/student/w/${WORKSPACE_ID}`);
   });
 });
+
+describe('student settings', () => {
+  it('switches the optional notifications on and off', async () => {
+    const user = userEvent.setup();
+    const saved = { lessonReminders: true, homeworkEmails: true };
+    const api = fakeApi({
+      me: teacher(),
+      extra: [
+        (call) => {
+          if (call.path !== '/api/me/notification-preferences') return undefined;
+          if (call.method === 'PUT') {
+            const body = call.body as { lessonReminders: boolean | null; homeworkEmails: boolean | null };
+            saved.lessonReminders = body.lessonReminders ?? saved.lessonReminders;
+            saved.homeworkEmails = body.homeworkEmails ?? saved.homeworkEmails;
+          }
+          return json(200, saved);
+        },
+      ],
+    });
+    await renderRoute('/student/settings');
+
+    const reminders = await screen.findByRole('checkbox', { name: 'Потсетници еден ден пред секој час' });
+    expect(reminders).toBeChecked();
+    expect(screen.getByText(/Промените на вашите часови секогаш стигнуваат по е-пошта/)).toBeInTheDocument();
+    await user.click(reminders);
+
+    await expect.poll(() => api.to('/api/me/notification-preferences', 'PUT').length).toBe(1);
+    expect(api.to('/api/me/notification-preferences', 'PUT')[0]).toMatchObject({ body: { lessonReminders: false, homeworkEmails: null }, xsrf: 'xsrf' });
+    await expect.poll(() => (screen.getByRole('checkbox', { name: 'Потсетници еден ден пред секој час' }) as HTMLInputElement).checked).toBe(false);
+    expect(screen.getByRole('checkbox', { name: 'Пораки за нови домашни задачи' })).toBeChecked();
+  });
+});

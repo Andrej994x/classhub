@@ -305,6 +305,16 @@ public interface ILessonLookup
     Task<LessonAttendanceFacts?> AttendanceAsync(Guid lessonId, CancellationToken cancellationToken);
 }
 
+/// <summary>A scheduled lesson starting soon, with its students (reminders, R2-P11).</summary>
+public sealed record UpcomingLesson(Guid LessonId, Guid WorkspaceId, Guid TeacherUserId, DateTime StartUtc, IReadOnlyList<Guid> StudentIds);
+
+/// <summary>Scheduled lessons across workspaces, for the reminder planner.</summary>
+public interface IUpcomingLessons
+{
+    /// <summary>System scope (every workspace, identifiers only): scheduled lessons starting in [fromUtc, toUtc).</summary>
+    Task<IReadOnlyList<UpcomingLesson>> ScheduledBetweenAsync(DateTime fromUtc, DateTime toUtc, int max, CancellationToken cancellationToken);
+}
+
 /// <summary>An unprocessed lesson event (the Finance outbox, R2-P7/R2-P10).</summary>
 public sealed record PendingLessonEvent(Guid Id, Guid WorkspaceId, Guid LessonId, Guid TeacherUserId, string Kind, DateTime OccurredAtUtc);
 
