@@ -20,6 +20,9 @@ internal sealed class NotificationScheduler(ClassHubDbContext db, ITenantContext
     {
         foreach (var studentId in studentIds.Distinct())
         {
+            // Back in the lesson before an earlier removal was told: that cancellation is no longer true.
+            Withdraw(await db.Set<Notification>().Where(n => n.LessonId == lesson.LessonId && n.StudentId == studentId
+                && n.Status == NotificationStatus.Pending && n.Kind == NotificationKind.LessonCancelled).ToListAsync(cancellationToken), "rejoined");
             await AddLessonAsync(NotificationKind.LessonScheduled, lesson, studentId, cancellationToken);
         }
     }

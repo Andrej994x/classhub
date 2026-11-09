@@ -108,7 +108,16 @@ internal sealed class NotificationSender(
         }
         else if (n.Kind == NotificationKind.LessonCancelled)
         {
-            // Always worth telling, also when the lesson was removed: named as it was when cancelled.
+            // Told unless it is no longer true: the student is (again) in the lesson and it is still scheduled. Also when
+            // the lesson was removed: named as it was when cancelled.
+            var lessonId = n.LessonId!.Value;
+            var current = (await lessons.FindAsync([lessonId], cancellationToken)).GetValueOrDefault(lessonId);
+            if (current is { Status: "Scheduled" }
+                && (await lessons.AttendanceAsync(lessonId, cancellationToken))?.Participants.Any(p => p.StudentId == n.StudentId) == true)
+            {
+                return Suppressed("outdated");
+            }
+
             content = new NotificationContent(teacher, contact.FirstName, n.LessonTitle ?? string.Empty,
                 NotificationRules.LocalTime(n.LessonStartUtc!.Value, n.LessonTimeZone!, locale), null, portal);
         }

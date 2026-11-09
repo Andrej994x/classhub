@@ -125,6 +125,30 @@ public sealed class NotificationTests(ClassHubApiFixture fixture)
     }
 
     [Fact]
+    public async Task A_student_taken_out_and_back_before_sending_gets_no_cancellation()
+    {
+        using var teacher = await fixture.CreateTeacherAsync();
+        var ana = await StudentAsync(teacher, "Ана", ApiTestExtensions.UniqueEmail("ana"));
+        var boris = await StudentAsync(teacher, "Борис", ApiTestExtensions.UniqueEmail("boris"));
+        var since = DateTime.UtcNow.AddSeconds(-1);
+        var start = StartIn(TimeSpan.FromDays(3));
+        var lesson = await LessonAsync(teacher, ana.Id, start);
+        await RunAsync(DateTime.UtcNow); // Ana is told
+
+        // Out and back in before the dispatcher runs again: the cancellation is no longer true.
+        var toBoris = await ReadAsync<LessonResponse>(await teacher.Client.PutAsync($"/api/w/{teacher.WorkspaceId}/lessons/{lesson.Id}", LessonBody(boris.Id, start, lesson.Version)));
+        await ReadAsync<LessonResponse>(await teacher.Client.PutAsync($"/api/w/{teacher.WorkspaceId}/lessons/{lesson.Id}", LessonBody(ana.Id, start, toBoris.Version)));
+        await RunAsync(DateTime.UtcNow);
+
+        var anaNotices = (await StatusesAsync(lesson.Id)).Count(s => s.Kind == NotificationKind.LessonCancelled && s.Status == NotificationStatus.Sent);
+        await fixture.WaitForEmailAsync(ana.Email!, "notify.lesson-scheduled", since);
+        await Task.Delay(500, Ct); // the outbox delivers anything left
+        (await EmailsAsync(ana.Email!, "notify.lesson-cancelled", since)).ShouldBe(0);
+        (await EmailsAsync(ana.Email!, "notify.lesson-scheduled", since)).ShouldBe(2);
+        anaNotices.ShouldBe(0); // Boris was never told about the lesson, so he gets no cancellation either
+    }
+
+    [Fact]
     public async Task A_lesson_moved_away_and_back_gets_a_reminder_for_its_time_again()
     {
         using var teacher = await fixture.CreateTeacherAsync();
