@@ -15,6 +15,8 @@ public sealed class Lesson : ITenantOwned
     public const int MeetingUrlMaxLength = 500;
     public const int LocationMaxLength = 200;
     public const int ReasonMaxLength = 500;
+    public const int PrivateNoteMaxLength = 4000;
+    public const int SharedSummaryMaxLength = 2000;
     public const int MinDurationMinutes = 15;
     public const int MaxDurationMinutes = 8 * 60;
 
@@ -56,6 +58,12 @@ public sealed class Lesson : ITenantOwned
 
     public DateTime? CancelledAtUtc { get; set; }
 
+    /// <summary>The teacher's own notes about the lesson; never shown to students (D-40).</summary>
+    public string? PrivateNote { get; set; }
+
+    /// <summary>An optional summary the teacher shares with the lesson's students (D-40).</summary>
+    public string? SharedSummary { get; set; }
+
     /// <summary>The series this lesson was created by (R2-P5), and its occurrence number in it.</summary>
     public Guid? SeriesId { get; set; }
 
@@ -79,6 +87,43 @@ public sealed class LessonParticipant : ITenantOwned
     public Guid LessonId { get; set; }
 
     public Guid StudentId { get; set; }
+
+    /// <summary>Recorded when the lesson is held (R2-P7, D-22): only Present consumes from a package automatically.</summary>
+    public AttendanceStatus? Attendance { get; set; }
+}
+
+/// <summary>
+/// A lesson event for other modules (R2-P7: Finance consumes packages from it in R2-P10), written in the same transaction
+/// as the change. A lesson is completed once, so it has at most one <see cref="LessonEventKinds.Completed"/> event.
+/// </summary>
+public sealed class LessonEvent : ITenantOwned
+{
+    public Guid Id { get; set; }
+
+    public Guid WorkspaceId { get; set; }
+
+    public Guid LessonId { get; set; }
+
+    public required string Kind { get; set; }
+
+    public required string PayloadJson { get; set; }
+
+    public DateTime OccurredAtUtc { get; set; }
+
+    /// <summary>Set by the consumer (Finance) once handled.</summary>
+    public DateTime? ProcessedAtUtc { get; set; }
+}
+
+/// <summary>Data fixes that migrations run (kept here so tests can run the same statements).</summary>
+public static class LessonBackfills
+{
+    /// <summary>
+    /// R2-P7: lessons held before attendance existed had no attendance; D-22's default (Present) applies to them, as it
+    /// does to students left out when a lesson is marked held. No Finance events are created for them (no packages then).
+    /// </summary>
+    public const string CompletedLessonAttendanceSql =
+        "UPDATE lp SET lp.[Attendance] = 1 FROM [LessonParticipants] AS lp INNER JOIN [Lessons] AS l ON l.[Id] = lp.[LessonId] " +
+        "WHERE l.[Status] = 2 AND lp.[Attendance] IS NULL;";
 }
 
 public static class LessonRules

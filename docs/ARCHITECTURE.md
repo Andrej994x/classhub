@@ -89,6 +89,13 @@ Details and tests: [SECURITY.md](SECURITY.md#tenant-isolation-r0-p5).
 - API access: `src/api/client.ts` wraps `openapi-fetch` with the generated types. It sends cookies, keeps the antiforgery request token in memory, fetches it from `GET /api/auth/antiforgery` before the first unsafe request, adopts tokens re-issued in the `X-XSRF-TOKEN` response header, retries once on `ANTIFORGERY_INVALID`, and turns ProblemDetails into `ApiError`. `errorMessage()` shows only translated messages for error codes, never server text. TanStack Query is provided in `src/app/Providers.tsx`.
 - Hosting: `npm run build` writes to `src/ClassHub.Api/wwwroot/dist` (git-ignored, base `/dist/`). `Platform/SpaHosting.cs` serves static files before routing (hashed `/dist/assets` immutable, everything else `no-cache`) and maps `dist/index.html` as the fallback for the SPA prefixes only (`/` is the Razor landing page since R1-P4; the SPA's `/` route hands over with a full page load). `/api`, health checks and unknown paths never get the SPA, and the deny-by-default policy still applies to them.
 
+## Attendance, notes and history (R2-P7)
+
+- **Completion** (`POST /lessons/{id}/complete`): marks a scheduled lesson held with each participant's attendance (`LessonParticipants.Attendance`: Present/Absent/Excused; students left out are Present, D-22). Idempotent: a held lesson is returned as it is (whatever version was sent); parallel completions make one transition (version token), the losers get the held lesson.
+- **Finance event:** completion writes a `LessonEvents` row (`LessonCompleted`, JSON payload with the attendance) in the same transaction; a filtered unique index allows one per lesson. Attendance corrections on held lessons (`PUT /attendance`) write `AttendanceChanged`. Finance consumes them in R2-P10 (`ProcessedAtUtc`).
+- **Notes (D-40):** `PrivateNote` (teacher only) and `SharedSummary` (for the lesson's students in their portal) via `PUT /notes`, in any status.
+- **History:** `GET /lessons/history?studentId=|groupId=` (paged, newest first, with the student's attendance); shown on the student and group pages.
+
 ## Availability and booking (R2-P6)
 
 - In `Modules/Lessons`: `BookingSettings` (per workspace: on/off, slot step 15/30/60, notice 0–168 h, horizon 7–90 days, version), `WorkingHours` (weekday intervals, local), `TimeOff` (whole local days) and `BookingRequest` (offer as requested, UTC start/end, status Pending/Confirmed/Declined/Cancelled, lesson; composite tenant FKs to `Leads`, `Offers` and `Lessons`).

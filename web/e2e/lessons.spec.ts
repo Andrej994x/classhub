@@ -69,3 +69,28 @@ test('a teacher schedules weekly lessons and ends the series', async ({ page }) 
   await page.getByRole('button', { name: text(language, 'lessons.series.endYes') }).click();
   await expect(page.getByText(text(language, 'lessons.series.ended'))).toBeVisible();
 });
+
+// R2-P7 acceptance: a held lesson records attendance, and the student's history shows it.
+test('a teacher marks a lesson as held with attendance and sees it in the history', async ({ page }) => {
+  const language = 'mk' as const;
+  await useLanguage(page, language);
+  const { workspaceId } = await signedInTeacher(page, uniqueEmail('attendance'));
+  const headers = async () => ({ 'X-XSRF-TOKEN': await xsrf(page.request) });
+  const created = await page.request.post(`/api/w/${workspaceId}/students`, { data: { firstName: 'Лена', lastName: 'Ристова' }, headers: await headers() });
+  const studentId = ((await created.json()) as { id: string }).id;
+  const lesson = await page.request.post(`/api/w/${workspaceId}/lessons`, {
+    data: { kind: 'Individual', studentId, title: 'Геометрија', startLocal: '2024-03-05T17:00:00', durationMinutes: 60, mode: 'Online' },
+    headers: await headers(),
+  });
+  const lessonId = ((await lesson.json()) as { id: string }).id;
+
+  await page.goto(`/app/w/${workspaceId}/lessons/${lessonId}`);
+  await page.getByRole('button', { name: text(language, 'lessons.complete') }).click();
+  await page.getByRole('group', { name: 'Лена Ристова' }).getByLabel(text(language, 'lessons.attendance.statuses.Excused')).check();
+  await page.getByRole('button', { name: text(language, 'lessons.attendance.confirmHeld') }).click();
+  await expect(page.getByText(text(language, 'lessons.statuses.Completed'), { exact: true })).toBeVisible();
+
+  await page.goto(`/app/w/${workspaceId}/students/${studentId}`);
+  const history = page.getByRole('list', { name: text(language, 'lessons.history.title') });
+  await expect(history.getByText(`${text(language, 'lessons.statuses.Completed')} · ${text(language, 'lessons.attendance.statuses.Excused')}`)).toBeVisible();
+});

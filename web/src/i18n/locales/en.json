@@ -1164,6 +1164,30 @@
       "endConfirm": "Upcoming lessons of this series from that date are removed. Continue?",
       "endYes": "Yes, end it",
       "ended": "The series ends."
+    },
+    "attendance": {
+      "title": "Attendance",
+      "lead": "Who took part? Students you do not change are present.",
+      "save": "Save attendance",
+      "confirmHeld": "Mark as held",
+      "statuses": {
+        "Present": "Present",
+        "Absent": "Absent",
+        "Excused": "Excused"
+      }
+    },
+    "notes": {
+      "title": "Notes",
+      "private": "Private note",
+      "privateHint": "Only you see this.",
+      "shared": "Summary for the students",
+      "sharedHint": "The lesson’s students will see this summary in their portal.",
+      "save": "Save notes"
+    },
+    "history": {
+      "title": "Lessons",
+      "none": "No lessons yet.",
+      "pages": "Pages of lessons"
     }
   },
   "booking": {

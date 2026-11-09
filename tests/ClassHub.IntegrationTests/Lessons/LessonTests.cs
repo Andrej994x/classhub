@@ -88,7 +88,8 @@ public sealed class LessonTests(ClassHubApiFixture fixture)
         var past = await CreateAsync(teacher, Individual(ana.Id, "2024-03-05T15:00:00", 60));
         var held = await ReadAsync<LessonResponse>(await teacher.Client.PostAsync(Path(teacher, $"/{past.Id}/complete"), new { version = past.Version }));
         held.Status.ShouldBe(nameof(LessonStatus.Completed));
-        (await teacher.Client.PostAsync(Path(teacher, $"/{past.Id}/complete"), new { version = held.Version })).StatusCode.ShouldBe(HttpStatusCode.UnprocessableEntity);
+        // Completing again is idempotent (R2-P7): the held lesson as it is, not a second held lesson.
+        (await ReadAsync<LessonResponse>(await teacher.Client.PostAsync(Path(teacher, $"/{past.Id}/complete"), new { version = held.Version }))).Version.ShouldBe(held.Version);
         (await teacher.Client.PostAsync(Path(teacher, $"/{past.Id}/cancel"), new { version = held.Version, reason = "x" })).StatusCode.ShouldBe(HttpStatusCode.UnprocessableEntity);
         using var edit = await teacher.Client.PutAsync(Path(teacher, $"/{past.Id}"), Individual(ana.Id, "2024-03-05T16:00:00", 60, held.Version));
         edit.StatusCode.ShouldBe(HttpStatusCode.UnprocessableEntity);

@@ -88,6 +88,11 @@ ASP.NET Core Identity with cookie sessions. See [ARCHITECTURE.md](ARCHITECTURE.m
 - Names, phones and guardian contacts are redacted in logs.
 - No duplicates by email within a workspace (unique index) and no limit overrun under parallel requests (intake lock; tested).
 
+## Attendance and notes (R2-P7)
+
+- The private note is the teacher's only: it is never part of a student-facing response (the portal shows the shared summary only, R2-P12).
+- Attendance and notes change only with `lessons.manage` in the lesson's workspace; other teachers get 404, and attendance can name only the lesson's own students.
+
 ## Booking (R2-P6)
 
 - Booking requests go through the public lead intake unchanged (D-19: signed token, minimum fill time, honeypot, per-site cap under a lock, per-IP rate limits; D-18 consent); the slot is re-checked on the server, and the booking API only lists offers that are public and active.
