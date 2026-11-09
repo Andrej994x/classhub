@@ -25,6 +25,12 @@ public interface INotificationScheduler
     /// </summary>
     Task LessonCancelledAsync(LessonNotice lesson, IReadOnlyCollection<Guid> studentIds, CancellationToken cancellationToken);
 
+    /// <summary>
+    /// The lesson changed and is told another way (a booked lesson: the booking emails): its pending notices for these
+    /// students are withdrawn without telling anything (a reminder for the new time follows).
+    /// </summary>
+    Task LessonChangedQuietlyAsync(Guid lessonId, IReadOnlyCollection<Guid> studentIds, CancellationToken cancellationToken);
+
     /// <summary>New homework for these students (one notice per assignment).</summary>
     Task HomeworkAssignedAsync(Guid homeworkId, IReadOnlyCollection<HomeworkAssignmentRef> assignments, CancellationToken cancellationToken);
 }

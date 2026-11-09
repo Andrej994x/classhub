@@ -144,14 +144,14 @@ internal sealed partial class NotificationJob(IServiceScopeFactory scopes, IOpti
         var lessonIds = candidates.Select(c => c.Lesson.LessonId).Distinct().ToList();
         var reminders = await db.Set<Notification>().IgnoreQueryFilters().AsNoTracking()
             .Where(n => n.Kind == NotificationKind.LessonReminder && lessonIds.Contains(n.LessonId!.Value))
-            .Select(n => new { n.LessonId, n.StudentId, n.LessonStartUtc, n.Status })
+            .Select(n => new { n.LessonId, n.StudentId, n.LessonStartUtc, n.Status, n.Outcome })
             .ToListAsync(cancellationToken);
         foreach (var (lesson, studentId, due) in candidates)
         {
             var forThisTime = reminders.Where(r => r.LessonId == lesson.LessonId && r.StudentId == studentId && r.LessonStartUtc == lesson.StartUtc).ToList();
-            // Only a withdrawn reminder (the lesson moved away and back) is followed by a new one: a reminder that was sent,
-            // suppressed (opted out, no address) or failed stays the outcome for this time.
-            if (forThisTime.Any(r => r.Status != NotificationStatus.Cancelled))
+            // Only a reminder that no longer applied (withdrawn, or found outdated when sent: the lesson had moved away and
+            // is back) is followed by a new one; one that was sent, opted out, without an address or failed stays the outcome.
+            if (forThisTime.Any(r => !Replaceable(r.Status, r.Outcome)))
             {
                 continue;
             }
@@ -168,6 +168,9 @@ internal sealed partial class NotificationJob(IServiceScopeFactory scopes, IOpti
             }
         }
     }
+
+    private static bool Replaceable(NotificationStatus status, string? outcome) =>
+        status == NotificationStatus.Cancelled || (status == NotificationStatus.Suppressed && outcome == NotificationSender.Outdated);
 
     private static void AddReminder(ClassHubDbContext db, UpcomingLesson lesson, Guid studentId, DateTime due, string key, DateTime nowUtc) =>
         db.Set<Notification>().Add(new Notification

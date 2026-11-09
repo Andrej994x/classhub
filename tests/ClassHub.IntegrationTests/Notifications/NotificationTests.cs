@@ -258,6 +258,48 @@ public sealed class NotificationTests(ClassHubApiFixture fixture)
     }
 
     [Fact]
+    public async Task A_reminder_found_outdated_is_replaced_when_the_lesson_is_back_at_its_time()
+    {
+        using var teacher = await fixture.CreateTeacherAsync();
+        var ana = await StudentAsync(teacher, "Ана", ApiTestExtensions.UniqueEmail("ana"));
+        var now = DateTime.UtcNow;
+        var since = now.AddSeconds(-1);
+        var lesson = await LessonAsync(teacher, ana.Id, StartIn(TimeSpan.FromHours(30)));
+        await RunAsync(now.AddHours(5)); // the reminder is planned (pending)
+
+        // As when a booked lesson moved away and the old reminder was found outdated when it came due.
+        await using (var db = fixture.CreateDbContext())
+        {
+            await db.Database.ExecuteSqlAsync(
+                $"UPDATE Notifications SET Status = 3, Outcome = 'outdated', Version = Version + 1 WHERE LessonId = {lesson.Id} AND Kind = 4", Ct);
+        }
+
+        await RunAsync(now.AddHours(7)); // the lesson is (back) at that time: a new reminder
+
+        await fixture.WaitForEmailAsync(ana.Email!, "notify.lesson-reminder", since);
+        (await StatusesAsync(lesson.Id)).Where(s => s.Kind == NotificationKind.LessonReminder).ToList()
+            .ShouldBe([(NotificationKind.LessonReminder, NotificationStatus.Suppressed), (NotificationKind.LessonReminder, NotificationStatus.Sent)], ignoreOrder: true);
+    }
+
+    [Fact]
+    public async Task A_reminder_delayed_into_the_last_hour_is_not_sent()
+    {
+        using var teacher = await fixture.CreateTeacherAsync();
+        var ana = await StudentAsync(teacher, "Ана", ApiTestExtensions.UniqueEmail("ana"));
+        var now = DateTime.UtcNow;
+        var since = now.AddSeconds(-1);
+        var start = StartIn(TimeSpan.FromHours(30));
+        var lesson = await LessonAsync(teacher, ana.Id, start);
+        await RunAsync(now.AddHours(5)); // planned for 24 h before the lesson
+
+        await RunAsync(start.AddMinutes(-30)); // the dispatcher only gets to it half an hour before the lesson
+
+        (await StatusesAsync(lesson.Id)).Single(s => s.Kind == NotificationKind.LessonReminder).Status.ShouldBe(NotificationStatus.Suppressed);
+        await Task.Delay(500, Ct); // the outbox delivers anything left
+        (await EmailsAsync(ana.Email!, "notify.lesson-reminder", since)).ShouldBe(0);
+    }
+
+    [Fact]
     public async Task Reminders_are_planned_for_the_whole_window_page_by_page()
     {
         using var teacher = await fixture.CreateTeacherAsync();

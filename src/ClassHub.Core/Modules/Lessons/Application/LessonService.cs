@@ -137,7 +137,12 @@ internal sealed class LessonService(
         Touch(lesson);
         // A booked lesson keeps its booking in step (new time, visitor told) in the same save; otherwise the students are
         // told (R2-P11): removed ones that it is off, new ones that it is on, the others of a new time.
-        if (!await bookings.OnLessonChangedAsync(lesson, cancellationToken))
+        if (await bookings.OnLessonChangedAsync(lesson, cancellationToken))
+        {
+            // The visitor is told by the booking emails; the pending notices are withdrawn all the same.
+            await notifications.LessonChangedQuietlyAsync(lesson.Id, [.. before.Union(after)], cancellationToken);
+        }
+        else
         {
             // Removed students hear about the lesson as they knew it (title and time before this edit), as this change.
             await notifications.LessonCancelledAsync(Notice(current, lesson.Version), [.. before.Except(after)], cancellationToken);
@@ -313,10 +318,14 @@ internal sealed class LessonService(
         lesson.CancellationReason = request.Reason!.Trim();
         lesson.CancelledAtUtc = clock.GetUtcNow().UtcDateTime;
         Touch(lesson);
-        if (!await bookings.OnLessonChangedAsync(lesson, cancellationToken))
+        var participants = await db.Set<LessonParticipant>().Where(p => p.LessonId == lesson.Id).Select(p => p.StudentId).ToListAsync(cancellationToken);
+        if (await bookings.OnLessonChangedAsync(lesson, cancellationToken))
+        {
+            await notifications.LessonChangedQuietlyAsync(lesson.Id, participants, cancellationToken);
+        }
+        else
         {
             // Pending reminders are withdrawn; students who were told about the lesson hear it is off.
-            var participants = await db.Set<LessonParticipant>().Where(p => p.LessonId == lesson.Id).Select(p => p.StudentId).ToListAsync(cancellationToken);
             await notifications.LessonCancelledAsync(Notice(lesson), participants, cancellationToken);
         }
 

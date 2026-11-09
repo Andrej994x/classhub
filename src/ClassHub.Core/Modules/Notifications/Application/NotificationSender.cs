@@ -26,6 +26,9 @@ internal sealed class NotificationSender(
     IEmailOutbox outbox,
     IOptions<AppLinkOptions> links)
 {
+    /// <summary>The outcome of a notice that no longer applied when it was due (the lesson moved, was cancelled, …).</summary>
+    public const string Outdated = "outdated";
+
     public async Task<NotificationStatus?> SendAsync(Guid notificationId, DateTime nowUtc, CancellationToken cancellationToken)
     {
         var notification = await db.Set<Notification>().SingleOrDefaultAsync(n => n.Id == notificationId, cancellationToken);
@@ -112,7 +115,7 @@ internal sealed class NotificationSender(
             var next = await lessons.NextInSeriesAsync(n.SeriesId!.Value, n.StudentId, nowUtc, cancellationToken);
             if (next is null)
             {
-                return Suppressed("outdated");
+                return Suppressed(Outdated);
             }
 
             content = new NotificationContent(teacher, contact.FirstName, next.Title, NotificationRules.LocalTime(next.StartUtc, next.TimeZone, locale), null, portal);
@@ -126,7 +129,7 @@ internal sealed class NotificationSender(
             if (current is { Status: "Scheduled" }
                 && (await lessons.AttendanceAsync(lessonId, cancellationToken))?.Participants.Any(p => p.StudentId == n.StudentId) == true)
             {
-                return Suppressed("outdated");
+                return Suppressed(Outdated);
             }
 
             content = new NotificationContent(teacher, contact.FirstName, n.LessonTitle ?? string.Empty,
@@ -148,12 +151,14 @@ internal sealed class NotificationSender(
             {
                 NotificationKind.LessonScheduled => scheduled && takesPart,
                 NotificationKind.LessonRescheduled => scheduled && takesPart && lesson.StartUtc == n.LessonStartUtc,
-                NotificationKind.LessonReminder => scheduled && takesPart && lesson.StartUtc == n.LessonStartUtc && lesson.StartUtc > nowUtc,
+                // Never in the last hour (also when a planned reminder was delayed): too late to be of use.
+                NotificationKind.LessonReminder => scheduled && takesPart && lesson.StartUtc == n.LessonStartUtc
+                    && lesson.StartUtc - nowUtc >= NotificationRules.MinimumReminderNotice,
                 _ => false,
             };
             if (!stillTrue)
             {
-                return Suppressed("outdated");
+                return Suppressed(Outdated);
             }
 
             content = new NotificationContent(teacher, contact.FirstName, lesson.Title, NotificationRules.LocalTime(lesson.StartUtc, lesson.TimeZone, locale), null, portal);

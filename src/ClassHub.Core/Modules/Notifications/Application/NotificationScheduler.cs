@@ -77,6 +77,14 @@ internal sealed class NotificationScheduler(ClassHubDbContext db, ITenantContext
         }
     }
 
+    public async Task LessonChangedQuietlyAsync(Guid lessonId, IReadOnlyCollection<Guid> studentIds, CancellationToken cancellationToken)
+    {
+        foreach (var studentId in studentIds.Distinct())
+        {
+            Withdraw(await PendingAsync(lessonId, studentId, cancellationToken), "changed");
+        }
+    }
+
     public async Task HomeworkAssignedAsync(Guid homeworkId, IReadOnlyCollection<HomeworkAssignmentRef> assignments, CancellationToken cancellationToken)
     {
         foreach (var assignment in assignments)
