@@ -286,3 +286,12 @@ public interface IBookingAvailability
 {
     Task<bool> IsEnabledAsync(CancellationToken cancellationToken);
 }
+
+/// <summary>A lesson for other modules (homework linked to a lesson).</summary>
+public sealed record LessonSummary(Guid Id, string Title, DateTime StartUtc, string TimeZone, string Status);
+
+/// <summary>Lessons of the current workspace, for other modules.</summary>
+public interface ILessonLookup
+{
+    Task<IReadOnlyDictionary<Guid, LessonSummary>> FindAsync(IReadOnlyCollection<Guid> ids, CancellationToken cancellationToken);
+}

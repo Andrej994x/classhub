@@ -473,6 +473,201 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/w/{workspaceId}/homework": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Homework (active or archived), newest change first, with the number of assigned, submitted and reviewed students; optionally of one lesson. */
+        get: operations["ListHomework"];
+        put?: never;
+        post: operations["CreateHomework"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/w/{workspaceId}/homework/{homeworkId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetHomework"];
+        put: operations["UpdateHomework"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/w/{workspaceId}/homework/{homeworkId}/archive": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["ArchiveHomework"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/w/{workspaceId}/homework/{homeworkId}/restore": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["RestoreHomework"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/w/{workspaceId}/homework/{homeworkId}/assignments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["AssignHomework"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/w/{workspaceId}/homework/{homeworkId}/assignments/{assignmentId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Only while the student has not answered. */
+        delete: operations["UnassignHomework"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/w/{workspaceId}/homework/{homeworkId}/assignments/{assignmentId}/review": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["ReviewHomework"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/w/{workspaceId}/homework/{homeworkId}/assignments/{assignmentId}/file": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["DownloadHomeworkAnswer"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/student/w/{workspaceId}/homework": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["ListMyHomework"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/student/w/{workspaceId}/homework/{assignmentId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetMyHomework"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/student/w/{workspaceId}/homework/{assignmentId}/submission": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Answer with text and/or a file (PDF, PNG, JPEG, WebP, DOCX, XLSX, PPTX or TXT, at most 20 MB); allowed until reviewed. */
+        post: operations["SubmitMyHomework"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/student/w/{workspaceId}/homework/{assignmentId}/file": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["DownloadMyHomeworkAnswer"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/auth/antiforgery": {
         parameters: {
             query?: never;
@@ -2132,6 +2327,11 @@ export interface components {
         AntiforgeryTokenResponse: {
             requestToken: string;
         };
+        AssignHomeworkRequest: {
+            studentIds: null | string[];
+            /** Format: uuid */
+            groupId: null | string;
+        };
         AssignMaterialRequest: {
             /** Format: uuid */
             studentId: null | string;
@@ -2486,6 +2686,91 @@ export interface components {
         };
         HideContentRequest: {
             reason: null | string;
+        };
+        HomeworkAssignmentResponse: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            studentId: string;
+            studentName: string;
+            studentArchived: boolean;
+            status: string;
+            /** Format: date-time */
+            assignedAtUtc: string;
+            /** Format: date-time */
+            submittedAtUtc: null | string;
+            late: boolean;
+            answerText: null | string;
+            file: null | components["schemas"]["HomeworkFileResponse"];
+            /** Format: date-time */
+            reviewedAtUtc: null | string;
+            teacherComment: null | string;
+            /** Format: int32 */
+            version: number | string;
+        };
+        HomeworkFileResponse: {
+            fileName: string;
+            contentType: string;
+            /** Format: int64 */
+            sizeBytes: number | string;
+        };
+        HomeworkLessonResponse: {
+            /** Format: uuid */
+            id: string;
+            title: string;
+            /** Format: date-time */
+            startUtc: string;
+            timeZone: string;
+        };
+        HomeworkListItem: {
+            /** Format: uuid */
+            id: string;
+            title: string;
+            /** Format: date */
+            dueDate: null | string;
+            /** Format: uuid */
+            lessonId: null | string;
+            /** Format: int32 */
+            assigned: number | string;
+            /** Format: int32 */
+            submitted: number | string;
+            /** Format: int32 */
+            reviewed: number | string;
+            archived: boolean;
+            /** Format: date-time */
+            updatedAtUtc: string;
+        };
+        HomeworkListResponse: {
+            items: components["schemas"]["HomeworkListItem"][];
+            /** Format: int32 */
+            total: number | string;
+            /** Format: int32 */
+            page: number | string;
+            /** Format: int32 */
+            pageSize: number | string;
+        };
+        HomeworkResponse: {
+            /** Format: uuid */
+            id: string;
+            title: string;
+            description: null | string;
+            /** Format: date */
+            dueDate: null | string;
+            /** Format: date-time */
+            dueAtUtc: null | string;
+            lesson: null | components["schemas"]["HomeworkLessonResponse"];
+            archived: boolean;
+            assignments: components["schemas"]["HomeworkAssignmentResponse"][];
+            /** Format: date-time */
+            createdAtUtc: string;
+            /** Format: date-time */
+            updatedAtUtc: string;
+            /** Format: int32 */
+            version: number | string;
+        };
+        HomeworkVersionRequest: {
+            /** Format: int32 */
+            version: null | number | string;
         };
         HttpValidationProblemDetails: {
             type?: null | string;
@@ -2929,6 +3214,11 @@ export interface components {
             testId: null | string;
             reason: null | string;
         };
+        ReviewHomeworkRequest: {
+            comment: null | string;
+            /** Format: int32 */
+            version: null | number | string;
+        };
         SaveBookingSettingsRequest: {
             enabled: boolean;
             /** Format: int32 */
@@ -2958,6 +3248,16 @@ export interface components {
             /** Format: uuid */
             subjectId: null | string;
             description: null | string;
+            /** Format: int32 */
+            version: null | number | string;
+        };
+        SaveHomeworkRequest: {
+            title: null | string;
+            description: null | string;
+            /** Format: date */
+            dueDate: null | string;
+            /** Format: uuid */
+            lessonId: null | string;
             /** Format: int32 */
             version: null | number | string;
         };
@@ -3181,6 +3481,27 @@ export interface components {
             slug: string;
             available: boolean;
             reason: null | string;
+        };
+        StudentHomeworkResponse: {
+            /** Format: uuid */
+            id: string;
+            title: string;
+            description: null | string;
+            /** Format: date */
+            dueDate: null | string;
+            status: string;
+            /** Format: date-time */
+            assignedAtUtc: string;
+            /** Format: date-time */
+            submittedAtUtc: null | string;
+            late: boolean;
+            answerText: null | string;
+            file: null | components["schemas"]["HomeworkFileResponse"];
+            /** Format: date-time */
+            reviewedAtUtc: null | string;
+            teacherComment: null | string;
+            /** Format: int32 */
+            version: number | string;
         };
         StudentInvitationInfo: {
             email: string;
@@ -4402,6 +4723,394 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["GroupResponse"];
                 };
+            };
+        };
+    };
+    ListHomework: {
+        parameters: {
+            query?: {
+                q?: string;
+                lessonId?: string;
+                archived?: boolean;
+                page?: number | string;
+                pageSize?: number | string;
+            };
+            header?: never;
+            path: {
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HomeworkListResponse"];
+                };
+            };
+        };
+    };
+    CreateHomework: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SaveHomeworkRequest"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HomeworkResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["HttpValidationProblemDetails"];
+                };
+            };
+        };
+    };
+    GetHomework: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                homeworkId: string;
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HomeworkResponse"];
+                };
+            };
+        };
+    };
+    UpdateHomework: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                homeworkId: string;
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SaveHomeworkRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HomeworkResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["HttpValidationProblemDetails"];
+                };
+            };
+        };
+    };
+    ArchiveHomework: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                homeworkId: string;
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["HomeworkVersionRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HomeworkResponse"];
+                };
+            };
+        };
+    };
+    RestoreHomework: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                homeworkId: string;
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["HomeworkVersionRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HomeworkResponse"];
+                };
+            };
+        };
+    };
+    AssignHomework: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                homeworkId: string;
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AssignHomeworkRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HomeworkResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["HttpValidationProblemDetails"];
+                };
+            };
+        };
+    };
+    UnassignHomework: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                homeworkId: string;
+                assignmentId: string;
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HomeworkResponse"];
+                };
+            };
+        };
+    };
+    ReviewHomework: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                homeworkId: string;
+                assignmentId: string;
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReviewHomeworkRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HomeworkResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["HttpValidationProblemDetails"];
+                };
+            };
+        };
+    };
+    DownloadHomeworkAnswer: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                homeworkId: string;
+                assignmentId: string;
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ListMyHomework: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StudentHomeworkResponse"][];
+                };
+            };
+        };
+    };
+    GetMyHomework: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                assignmentId: string;
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StudentHomeworkResponse"];
+                };
+            };
+        };
+    };
+    SubmitMyHomework: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                assignmentId: string;
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["IFormFile"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StudentHomeworkResponse"];
+                };
+            };
+        };
+    };
+    DownloadMyHomeworkAnswer: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                assignmentId: string;
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };

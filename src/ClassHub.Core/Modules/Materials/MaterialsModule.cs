@@ -1,3 +1,4 @@
+using ClassHub.Core.Infrastructure.Files;
 using ClassHub.Core.Infrastructure.Web;
 using ClassHub.Core.Modules.Materials.Application;
 using ClassHub.Core.Modules.Materials.Contracts;
@@ -9,21 +10,16 @@ using ClassHub.Core.SharedKernel.Security;
 using FluentValidation;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Net.Http.Headers;
 
 namespace ClassHub.Core.Modules.Materials;
 
 /// <summary>Materials (M10, R2-P8): private teaching files, assigned to students or groups and opened in the portal.</summary>
 public sealed class MaterialsModule : IModule
 {
-    /// <summary>Upper bound for the upload request (the file itself is limited to 20 MB).</summary>
-    private const long UploadRequestLimitBytes = MaterialFiles.MaxBytes + (256 * 1024);
-
     public void AddServices(IServiceCollection services, IConfiguration configuration)
     {
         services.AddScoped<MaterialQueries>();
@@ -46,17 +42,10 @@ public sealed class MaterialsModule : IModule
             .RequireAuthorization(read)
             .WithName("GetMaterial");
 
-        // multipart/form-data: "file" plus "title", "description", "subjectId". Read manually (not IFormFile binding): the
-        // antiforgery header filter protects it like every other unsafe request.
+        // multipart/form-data: "file" plus "title", "description", "subjectId".
         materials.MapPost("", async Task<Created<MaterialResponse>> (HttpContext http, MaterialService service, CancellationToken ct) =>
             {
-                var form = await ReadFormAsync(http, ct);
-                var file = form.Files.GetFile("file") ?? throw new BadRequestException("The form has no file part named 'file'.", ErrorCodes.FileNotAllowed);
-                if (file.Length > MaterialFiles.MaxBytes)
-                {
-                    throw new BadRequestException("The file must be at most 20 MB.", ErrorCodes.PayloadTooLarge);
-                }
-
+                var (form, fileName, content) = await DocumentUploads.ReadAsync(http, fileRequired: true, ct);
                 Guid? subjectId = null;
                 if (form["subjectId"].ToString() is { Length: > 0 } subject)
                 {
@@ -65,9 +54,7 @@ public sealed class MaterialsModule : IModule
                         : throw new RequestValidationException(new Dictionary<string, string[]>(StringComparer.Ordinal) { ["subjectId"] = ["Unknown subject."] });
                 }
 
-                using var buffer = new MemoryStream((int)file.Length);
-                await file.CopyToAsync(buffer, ct);
-                return TypedResults.Created((string?)null, await service.CreateAsync(form["title"].ToString(), form["description"].ToString(), subjectId, file.FileName, buffer.ToArray(), ct));
+                return TypedResults.Created((string?)null, await service.CreateAsync(form["title"].ToString(), form["description"].ToString(), subjectId, fileName, content!, ct));
             })
             .RequireAuthorization(manage)
             .Accepts<IFormFile>("multipart/form-data")
@@ -111,7 +98,7 @@ public sealed class MaterialsModule : IModule
             .WithName("UnassignMaterial");
 
         materials.MapGet("/{materialId:guid}/file", async (Guid materialId, HttpContext http, MaterialService service, CancellationToken ct) =>
-                FileResult(http, await service.OpenAsync(materialId, ct)))
+                DocumentUploads.FileResult(http, await service.OpenAsync(materialId, ct)))
             .RequireAuthorization(read)
             .WithName("DownloadMaterial");
 
@@ -121,51 +108,10 @@ public sealed class MaterialsModule : IModule
             .RequireAuthorization(ClassHubPolicies.StudentSelf)
             .WithName("ListMyMaterials");
         portal.MapGet("/{materialId:guid}/file", async (Guid materialId, HttpContext http, MaterialService service, CancellationToken ct) =>
-                FileResult(http, await service.OpenForStudentAsync(materialId, ct)))
+                DocumentUploads.FileResult(http, await service.OpenForStudentAsync(materialId, ct)))
             .RequireAuthorization(ClassHubPolicies.StudentSelf)
             .WithName("DownloadMyMaterial")
             .WithSummary("Only a material assigned to the student or to one of their groups; anything else is 404.");
-    }
-
-    private static async Task<IFormCollection> ReadFormAsync(HttpContext http, CancellationToken cancellationToken)
-    {
-        var sizeLimit = http.Features.Get<IHttpMaxRequestBodySizeFeature>();
-        if (sizeLimit is { IsReadOnly: false })
-        {
-            sizeLimit.MaxRequestBodySize = UploadRequestLimitBytes;
-        }
-
-        if (!http.Request.HasFormContentType)
-        {
-            throw new BadRequestException("Send the file as multipart/form-data.", ErrorCodes.UnsupportedMediaType);
-        }
-
-        try
-        {
-            return await http.Request.ReadFormAsync(new FormOptions { MultipartBodyLengthLimit = UploadRequestLimitBytes }, cancellationToken);
-        }
-        catch (InvalidDataException)
-        {
-            throw new BadRequestException("The upload is not valid multipart/form-data.", ErrorCodes.BadRequest);
-        }
-    }
-
-    /// <summary>
-    /// A material file: never sniffed, sandboxed, not cached by shared caches, and downloaded (as an attachment with the
-    /// safe name) unless it is an image.
-    /// </summary>
-    private static FileStreamHttpResult FileResult(HttpContext http, MaterialFile file)
-    {
-        http.Response.Headers[HeaderNames.XContentTypeOptions] = "nosniff";
-        http.Response.Headers[HeaderNames.ContentSecurityPolicy] = "sandbox; default-src 'none'; img-src 'self'";
-        http.Response.Headers[HeaderNames.CacheControl] = "private, no-store";
-        if (file.Inline)
-        {
-            http.Response.Headers[HeaderNames.ContentDisposition] = new ContentDispositionHeaderValue("inline") { FileNameStar = file.FileName }.ToString();
-            return TypedResults.Stream(file.Content, file.ContentType);
-        }
-
-        return TypedResults.Stream(file.Content, file.ContentType, fileDownloadName: file.FileName);
     }
 }
 

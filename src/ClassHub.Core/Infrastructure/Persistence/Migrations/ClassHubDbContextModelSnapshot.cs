@@ -1059,6 +1059,152 @@ namespace ClassHub.Core.Infrastructure.Persistence.Migrations
                         });
                 });
 
+            modelBuilder.Entity("ClassHub.Core.Modules.Homework.Domain.HomeworkAssignment", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("AnswerText")
+                        .HasMaxLength(8000)
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("AssignedAtUtc")
+                        .HasPrecision(3)
+                        .HasColumnType("datetime2(3)");
+
+                    b.Property<string>("ContentType")
+                        .HasMaxLength(100)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(100)");
+
+                    b.Property<Guid?>("FileId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("FileName")
+                        .HasMaxLength(120)
+                        .HasColumnType("nvarchar(120)");
+
+                    b.Property<Guid>("HomeworkId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("ReviewedAtUtc")
+                        .HasPrecision(3)
+                        .HasColumnType("datetime2(3)");
+
+                    b.Property<long?>("SizeBytes")
+                        .HasColumnType("bigint");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.Property<Guid>("StudentId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("SubmittedAtUtc")
+                        .HasPrecision(3)
+                        .HasColumnType("datetime2(3)");
+
+                    b.Property<string>("TeacherComment")
+                        .HasMaxLength(4000)
+                        .HasColumnType("nvarchar(4000)");
+
+                    b.Property<int>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("int");
+
+                    b.Property<Guid>("WorkspaceId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("FileId")
+                        .IsUnique()
+                        .HasFilter("[FileId] IS NOT NULL");
+
+                    b.HasIndex("WorkspaceId");
+
+                    b.HasIndex("HomeworkId", "StudentId")
+                        .IsUnique();
+
+                    b.HasIndex("WorkspaceId", "FileId");
+
+                    b.HasIndex("WorkspaceId", "HomeworkId");
+
+                    b.HasIndex("WorkspaceId", "StudentId");
+
+                    b.ToTable("HomeworkAssignments", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_HomeworkAssignments_File", "([FileId] IS NULL AND [FileName] IS NULL AND [ContentType] IS NULL AND [SizeBytes] IS NULL) OR ([FileId] IS NOT NULL AND [FileName] IS NOT NULL AND [ContentType] IS NOT NULL AND [SizeBytes] > 0)");
+
+                            t.HasCheckConstraint("CK_HomeworkAssignments_Reviewed", "([Status] = 3 AND [ReviewedAtUtc] IS NOT NULL) OR ([Status] <> 3 AND [ReviewedAtUtc] IS NULL)");
+
+                            t.HasCheckConstraint("CK_HomeworkAssignments_Status", "[Status] BETWEEN 1 AND 3");
+
+                            t.HasCheckConstraint("CK_HomeworkAssignments_Submitted", "[Status] = 1 OR [SubmittedAtUtc] IS NOT NULL");
+                        });
+                });
+
+            modelBuilder.Entity("ClassHub.Core.Modules.Homework.Domain.HomeworkTask", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("ArchivedAtUtc")
+                        .HasPrecision(3)
+                        .HasColumnType("datetime2(3)");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasPrecision(3)
+                        .HasColumnType("datetime2(3)");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(4000)
+                        .HasColumnType("nvarchar(4000)");
+
+                    b.Property<DateTime?>("DueAtUtc")
+                        .HasPrecision(3)
+                        .HasColumnType("datetime2(3)");
+
+                    b.Property<DateOnly?>("DueDate")
+                        .HasColumnType("date");
+
+                    b.Property<Guid?>("LessonId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(160)
+                        .HasColumnType("nvarchar(160)");
+
+                    b.Property<DateTime>("UpdatedAtUtc")
+                        .HasPrecision(3)
+                        .HasColumnType("datetime2(3)");
+
+                    b.Property<int>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("int");
+
+                    b.Property<Guid>("WorkspaceId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("WorkspaceId");
+
+                    b.HasIndex("WorkspaceId", "LessonId");
+
+                    b.HasIndex("WorkspaceId", "ArchivedAtUtc", "UpdatedAtUtc");
+
+                    b.ToTable("Homework", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_Homework_Due", "([DueDate] IS NULL AND [DueAtUtc] IS NULL) OR ([DueDate] IS NOT NULL AND [DueAtUtc] IS NOT NULL)");
+
+                            t.HasCheckConstraint("CK_Homework_Title", "LEN([Title]) >= 1");
+                        });
+                });
+
             modelBuilder.Entity("ClassHub.Core.Modules.Identity.Contracts.AppRole", b =>
                 {
                     b.Property<Guid>("Id")
@@ -3205,6 +3351,44 @@ namespace ClassHub.Core.Infrastructure.Persistence.Migrations
                         .HasPrincipalKey("WorkspaceId", "Id")
                         .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
+                });
+
+            modelBuilder.Entity("ClassHub.Core.Modules.Homework.Domain.HomeworkAssignment", b =>
+                {
+                    b.HasOne("ClassHub.Core.Infrastructure.Files.StoredFile", null)
+                        .WithMany()
+                        .HasForeignKey("WorkspaceId", "FileId")
+                        .HasPrincipalKey("WorkspaceId", "Id")
+                        .OnDelete(DeleteBehavior.NoAction);
+
+                    b.HasOne("ClassHub.Core.Modules.Homework.Domain.HomeworkTask", null)
+                        .WithMany()
+                        .HasForeignKey("WorkspaceId", "HomeworkId")
+                        .HasPrincipalKey("WorkspaceId", "Id")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.HasOne("ClassHub.Core.Modules.Students.Domain.Student", null)
+                        .WithMany()
+                        .HasForeignKey("WorkspaceId", "StudentId")
+                        .HasPrincipalKey("WorkspaceId", "Id")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("ClassHub.Core.Modules.Homework.Domain.HomeworkTask", b =>
+                {
+                    b.HasOne("ClassHub.Core.Modules.Workspaces.Domain.Workspace", null)
+                        .WithMany()
+                        .HasForeignKey("WorkspaceId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.HasOne("ClassHub.Core.Modules.Lessons.Domain.Lesson", null)
+                        .WithMany()
+                        .HasForeignKey("WorkspaceId", "LessonId")
+                        .HasPrincipalKey("WorkspaceId", "Id")
+                        .OnDelete(DeleteBehavior.NoAction);
                 });
 
             modelBuilder.Entity("ClassHub.Core.Modules.Leads.Domain.Lead", b =>

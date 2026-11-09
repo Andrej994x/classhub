@@ -42,7 +42,8 @@
     "studentSettings": "Settings",
     "calendar": "Calendar",
     "booking": "Booking",
-    "materials": "Materials"
+    "materials": "Materials",
+    "homework": "Homework"
   },
   "layout": {
     "teacherArea": "Teacher workspace",
@@ -1075,6 +1076,95 @@
     "deleteLead": "Deletes the file and its assignments for good and frees the storage. This cannot be undone.",
     "delete": "Delete…",
     "deleteConfirm": "Delete for good"
+  },
+  "homework": {
+    "title": "Homework",
+    "lead": "Give students tasks, collect their answers and review them.",
+    "add": "New homework",
+    "search": "Search homework",
+    "showArchived": "Show archived homework",
+    "empty": "No homework yet.",
+    "noArchived": "No archived homework.",
+    "noMatches": "No homework matches the search.",
+    "pages": "Homework pages",
+    "due": "Due {{date}}",
+    "counts": "{{assigned}} assigned · {{submitted}} to review · {{reviewed}} reviewed",
+    "late": "Late",
+    "status": {
+      "Assigned": "Assigned",
+      "Submitted": "Submitted",
+      "Reviewed": "Reviewed"
+    },
+    "back": "Back to homework",
+    "newTitle": "New homework",
+    "forLesson": "For the lesson",
+    "archivedLead": "Archived: students no longer see it or hand it in.",
+    "details": "Details",
+    "fields": {
+      "title": "Title",
+      "description": "Task (optional)",
+      "dueDate": "Due date (optional)",
+      "dueHint": "Answers after the end of this day are marked late."
+    },
+    "validation": {
+      "title": "Enter a title."
+    },
+    "save": "Save changes",
+    "create": "Create homework",
+    "saved": "Changes saved.",
+    "changedElsewhere": "This homework was changed in another window. Reload the page and apply your changes again.",
+    "submittedAt": "Handed in {{date}}",
+    "downloadAnswer": "Download {{name}}'s answer",
+    "assignments": {
+      "title": "Students",
+      "lead": "Each student hands in their own answer. Assigning a group gives the homework to its current members.",
+      "none": "Not assigned yet.",
+      "remove": "Remove {{name}}",
+      "removeShort": "Remove",
+      "toStudent": "Assign to a student",
+      "toGroup": "Assign to a group",
+      "chooseGroup": "Choose a group",
+      "groupHint": "Students who join the group later do not get it automatically.",
+      "assign": "Assign",
+      "archived": "Restore the homework to assign it."
+    },
+    "review": {
+      "comment": "Comment for {{name}} (optional)",
+      "submit": "Mark reviewed",
+      "update": "Update the review",
+      "newAnswer": "The student handed in a new answer meanwhile. Reload the page to review it."
+    },
+    "archiveTitle": "Archive the homework",
+    "archiveLead": "Students no longer see it or hand it in; their answers are kept.",
+    "archive": "Archive",
+    "restoreTitle": "Restore the homework",
+    "restoreLead": "Students see it again and can hand it in until it is reviewed.",
+    "restore": "Restore",
+    "ofLesson": "Homework",
+    "noneForLesson": "No homework for this lesson.",
+    "addForLesson": "Add homework for this lesson",
+    "portal": {
+      "title": "Homework",
+      "none": "You have no homework.",
+      "back": "Back",
+      "task": "Task",
+      "review": "Teacher's review",
+      "noComment": "Reviewed without a comment.",
+      "answer": "Your answer",
+      "answerLead": "You can hand in again until your teacher reviews it.",
+      "final": "Reviewed: your answer can no longer be changed.",
+      "text": "Answer",
+      "file": "Attach a file (optional)",
+      "replaceFile": "Replace the file (optional)",
+      "fileHint": "Allowed: {{types}}. Up to 20 MB.",
+      "removeFile": "Remove this file",
+      "ownFile": "Download your file {{name}}",
+      "empty": "Write an answer or attach a file.",
+      "submit": "Hand in",
+      "resubmit": "Hand in again",
+      "storageFull": "Your teacher's storage is full, so the file could not be saved. Hand in your answer as text or ask your teacher.",
+      "reviewedMeanwhile": "Your teacher has reviewed this homework meanwhile. Reload the page to see the review."
+    }
   },
   "studentPortal": {
     "teachers": "Your teachers",
