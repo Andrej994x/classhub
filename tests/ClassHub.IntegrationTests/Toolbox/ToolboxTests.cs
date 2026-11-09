@@ -90,6 +90,24 @@ public sealed class ToolboxTests(ClassHubApiFixture fixture)
         await using var db = fixture.CreateDbContext();
         (await db.Set<AuditLogEntry>().Where(e => e.TargetId == code && e.Action.StartsWith("toolbox.tool.")).Select(e => e.Action).ToListAsync(Ct))
             .ShouldBe(["toolbox.tool.created", "toolbox.tool.updated", "toolbox.tool.updated"], ignoreOrder: true);
+
+        // A change of the description or license alone is visible in the audit, with the value before it.
+        using (var described = await admin.Client.PutAsync($"/api/admin/toolbox/{created.Tool.Id}", new
+        {
+            nameMk = word, nameEn = word, descriptionMk = "Нов опис", descriptionEn = "New description", kind = "External", category = "Simulations",
+            url = "https://phet.colorado.edu/", subjectIds = Array.Empty<Guid>(), licenseNoteMk = "Нова лиценца", licenseNoteEn = "New license", isActive = false, version = 3,
+        }))
+        {
+            described.StatusCode.ShouldBe(HttpStatusCode.OK, await described.Content.ReadAsStringAsync(Ct));
+        }
+
+        var details = await db.Set<AuditLogEntry>().Where(e => e.TargetId == code && e.Action == "toolbox.tool.updated").OrderByDescending(e => e.OccurredAtUtc).Select(e => e.DetailsJson).FirstAsync(Ct);
+        details.ShouldNotBeNull();
+        var text = System.Text.RegularExpressions.Regex.Unescape(details); // JSON escapes non-ASCII text
+        text.ShouldContain("Симулации за сили."); // before
+        text.ShouldContain("Нов опис"); // after
+        text.ShouldContain("CC BY 4.0 (бесплатно)");
+        text.ShouldContain("Нова лиценца");
     }
 
     [Fact]

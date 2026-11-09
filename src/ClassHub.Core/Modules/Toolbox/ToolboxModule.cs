@@ -215,8 +215,13 @@ internal sealed class ToolboxService(ClassHubDbContext db, ICatalogLookup catalo
 
     private static AdminToolResponse ToAdmin(Tool t, ILookup<Guid, Guid> subjects) => new(ToResponse(t, subjects), t.IsActive, t.SortOrder, t.UpdatedAtUtc, t.Version);
 
+    /// <summary>Every field staff manage, so an audit entry shows what changed and what it was before.</summary>
     private static object Snapshot(Tool t, IReadOnlyList<Guid> subjectIds) =>
-        new { t.NameMk, t.NameEn, Kind = t.Kind.ToString(), Category = t.Category.ToString(), t.Url, t.BuiltInKey, t.IsActive, t.IsFeatured, t.SortOrder, SubjectIds = subjectIds };
+        new
+        {
+            t.NameMk, t.NameEn, t.DescriptionMk, t.DescriptionEn, Kind = t.Kind.ToString(), Category = t.Category.ToString(), t.Url, t.BuiltInKey,
+            t.LicenseNoteMk, t.LicenseNoteEn, t.IsActive, t.IsFeatured, t.SortOrder, SubjectIds = subjectIds,
+        };
 
     private async Task SaveAsync(CancellationToken cancellationToken)
     {
