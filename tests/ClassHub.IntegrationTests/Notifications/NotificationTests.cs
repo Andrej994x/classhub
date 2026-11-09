@@ -571,11 +571,14 @@ public sealed class NotificationTests(ClassHubApiFixture fixture)
         using var teacher = await fixture.CreateTeacherAsync();
         var ana = await StudentAsync(teacher, "Ана", ApiTestExtensions.UniqueEmail("ana"));
         var boris = await StudentAsync(teacher, "Борис", ApiTestExtensions.UniqueEmail("boris"));
+        await RunAsync(DateTime.UtcNow); // the backlog other test classes leave (their notices are never dispatched) goes first
         var since = DateTime.UtcNow.AddSeconds(-1);
         var homework = await HomeworkAsync(teacher, "Заостанато", ana.Id, boris.Id);
 
-        // Batches of one: both notices (and any other test's due ones) are still sent in this single pass.
-        using var factory = fixture.Factory.WithWebHostBuilder(builder => builder.UseSetting("Notifications:BatchSize", "1"));
+        // Batches of one: both notices (and any due meanwhile in parallel tests) are still sent in this single pass.
+        using var factory = fixture.Factory.WithWebHostBuilder(builder => builder
+            .UseSetting("Notifications:BatchSize", "1")
+            .UseSetting("Notifications:MaxBatchesPerPass", "1000"));
         await factory.Services.GetRequiredService<NotificationJob>().RunAtAsync(DateTime.UtcNow, Ct);
 
         (await OutcomesAsync(homework.Id)).ShouldAllBe(o => o.Status == NotificationStatus.Sent);
