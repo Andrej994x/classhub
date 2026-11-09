@@ -34,8 +34,10 @@ public sealed class NotificationOptions
 
 /// <summary>
 /// The notification dispatcher (R2-P11): plans reminders from the schedule, claims due notifications with a lease
-/// (<c>UPDLOCK, READPAST</c>: two dispatchers never claim the same row), and sends each in a scope bound to its
-/// workspace as its teacher. Pending, failed and claimed rows are read across workspaces as identifiers only.
+/// (<c>UPDLOCK, READPAST, ROWLOCK, READCOMMITTEDLOCK</c> like the email outbox: locking, not row-versioning, semantics
+/// although the database uses READ_COMMITTED_SNAPSHOT; two dispatchers never claim the same row), and sends each in a
+/// scope bound to its workspace as its teacher. Pending, failed and claimed rows are read across workspaces as
+/// identifiers only.
 /// </summary>
 internal sealed partial class NotificationJob(IServiceScopeFactory scopes, IOptions<NotificationOptions> options, TimeProvider clock, ILogger<NotificationJob> logger)
     : BackgroundService
@@ -196,7 +198,7 @@ internal sealed partial class NotificationJob(IServiceScopeFactory scopes, IOpti
             UPDATE TOP ({batch}) n
             SET n.[LockedUntilUtc] = {lease}, n.[Attempts] = n.[Attempts] + 1
             OUTPUT inserted.[Id], inserted.[WorkspaceId], inserted.[TeacherUserId]
-            FROM [Notifications] AS n WITH (UPDLOCK, READPAST, ROWLOCK)
+            FROM [Notifications] AS n WITH (UPDLOCK, READPAST, ROWLOCK, READCOMMITTEDLOCK)
             WHERE n.[Status] = 1 AND n.[DueAtUtc] <= {nowUtc} AND (n.[LockedUntilUtc] IS NULL OR n.[LockedUntilUtc] < {nowUtc}) AND n.[Attempts] < {maxAttempts}
             """).ToListAsync(cancellationToken);
     }

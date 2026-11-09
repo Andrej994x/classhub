@@ -294,6 +294,12 @@ public sealed class NotificationTests(ClassHubApiFixture fixture)
             students.Add(await StudentAsync(teacher, $"Ученик {i}", ApiTestExtensions.UniqueEmail($"s{i}")));
         }
 
+        // As in production, the database reads with row versioning (READ_COMMITTED_SNAPSHOT): the claim must still lock.
+        await using (var db = fixture.CreateDbContext())
+        {
+            (await db.Database.SqlQueryRaw<bool>("SELECT is_read_committed_snapshot_on AS [Value] FROM sys.databases WHERE name = DB_NAME()").SingleAsync(Ct)).ShouldBeTrue();
+        }
+
         var since = DateTime.UtcNow.AddSeconds(-1);
         var homework = await HomeworkAsync(teacher, "Заедничка задача", [.. students.Select(s => s.Id)]);
         var job = fixture.Factory.Services.GetRequiredService<NotificationJob>();
