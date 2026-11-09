@@ -38,6 +38,7 @@ const keys = {
 
 export interface MaterialFilter {
   q: string;
+  subjectId: string;
   archived: boolean;
   page: number;
 }
@@ -49,7 +50,7 @@ export function useMaterials(workspaceId: string, filter: MaterialFilter) {
     queryFn: async () =>
       (
         await api.client.GET('/api/w/{workspaceId}/materials', {
-          params: { path: { workspaceId }, query: { q: filter.q.trim() || undefined, archived: filter.archived || undefined, page: filter.page } },
+          params: { path: { workspaceId }, query: { q: filter.q.trim() || undefined, subjectId: filter.subjectId || undefined, archived: filter.archived || undefined, page: filter.page } },
         })
       ).data!,
   });

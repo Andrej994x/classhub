@@ -2,7 +2,7 @@ import { act, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
 import { formatBytes, materialFileProblem } from '../../../teacher/materials.ts';
-import { fakeApi, json, problem, SUBJECT_MATH, teacher, WORKSPACE_ID, type FakeCall } from '../../../test/fakeApi.ts';
+import { fakeApi, json, problem, SUBJECT_ENGLISH, SUBJECT_MATH, teacher, WORKSPACE_ID, type FakeCall } from '../../../test/fakeApi.ts';
 import { renderRoute } from '../../../test/render.tsx';
 
 const BASE = `/api/w/${WORKSPACE_ID}/materials`;
@@ -55,8 +55,9 @@ function materialsApi() {
       const params = new URLSearchParams(call.search);
       const archived = params.get('archived') === 'true';
       const q = params.get('q') ?? '';
+      const subjectId = params.get('subjectId');
       const items = state.materials
-        .filter((m) => m.archived === archived && (!q || m.title.includes(q)))
+        .filter((m) => m.archived === archived && (!q || m.title.includes(q)) && (!subjectId || m.subjectId === subjectId))
         .map((m) => ({ id: m.id, title: m.title, subjectId: m.subjectId, fileName: m.fileName, contentType: m.contentType, sizeBytes: m.sizeBytes, assignmentCount: m.assignments.length, archived: m.archived, updatedAtUtc: m.updatedAtUtc }));
       return json(200, { items, total: items.length, page: 1, pageSize: 20, storageUsedBytes: state.materials.reduce((sum, m) => sum + m.sizeBytes, 0) });
     }
@@ -111,6 +112,21 @@ describe('materials', () => {
     expect(link).toHaveAttribute('href', `/app/w/${WORKSPACE_ID}/materials/m1`);
     expect(link).toHaveTextContent('ravenki.pdf · 350 KB · доделен на 0');
     expect(screen.getByText('Искористен простор: 350 KB')).toBeInTheDocument();
+  });
+
+  it('filters by subject', async () => {
+    const user = userEvent.setup();
+    const { api, state } = materialsApi();
+    state.materials.push(material({ id: 'm3', title: 'Present Simple', subjectId: SUBJECT_ENGLISH }));
+    await renderRoute(`/app/w/${WORKSPACE_ID}/materials`);
+
+    const list = await screen.findByRole('list', { name: 'Материјали' });
+    expect(within(list).getAllByRole('link')).toHaveLength(2);
+    await user.selectOptions(screen.getByLabelText('Филтрирај по предмет'), SUBJECT_ENGLISH);
+
+    await expect.poll(() => within(screen.getByRole('list', { name: 'Материјали' })).queryAllByRole('link').length).toBe(1);
+    expect(within(screen.getByRole('list', { name: 'Материјали' })).getByRole('link', { name: /Present Simple/ })).toBeInTheDocument();
+    expect(api.to(BASE, 'GET').some((c) => new URLSearchParams(c.search).get('subjectId') === SUBJECT_ENGLISH)).toBe(true);
   });
 
   it('checks the file before uploading and opens the new material', async () => {

@@ -1,3 +1,4 @@
+using System.IO.Compression;
 using System.Text;
 using ClassHub.Core.Modules.Materials.Domain;
 
@@ -10,8 +11,7 @@ public sealed class MaterialFilesTests
     private static readonly byte[] Png = [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0x00];
     private static readonly byte[] Jpeg = [0xFF, 0xD8, 0xFF, 0xE0, 0x00];
     private static readonly byte[] Webp = [.. "RIFF"u8, 0x24, 0x00, 0x00, 0x00, .. "WEBPVP8 "u8];
-    private static readonly byte[] OfficeZip = [.. "PK\u0003\u0004"u8, 0x14, 0x00, .. "[Content_Types].xml"u8];
-    private static readonly byte[] PlainZip = [.. "PK\u0003\u0004"u8, 0x14, 0x00, .. "payload.bin"u8];
+    private static readonly byte[] PlainZip = Zip(("payload.bin", 10));
 
     [Theory]
     [InlineData("a.pdf", "application/pdf", false)]
@@ -33,7 +33,9 @@ public sealed class MaterialFilesTests
             ".jpg" or ".jpeg" => Jpeg,
             ".webp" => Webp,
             ".txt" => Encoding.UTF8.GetBytes("Здраво, свету!"),
-            _ => OfficeZip,
+            ".docx" => Zip(("[Content_Types].xml", 10), ("word/document.xml", 10)),
+            ".xlsx" => Zip(("[Content_Types].xml", 10), ("xl/workbook.xml", 10)),
+            _ => Zip(("[Content_Types].xml", 10), ("ppt/presentation.xml", 10)),
         };
 
         var kind = MaterialFiles.Detect(name, bytes).ShouldNotBeNull();
@@ -51,6 +53,9 @@ public sealed class MaterialFilesTests
         MaterialFiles.Detect("a.webp", [.. "RIFF"u8, 0, 0, 0, 0, .. "WAVE"u8]).ShouldBeNull();
         MaterialFiles.Detect("a.webp", "RIFF"u8).ShouldBeNull(); // too short for the WEBP tag
         MaterialFiles.Detect("a.docx", PlainZip).ShouldBeNull(); // a ZIP, but not Office Open XML
+        MaterialFiles.Detect("a.docx", Zip(("[Content_Types].xml", 10), ("xl/workbook.xml", 10))).ShouldBeNull(); // a workbook named .docx
+        MaterialFiles.Detect("a.xlsx", Zip(("xl/workbook.xml", 10))).ShouldBeNull(); // no content types
+        MaterialFiles.Detect("a.docx", [.. "PK\u0003\u0004"u8, 0x14, 0x00, .. "[Content_Types].xml word/document.xml"u8]).ShouldBeNull(); // not a readable ZIP
         MaterialFiles.Detect("a.txt", [0x41, 0x00, 0x42]).ShouldBeNull(); // NUL: binary
         MaterialFiles.Detect("a.txt", [0xC3, 0x28]).ShouldBeNull(); // invalid UTF-8
         MaterialFiles.Detect("a.exe", [0x4D, 0x5A]).ShouldBeNull();
@@ -58,6 +63,15 @@ public sealed class MaterialFilesTests
         MaterialFiles.Detect("a.svg", "<svg>"u8).ShouldBeNull();
         MaterialFiles.Detect("pdf", Pdf).ShouldBeNull();
         MaterialFiles.Detect("a.pdf", []).ShouldBeNull();
+    }
+
+    [Fact]
+    public void Office_packages_are_recognized_whatever_the_order_of_their_entries()
+    {
+        // Large parts first: the content types entry is far beyond the first kilobytes.
+        var document = Zip(("word/media/image1.png", 64 * 1024), ("word/document.xml", 8 * 1024), ("[Content_Types].xml", 10));
+
+        MaterialFiles.Detect("report.docx", document).ShouldNotBeNull().Extension.ShouldBe(".docx");
     }
 
     [Theory]
@@ -82,5 +96,21 @@ public sealed class MaterialFilesTests
 
         name.Length.ShouldBe(Material.FileNameMaxLength);
         name.ShouldEndWith(".docx");
+    }
+
+    /// <summary>A real ZIP with the entries in this order, stored uncompressed with random content of the given size.</summary>
+    private static byte[] Zip(params (string Name, int Size)[] entries)
+    {
+        using var buffer = new MemoryStream();
+        using (var archive = new ZipArchive(buffer, ZipArchiveMode.Create, leaveOpen: true))
+        {
+            foreach (var (name, size) in entries)
+            {
+                using var stream = archive.CreateEntry(name, CompressionLevel.NoCompression).Open();
+                stream.Write(Random.Shared.GetItems<byte>([.. Enumerable.Range(0, 256).Select(i => (byte)i)], size));
+            }
+        }
+
+        return buffer.ToArray();
     }
 }

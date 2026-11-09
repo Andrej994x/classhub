@@ -1,3 +1,4 @@
+using System.IO.Compression;
 using System.Text;
 using ClassHub.Core.SharedKernel.Tenancy;
 
@@ -93,9 +94,9 @@ public static class MaterialFiles
             ".png" when bytes.StartsWith(new byte[] { 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A }) => Png,
             ".jpg" or ".jpeg" when bytes.StartsWith(new byte[] { 0xFF, 0xD8, 0xFF }) => Jpeg,
             ".webp" when bytes.Length >= 12 && bytes.StartsWith("RIFF"u8) && bytes[8..12].SequenceEqual("WEBP"u8) => Webp,
-            ".docx" when IsOfficeZip(bytes) => Docx,
-            ".xlsx" when IsOfficeZip(bytes) => Xlsx,
-            ".pptx" when IsOfficeZip(bytes) => Pptx,
+            ".docx" when IsOfficePackage(bytes, "word/document.xml") => Docx,
+            ".xlsx" when IsOfficePackage(bytes, "xl/workbook.xml") => Xlsx,
+            ".pptx" when IsOfficePackage(bytes, "ppt/presentation.xml") => Pptx,
             ".txt" when IsPlainText(bytes) => Text,
             _ => null,
         };
@@ -125,9 +126,29 @@ public static class MaterialFiles
         return (stem.Length > maxStem ? stem[..maxStem] : stem) + extension;
     }
 
-    /// <summary>Office Open XML is a ZIP whose first entry is <c>[Content_Types].xml</c> (or that names it early).</summary>
-    private static bool IsOfficeZip(ReadOnlySpan<byte> bytes) =>
-        bytes.StartsWith("PK\u0003\u0004"u8) && bytes[..Math.Min(bytes.Length, 4096)].IndexOf("[Content_Types].xml"u8) >= 0;
+    /// <summary>
+    /// Office Open XML: a readable ZIP whose central directory lists <c>[Content_Types].xml</c> and the kind's main part
+    /// (wherever they are in the archive; OPC does not fix the entry order). Only the directory is read, nothing is
+    /// extracted.
+    /// </summary>
+    private static bool IsOfficePackage(ReadOnlySpan<byte> bytes, string mainPart)
+    {
+        if (!bytes.StartsWith("PK\u0003\u0004"u8))
+        {
+            return false;
+        }
+
+        try
+        {
+            using var archive = new ZipArchive(new MemoryStream(bytes.ToArray(), writable: false), ZipArchiveMode.Read);
+            var names = archive.Entries.Select(e => e.FullName).ToHashSet(StringComparer.OrdinalIgnoreCase);
+            return names.Contains("[Content_Types].xml") && names.Contains(mainPart);
+        }
+        catch (InvalidDataException)
+        {
+            return false;
+        }
+    }
 
     /// <summary>Valid UTF-8 without NUL characters.</summary>
     private static bool IsPlainText(ReadOnlySpan<byte> bytes)

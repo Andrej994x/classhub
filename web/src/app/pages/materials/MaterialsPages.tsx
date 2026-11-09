@@ -36,14 +36,14 @@ const textarea = 'w-full rounded-md border border-input bg-background px-3 py-2 
 const TITLE_MAX = 120;
 const DESCRIPTION_MAX = 1000;
 
-function SubjectSelect({ id, value, onChange }: { id: string; value: string; onChange: (subjectId: string) => void }) {
+function SubjectSelect({ id, value, onChange, label, emptyLabel }: { id: string; value: string; onChange: (subjectId: string) => void; label?: string; emptyLabel?: string }) {
   const { t, i18n } = useTranslation();
   const catalog = useCatalog();
   return (
     <div className="flex flex-col gap-2">
-      <Label htmlFor={id}>{t('materials.fields.subject')}</Label>
+      <Label htmlFor={id}>{label ?? t('materials.fields.subject')}</Label>
       <select id={id} className={field} value={value} onChange={(e) => onChange(e.target.value)}>
-        <option value="">{t('materials.fields.noSubject')}</option>
+        <option value="">{emptyLabel ?? t('materials.fields.noSubject')}</option>
         {/* A saved subject the ClassHub team deactivated is not in the catalog but stays valid on this material. */}
         {value && !catalog.data?.subjects.some((s) => s.id === value) && <option value={value}>{catalog.data ? t('groups.fields.retiredSubject') : t('common.loading')}</option>}
         {catalog.data?.subjects.map((s) => (
@@ -63,8 +63,9 @@ export function MaterialsPage() {
   const [params, setParams] = useSearchParams();
   const archived = params.get('archived') === 'true';
   const [q, setQ] = useState('');
+  const [subjectId, setSubjectId] = useState('');
   const [page, setPage] = useState(1);
-  const materials = useMaterials(workspaceId, { q, archived, page });
+  const materials = useMaterials(workspaceId, { q, subjectId, archived, page });
   const pages = Math.max(1, Math.ceil((num(materials.data?.total) ?? 0) / (num(materials.data?.pageSize) ?? 20)));
 
   if (materials.isError && !materials.data)
@@ -82,8 +83,8 @@ export function MaterialsPage() {
 
       {!archived && <UploadCard workspaceId={workspaceId} />}
 
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-        <div className="flex flex-col gap-1 sm:w-80">
+      <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end">
+        <div className="flex flex-col gap-1 sm:w-72">
           <Label htmlFor="materials-search">{t('materials.search')}</Label>
           <input
             id="materials-search"
@@ -96,7 +97,19 @@ export function MaterialsPage() {
             }}
           />
         </div>
-        <label className="flex items-center gap-2 text-sm">
+        <div className="sm:w-60">
+          <SubjectSelect
+            id="materials-subject-filter"
+            label={t('materials.filterSubject')}
+            emptyLabel={t('materials.allSubjects')}
+            value={subjectId}
+            onChange={(next) => {
+              setSubjectId(next);
+              setPage(1);
+            }}
+          />
+        </div>
+        <label className="flex items-center gap-2 text-sm sm:h-10">
           <input
             type="checkbox"
             className="h-4 w-4"
@@ -115,7 +128,7 @@ export function MaterialsPage() {
       ) : materials.data.items.length === 0 ? (
         <Card>
           <CardHeader>
-            <CardDescription>{q.trim() ? t('materials.noMatches') : archived ? t('materials.noArchived') : t('materials.empty')}</CardDescription>
+            <CardDescription>{q.trim() || subjectId ? t('materials.noMatches') : archived ? t('materials.noArchived') : t('materials.empty')}</CardDescription>
           </CardHeader>
         </Card>
       ) : (
