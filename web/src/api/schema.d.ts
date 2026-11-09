@@ -4,6 +4,74 @@
  */
 
 export interface paths {
+    "/api/w/{workspaceId}/activities": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The workspace's activities (without documents), most recently changed first; search by title, filter by subject and board. */
+        get: operations["ListActivities"];
+        put?: never;
+        /** Save a new activity (counts toward the plan's activities). */
+        post: operations["CreateActivity"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/w/{workspaceId}/activities/{activityId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetActivity"];
+        put: operations["UpdateActivity"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/w/{workspaceId}/activities/{activityId}/duplicate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** A copy of the activity (counts toward the plan's activities). */
+        post: operations["DuplicateActivity"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/w/{workspaceId}/activities/{activityId}/delete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Delete the activity (soft: it disappears from the library and no longer counts toward the plan). */
+        post: operations["DeleteActivity"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/admin/overview": {
         parameters: {
             query?: never;
@@ -2418,6 +2486,54 @@ export interface components {
             paidOn: null | string;
             note: null | string;
         };
+        ActivityListItem: {
+            /** Format: uuid */
+            id: string;
+            title: string;
+            /** Format: uuid */
+            subjectId: null | string;
+            toolType: string;
+            /** Format: int32 */
+            schemaVersion: number | string;
+            /** Format: int32 */
+            sizeBytes: number | string;
+            /** Format: date-time */
+            updatedAtUtc: string;
+            /** Format: int32 */
+            version: number | string;
+        };
+        ActivityListResponse: {
+            items: components["schemas"]["ActivityListItem"][];
+            /** Format: int32 */
+            total: number | string;
+            /** Format: int32 */
+            page: number | string;
+            /** Format: int32 */
+            pageSize: number | string;
+        };
+        ActivityResponse: {
+            /** Format: uuid */
+            id: string;
+            title: string;
+            /** Format: uuid */
+            subjectId: null | string;
+            toolType: string;
+            /** Format: int32 */
+            schemaVersion: number | string;
+            document: components["schemas"]["JsonElement"];
+            /** Format: int32 */
+            sizeBytes: number | string;
+            /** Format: date-time */
+            createdAtUtc: string;
+            /** Format: date-time */
+            updatedAtUtc: string;
+            /** Format: int32 */
+            version: number | string;
+        };
+        ActivityVersionRequest: {
+            /** Format: int32 */
+            version: null | number | string;
+        };
         AddGroupMemberRequest: {
             /** Format: uuid */
             studentId: null | string;
@@ -3181,6 +3297,7 @@ export interface components {
         InviteStudentRequest: {
             email: null | string;
         };
+        JsonElement: unknown;
         LeadFormOption: {
             /** Format: uuid */
             id: string;
@@ -3659,6 +3776,17 @@ export interface components {
         };
         ReviewHomeworkRequest: {
             comment: null | string;
+            /** Format: int32 */
+            version: null | number | string;
+        };
+        SaveActivityRequest: {
+            title: null | string;
+            /** Format: uuid */
+            subjectId: null | string;
+            toolType: null | string;
+            /** Format: int32 */
+            schemaVersion: null | number | string;
+            document: null | components["schemas"]["JsonElement"];
             /** Format: int32 */
             version: null | number | string;
         };
@@ -4351,6 +4479,176 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    ListActivities: {
+        parameters: {
+            query?: {
+                q?: string;
+                subjectId?: string;
+                toolType?: string;
+                page?: number | string;
+                pageSize?: number | string;
+            };
+            header?: never;
+            path: {
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ActivityListResponse"];
+                };
+            };
+        };
+    };
+    CreateActivity: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SaveActivityRequest"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ActivityResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["HttpValidationProblemDetails"];
+                };
+            };
+        };
+    };
+    GetActivity: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                activityId: string;
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ActivityResponse"];
+                };
+            };
+        };
+    };
+    UpdateActivity: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                activityId: string;
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SaveActivityRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ActivityResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["HttpValidationProblemDetails"];
+                };
+            };
+        };
+    };
+    DuplicateActivity: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                activityId: string;
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ActivityResponse"];
+                };
+            };
+        };
+    };
+    DeleteActivity: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                activityId: string;
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ActivityVersionRequest"];
+            };
+        };
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     GetAdminOverview: {
         parameters: {
             query?: never;

@@ -7,10 +7,10 @@ This is the live status of the autonomous implementation loop ([ROADMAP.md](ROAD
 | Field | Value |
 |---|---|
 | Release | R3 — Teaching Toolbox (R0, R1 and R2 complete) |
-| Current phase | R3-P1 — Toolbox catalog |
-| Branch | `feature/r3-p1-toolbox-catalog` (from `main` @ `3881062`) |
+| Current phase | R3-P2 — Activity Library |
+| Branch | `feature/r3-p2-activity-library` (from `main` @ `2f359ef`) |
 | Workflow step | 3 — implementation and local checks |
-| Next action | R3-P1 checks, Codex review and PR; then R3-P2 (Activity Library) |
+| Next action | R3-P2 checks, Codex review and PR; then R3-P3 (Drawing Board) |
 | Open blockers | None. User actions (optional): direct-push probe (R0-P8); remove the now redundant required `pr-gate` check (see Decisions) |
 
 ## Phase status
@@ -55,8 +55,8 @@ Status values: `not started`, `in progress`, `in review` (PR open), `merged`, `b
 | R2-P11 | Notifications | merged | `feature/r2-p11-notifications` | [#35](https://github.com/Andrej994x/classhub/pull/35) | `939e059` | 15 rounds: 1 × P1 + 16 × P2 fixed (keys per change, series announcements and endings, paged reminder planning, reminder replacement rules, READCOMMITTEDLOCK, re-added students, removed students told as they knew it, last-hour rule at send time, told-per-series, preference save race, horizon series, cancellations of lessons known without our email, send time per notice, kept series lessons named); round 15 clean | green after 2 CI fixes (oldest-first multi-batch dispatch; a test backlog) | Migration applied to local `ClassHubDb` |
 | R2-P12 | Dashboards (teacher + student) | merged | `feature/r2-p12-dashboards` | [#36](https://github.com/Andrej994x/classhub/pull/36) | `9d69d02` | 2 rounds: 1 × P2 fixed (running-low count before the list cap); round 2 clean | green | No migration |
 | R2-P13 | Release 2 hardening | merged | `chore/r2-p13-hardening` | [#37](https://github.com/Andrej994x/classhub/pull/37) | `3881062` | Release-level review of all R2 changes: 1 × P2 fixed (series edits with referenced lessons); phase round 1 clean | green | Release 2 complete |
-| R3-P1 | Toolbox catalog | in progress | `feature/r3-p1-toolbox-catalog` | | | | | Plan: global tool catalog (mk/en, subjects, categories, external or built-in, featured, active), teacher search and filters, external tools only by official HTTPS links on approved domains opened with noopener, staff admin with audit and versions, seeded GeoGebra/Desmos/PhET/MolView |
-| R3-P2 | Activity Library | not started | | | | | | |
+| R3-P1 | Toolbox catalog | merged | `feature/r3-p1-toolbox-catalog` | [#38](https://github.com/Andrej994x/classhub/pull/38) | `2f359ef` | 4 rounds: 6 × P2 fixed (tools for any subject under subject filters, names-only enums, unshipped boards, bilingual license notes, admin edit version, full audit snapshots); round 4 clean | green | Migration applied to local `ClassHubDb` |
+| R3-P2 | Activity Library | in progress | `feature/r3-p2-activity-library` | | | | | Plan: tenant-owned activities (title, subject, board, format version, JSON document), list/search/open/change with versions, duplicate, soft delete, document size and format checks, plan limit under the plan-limit lock, library page |
 | R3-P3 | Drawing Board | not started | | | | | | |
 | R3-P4 | Geometry Board — constructions | not started | | | | | | |
 | R3-P5 | Geometry Board — functions & graphs | not started | | | | | | |

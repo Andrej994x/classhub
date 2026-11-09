@@ -89,6 +89,28 @@ Details and tests: [SECURITY.md](SECURITY.md#tenant-isolation-r0-p5).
 - API access: `src/api/client.ts` wraps `openapi-fetch` with the generated types. It sends cookies, keeps the antiforgery request token in memory, fetches it from `GET /api/auth/antiforgery` before the first unsafe request, adopts tokens re-issued in the `X-XSRF-TOKEN` response header, retries once on `ANTIFORGERY_INVALID`, and turns ProblemDetails into `ApiError`. `errorMessage()` shows only translated messages for error codes, never server text. TanStack Query is provided in `src/app/Providers.tsx`.
 - Hosting: `npm run build` writes to `src/ClassHub.Api/wwwroot/dist` (git-ignored, base `/dist/`). `Platform/SpaHosting.cs` serves static files before routing (hashed `/dist/assets` immutable, everything else `no-cache`) and maps `dist/index.html` as the fallback for the SPA prefixes only (`/` is the Razor landing page since R1-P4; the SPA's `/` route hands over with a full page load). `/api`, health checks and unknown paths never get the SPA, and the deny-by-default policy still applies to them.
 
+## Activity Library (R3-P2)
+
+- **Module:** `Modules/Activities`. An `Activity` (tenant-owned) has a title, an optional subject, the board (`drawing-board`, `geometry-board`), the version of that board's document format, the document (JSON), its size and a version. It is deleted softly through `ArchivedAtUtc` and the Archived filter.
+- **Rules (`ActivityRules`):**
+  - The document is a JSON object (never an array or a value).
+  - At most `Activities:MaxDocumentBytes` UTF-8 bytes (default 2 MB).
+  - In a format version the board reads (v1 for both boards; each board's phase adds its own content checks).
+  - An activity stays on its board.
+- **API:** `/api/w/{id}/activities` (`ws:activities.read` / `ws:activities.manage`):
+  - list: paged, without documents, search the title, filter by subject and board;
+  - get, with the document;
+  - create;
+  - update, with the loaded version (409 when stale);
+  - `/duplicate`: "(копија)" / "(copy)" in the workspace language;
+  - `/delete`, with the version.
+- **Plan limit:** creating and duplicating run inside a transaction that holds the plan-limit lock (`PlanLimits.Activities`; Free 10, Pro 500, D-29), counting the activities not deleted. Parallel saves therefore cannot exceed the plan, and deleting frees a place.
+- **SPA:** `/app/w/{id}/activities`, in the navigation.
+  - Search, subject and board filters, and pages.
+  - Rename (title and subject; the document is sent back unchanged with the version the list showed, so a newer save is a conflict).
+  - Duplicate, and delete after confirming.
+  - Open links to the board (`/app/w/{id}/toolbox/{board}?activity={id}`) only once the toolbox lists the board (R3-P3/P4).
+
 ## Teaching Toolbox catalog (R3-P1)
 
 - **Module:** `Modules/Toolbox`. The tools are global reference data (like the catalog), not tenant-owned.
