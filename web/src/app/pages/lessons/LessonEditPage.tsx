@@ -431,7 +431,8 @@ function LessonEditor({ workspaceId, lesson }: { workspaceId: string; lesson: Le
 
       {current && current.status === 'Completed' && version !== null && (
         <AttendanceCard
-          key={`attendance-${num(current.version)}`}
+          // Remounts only when the saved attendance changes: an unrelated save (notes) keeps the draft.
+          key={current.participants.map((p) => `${p.studentId}:${p.attendance ?? ''}`).join('|')}
           workspaceId={workspaceId}
           lesson={current}
           version={version}

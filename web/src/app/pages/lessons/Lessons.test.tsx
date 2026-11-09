@@ -169,6 +169,28 @@ describe('attendance and notes', () => {
     expect(api.to(`${BASE}/l1/notes`)[0]!.body).toEqual({ version: 1, privateNote: 'Борис да ја повтори темата.', sharedSummary: 'Линеарни равенки.' });
   });
 
+  it('keeps unsaved attendance changes when the notes are saved', async () => {
+    const user = userEvent.setup();
+    const { state } = lessonsApi();
+    state.lessons[0] = lesson({
+      status: 'Completed',
+      startUtc: '2024-03-05T16:00:00Z',
+      endUtc: '2024-03-05T17:00:00Z',
+      startLocal: '2024-03-05T17:00:00',
+      endLocal: '2024-03-05T18:00:00',
+      participants: [{ studentId: 's1', firstName: 'Ана', lastName: 'Илиева', attendance: 'Present' }],
+    });
+    await renderRoute(`/app/w/${WORKSPACE_ID}/lessons/l1`);
+
+    const ana = within(await screen.findByRole('list', { name: 'Присуство' })).getByRole('group', { name: 'Ана Илиева' });
+    await user.click(within(ana).getByLabelText('Отсутен'));
+    await user.type(screen.getByLabelText('Приватна белешка'), 'Белешка');
+    await user.click(screen.getByRole('button', { name: 'Зачувај белешки' }));
+    expect(await screen.findByText('Зачувано.')).toBeInTheDocument();
+
+    expect(within(within(screen.getByRole('list', { name: 'Присуство' })).getByRole('group', { name: 'Ана Илиева' })).getByLabelText('Отсутен')).toBeChecked();
+  });
+
   it('shows a student\'s lessons with attendance on the student page', async () => {
     const history = {
       items: [

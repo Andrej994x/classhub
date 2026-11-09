@@ -43,6 +43,25 @@ public sealed class AttendanceTests(ClassHubApiFixture fixture)
     }
 
     [Fact]
+    public async Task Lessons_held_before_attendance_existed_are_backfilled_as_present()
+    {
+        using var teacher = await fixture.CreateTeacherAsync();
+        var (lesson, ana, _, _) = await PastGroupLessonAsync(teacher);
+        var held = await ReadAsync<LessonResponse>(await teacher.Client.PostAsync(Path(teacher, $"/{lesson.Id}/complete"), new { version = lesson.Version }));
+        await using (var db = fixture.CreateDbContext())
+        {
+            // As it was before this phase: held, without attendance.
+            await db.Database.ExecuteSqlAsync($"UPDATE LessonParticipants SET Attendance = NULL WHERE LessonId = {lesson.Id}", Ct);
+            await db.Database.ExecuteSqlRawAsync(ClassHub.Core.Modules.Lessons.Domain.LessonBackfills.CompletedLessonAttendanceSql, Ct);
+        }
+
+        var after = await teacher.Client.GetJsonAsync<LessonResponse>(Path(teacher, $"/{lesson.Id}"));
+        after.Participants.ShouldAllBe(p => p.Attendance == "Present");
+        (await teacher.Client.GetJsonAsync<LessonHistoryResponse>(Path(teacher, $"/history?studentId={ana}"))).Items.ShouldHaveSingleItem().Attendance.ShouldBe("Present");
+        held.Status.ShouldBe("Completed");
+    }
+
+    [Fact]
     public async Task Parallel_completions_make_one_transition_and_one_event()
     {
         using var teacher = await fixture.CreateTeacherAsync();

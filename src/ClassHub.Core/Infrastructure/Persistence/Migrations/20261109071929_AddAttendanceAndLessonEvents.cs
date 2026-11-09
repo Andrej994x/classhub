@@ -79,6 +79,9 @@ namespace ClassHub.Core.Infrastructure.Persistence.Migrations
                 name: "IX_LessonEvents_WorkspaceId_LessonId",
                 table: "LessonEvents",
                 columns: new[] { "WorkspaceId", "LessonId" });
+
+            // Lessons held before attendance existed: Present (D-22 default).
+            migrationBuilder.Sql(ClassHub.Core.Modules.Lessons.Domain.LessonBackfills.CompletedLessonAttendanceSql);
         }
 
         /// <inheritdoc />
