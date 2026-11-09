@@ -37,6 +37,23 @@ public sealed class FinanceRulesTests
         FinanceRules.Reconcile(held, present, hasActive).ShouldBe(expected);
 
     [Fact]
+    public void A_lesson_the_teacher_took_back_does_not_consume_again()
+    {
+        FinanceRules.Reconcile(held: true, present: true, hasActiveConsumption: false, waivedByTeacher: true).ShouldBe(ConsumptionAction.None);
+        FinanceRules.Reconcile(held: true, present: false, hasActiveConsumption: true, waivedByTeacher: true).ShouldBe(ConsumptionAction.Reverse);
+    }
+
+    [Fact]
+    public void Corrections_never_go_below_the_held_lessons_of_the_package()
+    {
+        // 1 lesson used, and it is a held lesson: giving it back by a correction would let a later attendance change
+        // take it back a second time; it is given back by reversing its own entry.
+        var package = new PackageUsage(Guid.NewGuid(), T0, 4, 1, Closed: false, ActiveLessons: 1);
+        Should.Throw<BusinessRuleException>(() => FinanceRules.EnsureLessonAdjustment(package, -1)).Code.ShouldBe(ErrorCodes.PackageLessonsOutOfRange);
+        FinanceRules.EnsureLessonAdjustment(package with { Used = 2 }, -1); // a no-show counted on top can be given back
+    }
+
+    [Fact]
     public void The_oldest_open_package_with_a_lesson_left_is_used()
     {
         var full = new PackageUsage(Guid.NewGuid(), T0, 4, 4, Closed: false);

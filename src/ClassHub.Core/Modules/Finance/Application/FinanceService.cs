@@ -279,7 +279,10 @@ internal sealed class FinanceService(
 
             if (entry.PackageId is { } packageId)
             {
-                FinanceRules.EnsureLessonAdjustment((await PackageUsages.OfStudentAsync(db, entry.StudentId, cancellationToken)).Single(p => p.Id == packageId), -entry.Quantity);
+                var usage = (await PackageUsages.OfStudentAsync(db, entry.StudentId, cancellationToken)).Single(p => p.Id == packageId);
+                // Taking back a held lesson also removes it from the package's held lessons.
+                FinanceRules.EnsureLessonAdjustment(
+                    entry.Kind == LedgerEntryKind.Lesson ? usage with { ActiveLessons = usage.ActiveLessons - 1 } : usage, -entry.Quantity);
             }
 
             var reversal = new LessonLedgerEntry

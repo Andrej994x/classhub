@@ -23,6 +23,9 @@ internal sealed class LessonConsumption(ClassHubDbContext db, FinanceQueries que
         try
         {
             await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
+            // One lesson at a time, from reading its attendance to the processed mark: a worker never acts on attendance
+            // that another worker has already seen corrected (the later one reads the newer attendance after this commit).
+            await queries.LockLessonAsync(lessonEvent.LessonId, cancellationToken);
             var facts = await lessons.AttendanceAsync(lessonEvent.LessonId, cancellationToken);
             if (facts is not null)
             {
@@ -56,7 +59,10 @@ internal sealed class LessonConsumption(ClassHubDbContext db, FinanceQueries que
             await queries.LockStudentAsync(studentId, cancellationToken);
             var active = await ActiveLessonEntries(facts.LessonId).SingleOrDefaultAsync(e => e.StudentId == studentId, cancellationToken);
             var present = facts.Participants.Any(p => p.StudentId == studentId && p.Present);
-            switch (FinanceRules.Reconcile(facts.Held, present, active is not null))
+            // A reversal by the teacher (not one an attendance change made) waives the lesson for this student.
+            var waived = active is null && await ledger.AnyAsync(r => r.Kind == LedgerEntryKind.Reversal && r.CreatedByUserId != null && r.LessonId == facts.LessonId
+                && r.StudentId == studentId && ledger.Any(e => e.Id == r.ReversesId && e.Kind == LedgerEntryKind.Lesson), cancellationToken);
+            switch (FinanceRules.Reconcile(facts.Held, present, active is not null, waived))
             {
                 case ConsumptionAction.Consume:
                     var occurrence = await ledger.CountAsync(e => e.Kind == LedgerEntryKind.Lesson && e.LessonId == facts.LessonId && e.StudentId == studentId, cancellationToken);
@@ -106,6 +112,8 @@ internal static class PackageUsages
     public static async Task<IReadOnlyList<PackageUsage>> OfStudentAsync(ClassHubDbContext db, Guid studentId, CancellationToken cancellationToken) =>
         await db.Set<StudentPackage>().AsNoTracking().Where(p => p.StudentId == studentId)
             .Select(p => new PackageUsage(p.Id, p.CreatedAtUtc, p.LessonCount,
-                db.Set<LessonLedgerEntry>().Where(e => e.PackageId == p.Id).Sum(e => (int?)e.Quantity) ?? 0, p.ClosedAtUtc != null))
+                db.Set<LessonLedgerEntry>().Where(e => e.PackageId == p.Id).Sum(e => (int?)e.Quantity) ?? 0, p.ClosedAtUtc != null,
+                db.Set<LessonLedgerEntry>().Count(e => e.PackageId == p.Id && e.Kind == LedgerEntryKind.Lesson
+                    && !db.Set<LessonLedgerEntry>().Any(r => r.ReversesId == e.Id))))
             .ToListAsync(cancellationToken);
 }

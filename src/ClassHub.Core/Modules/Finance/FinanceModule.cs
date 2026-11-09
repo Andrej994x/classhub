@@ -131,7 +131,8 @@ internal sealed class BalanceAdjustmentRequestValidator : AbstractValidator<Bala
 {
     public BalanceAdjustmentRequestValidator()
     {
-        RuleFor(x => x.AmountMinor).NotNull().Must(a => a is not 0 && Math.Abs(a!.Value) <= FinanceService.MaxAmount).WithMessage("Enter an amount other than zero.");
+        RuleFor(x => x.AmountMinor).Must(a => a is { } v && v != 0 && v >= -FinanceService.MaxAmount && v <= FinanceService.MaxAmount)
+            .WithMessage("Enter an amount other than zero.");
         RuleFor(x => x.Currency).Must(FinanceService.ValidCurrency).WithMessage("Unknown currency.");
         RuleFor(x => x.Reason).Must(r => r is not null && r.Trim().Length is >= 1 and <= BalanceAdjustment.ReasonMaxLength)
             .WithMessage("Give a reason (up to 500 characters).");
@@ -142,7 +143,8 @@ internal sealed class LessonAdjustmentRequestValidator : AbstractValidator<Lesso
 {
     public LessonAdjustmentRequestValidator()
     {
-        RuleFor(x => x.Quantity).NotNull().Must(q => q is not 0 && Math.Abs(q!.Value) <= StudentPackage.MaxLessons).WithMessage("Change at least one lesson.");
+        RuleFor(x => x.Quantity).Must(q => q is { } v && v != 0 && v >= -StudentPackage.MaxLessons && v <= StudentPackage.MaxLessons)
+            .WithMessage("Change at least one lesson.");
         RuleFor(x => x.Reason).Must(r => r is not null && r.Trim().Length is >= 1 and <= LessonLedgerEntry.ReasonMaxLength)
             .WithMessage("Give a reason (up to 500 characters).");
     }

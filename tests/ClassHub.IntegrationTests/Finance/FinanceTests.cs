@@ -11,8 +11,10 @@ using ClassHub.Core.Modules.Offers.Contracts;
 using ClassHub.Core.Modules.Students.Contracts;
 using ClassHub.Core.SharedKernel.Errors;
 using ClassHub.IntegrationTests.Infrastructure;
+using Microsoft.AspNetCore.TestHost;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace ClassHub.IntegrationTests.Finance;
 
@@ -161,6 +163,94 @@ public sealed class FinanceTests(ClassHubApiFixture fixture)
         }
 
         (await LessonEventsPendingAsync(teacher.WorkspaceId)).ShouldBe(0);
+    }
+
+    [Fact]
+    public async Task A_worker_never_consumes_on_attendance_that_another_worker_saw_corrected()
+    {
+        using var teacher = await fixture.CreateTeacherAsync();
+        var ana = await StudentAsync(teacher, "Ана");
+        await AssignAsync(teacher, ana.Id, new { title = "Пакет", lessonCount = 4, priceMinor = 480_000, currency = "MKD" });
+        var lesson = await IndividualLessonAsync(teacher, ana.Id);
+        var held = await CompleteAsync(teacher, lesson, Array.Empty<object>()); // Ana present: event 1
+        var completed = await PendingEventsAsync(teacher.WorkspaceId);
+
+        // Worker A reads the attendance (present); right then the teacher marks Ana absent (event 2) and worker B starts
+        // on event 2. Worker A goes on after B had every chance to finish.
+        Task? workerB = null;
+        var hook = new AfterAttendanceRead(async () =>
+        {
+            await ReadAsync<LessonResponse>(await teacher.Client.PutAsync($"/api/w/{teacher.WorkspaceId}/lessons/{lesson.Id}/attendance",
+                new { version = held.Version, attendance = new[] { new { studentId = ana.Id, status = "Absent" } } }));
+            var corrected = (await PendingEventsAsync(teacher.WorkspaceId)).Single(e => e.Kind == LessonEventKinds.AttendanceChanged);
+            workerB = Task.Run(() => ProcessInScopeAsync(fixture.Factory.Services, corrected), Ct);
+            await Task.WhenAny(workerB, Task.Delay(1_500, Ct));
+        });
+        using var factory = fixture.Factory.WithWebHostBuilder(builder => builder.ConfigureTestServices(services =>
+            services.Replace(ServiceDescriptor.Scoped<ILessonLookup>(sp => hook.Wrap(ActivatorUtilities.CreateInstance<ClassHub.Core.Modules.Lessons.Application.LessonLookup>(sp))))));
+
+        await ProcessInScopeAsync(factory.Services, completed.Single());
+        await workerB!;
+        await ProcessAsync();
+
+        // Ana was absent in the end: nothing is used.
+        var finance = await GetAsync(teacher, ana.Id);
+        finance.Packages.Single().RemainingLessons.ShouldBe(4);
+        (await LessonEventsPendingAsync(teacher.WorkspaceId)).ShouldBe(0);
+    }
+
+    [Fact]
+    public async Task A_held_lesson_is_given_back_by_reversing_it_and_then_stays_waived()
+    {
+        using var teacher = await fixture.CreateTeacherAsync();
+        var ana = await StudentAsync(teacher, "Ана");
+        var package = (await AssignAsync(teacher, ana.Id, new { title = "Пакет", lessonCount = 4, priceMinor = 480_000, currency = "MKD" })).Packages.Single();
+        var lesson = await IndividualLessonAsync(teacher, ana.Id);
+        var held = await CompleteAsync(teacher, lesson, Array.Empty<object>());
+        await ProcessAsync();
+
+        // A correction cannot give back the held lesson (an attendance change would take it back a second time).
+        using (var correction = await teacher.Client.PostAsync(Path(teacher, $"/packages/{package.Id}/lesson-adjustments"), new { quantity = -1, reason = "Не се брои" }))
+        {
+            correction.StatusCode.ShouldBe(HttpStatusCode.UnprocessableEntity);
+            (await correction.ErrorCodeAsync()).ShouldBe(ErrorCodes.PackageLessonsOutOfRange);
+        }
+
+        // Reversing its entry gives it back; saving the attendance again (still present) does not consume it again, and
+        // marking the student absent later takes nothing back a second time.
+        var consumed = (await GetAsync(teacher, ana.Id)).Entries.Single(e => e.Kind == "LessonConsumed");
+        (await ReadAsync<StudentFinanceResponse>(await teacher.Client.PostAsync(Path(teacher, $"/ledger/{consumed.Id}/reverse"), new { reason = "Не се брои" })))
+            .Packages.Single().RemainingLessons.ShouldBe(4);
+        var resaved = await ReadAsync<LessonResponse>(await teacher.Client.PutAsync($"/api/w/{teacher.WorkspaceId}/lessons/{lesson.Id}/attendance",
+            new { version = held.Version, attendance = new[] { new { studentId = ana.Id, status = "Present" } } }));
+        await ProcessAsync();
+        (await GetAsync(teacher, ana.Id)).Packages.Single().RemainingLessons.ShouldBe(4);
+        await ReadAsync<LessonResponse>(await teacher.Client.PutAsync($"/api/w/{teacher.WorkspaceId}/lessons/{lesson.Id}/attendance",
+            new { version = resaved.Version, attendance = new[] { new { studentId = ana.Id, status = "Absent" } } }));
+        await ProcessAsync();
+        var finance = await GetAsync(teacher, ana.Id);
+        finance.Packages.Single().RemainingLessons.ShouldBe(4);
+        finance.Packages.Single().UsedLessons.ShouldBe(0);
+    }
+
+    [Fact]
+    public async Task Missing_or_extreme_numbers_are_validation_errors()
+    {
+        using var teacher = await fixture.CreateTeacherAsync();
+        var ana = await StudentAsync(teacher, "Ана");
+        var package = (await AssignAsync(teacher, ana.Id, new { title = "Пакет", lessonCount = 4, priceMinor = 480_000, currency = "MKD" })).Packages.Single();
+
+        foreach (var body in new object[] { new { currency = "MKD", reason = "x" }, new { amountMinor = (long?)null, currency = "MKD", reason = "x" }, new { amountMinor = long.MinValue, currency = "MKD", reason = "x" } })
+        {
+            (await teacher.Client.PostAsync(Path(teacher, $"/students/{ana.Id}/adjustments"), body)).StatusCode.ShouldBe(HttpStatusCode.BadRequest);
+        }
+
+        foreach (var body in new object[] { new { reason = "x" }, new { quantity = (int?)null, reason = "x" }, new { quantity = int.MinValue, reason = "x" } })
+        {
+            (await teacher.Client.PostAsync(Path(teacher, $"/packages/{package.Id}/lesson-adjustments"), body)).StatusCode.ShouldBe(HttpStatusCode.BadRequest);
+        }
+
+        (await teacher.Client.PostAsync(Path(teacher, $"/students/{ana.Id}/payments"), new { currency = "MKD", paidOn = "2026-11-01", method = "Cash" })).StatusCode.ShouldBe(HttpStatusCode.BadRequest);
     }
 
     [Fact]
@@ -337,6 +427,45 @@ public sealed class FinanceTests(ClassHubApiFixture fixture)
         (await intruder.Client.PostAsync(Path(intruder, $"/packages/{package.Id}/close"), new { version = package.Version })).StatusCode.ShouldBe(HttpStatusCode.NotFound);
         (await intruder.Client.PostAsync(Path(intruder, $"/payments/{payment.Id}/reverse"), new { reason = "x" })).StatusCode.ShouldBe(HttpStatusCode.NotFound);
         (await intruder.Client.GetJsonAsync<FinanceOverviewResponse>(Path(intruder, "/overview"))).Students.ShouldBeEmpty();
+    }
+
+    private async Task<IReadOnlyList<PendingLessonEvent>> PendingEventsAsync(Guid workspaceId)
+    {
+        await using var scope = fixture.Factory.Services.CreateAsyncScope();
+        return [.. (await scope.ServiceProvider.GetRequiredService<ILessonEventFeed>().PendingAsync(10_000, Ct)).Where(e => e.WorkspaceId == workspaceId)];
+    }
+
+    private static async Task ProcessInScopeAsync(IServiceProvider services, PendingLessonEvent lessonEvent)
+    {
+        await using var scope = services.CreateAsyncScope();
+        scope.ServiceProvider.GetRequiredService<TenantContext>().Set(lessonEvent.WorkspaceId, lessonEvent.TeacherUserId, ClassHub.Core.SharedKernel.Tenancy.WorkspaceRole.Owner);
+        await scope.ServiceProvider.GetRequiredService<ClassHub.Core.Modules.Finance.Application.LessonConsumption>().ProcessAsync(lessonEvent, Ct);
+    }
+
+    /// <summary>Runs an action once, right after the first attendance read (between reading and acting on it).</summary>
+    private sealed class AfterAttendanceRead(Func<Task> action)
+    {
+        private int _fired;
+
+        private Task RunAsync() => action();
+
+        public ILessonLookup Wrap(ILessonLookup inner) => new Lookup(this, inner);
+
+        private sealed class Lookup(AfterAttendanceRead owner, ILessonLookup inner) : ILessonLookup
+        {
+            public Task<IReadOnlyDictionary<Guid, LessonSummary>> FindAsync(IReadOnlyCollection<Guid> ids, CancellationToken cancellationToken) => inner.FindAsync(ids, cancellationToken);
+
+            public async Task<LessonAttendanceFacts?> AttendanceAsync(Guid lessonId, CancellationToken cancellationToken)
+            {
+                var facts = await inner.AttendanceAsync(lessonId, cancellationToken);
+                if (Interlocked.Exchange(ref owner._fired, 1) == 0)
+                {
+                    await owner.RunAsync();
+                }
+
+                return facts;
+            }
+        }
     }
 
     /// <summary>Runs the consumption job once (the hosted job may also have run meanwhile: it is idempotent).</summary>

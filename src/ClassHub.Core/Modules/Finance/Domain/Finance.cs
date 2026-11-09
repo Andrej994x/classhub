@@ -167,8 +167,11 @@ public enum ConsumptionAction
     Reverse,
 }
 
-/// <summary>A package as the consumption policy sees it.</summary>
-public sealed record PackageUsage(Guid Id, DateTime CreatedAtUtc, int LessonCount, int Used, bool Closed)
+/// <summary>
+/// A package as the consumption policy sees it. <see cref="ActiveLessons"/>: held lessons consumed from it that were not
+/// taken back (they are part of <see cref="Used"/>).
+/// </summary>
+public sealed record PackageUsage(Guid Id, DateTime CreatedAtUtc, int LessonCount, int Used, bool Closed, int ActiveLessons = 0)
 {
     public int Remaining => LessonCount - Used;
 }
@@ -203,11 +206,13 @@ public static class FinanceRules
 
     /// <summary>
     /// D-22: only a held lesson with the student Present consumes automatically; a change of attendance takes the
-    /// consumption back. Cancelled (never held) lessons never consume.
+    /// consumption back. Cancelled (never held) lessons never consume, and a lesson the teacher took back stays waived.
     /// </summary>
-    public static ConsumptionAction Reconcile(bool held, bool present, bool hasActiveConsumption) =>
+    public static ConsumptionAction Reconcile(bool held, bool present, bool hasActiveConsumption, bool waivedByTeacher = false) =>
         (held && present, hasActiveConsumption) switch
         {
+            // The teacher took a held lesson back (reversed its entry): it does not consume again automatically.
+            (true, false) when waivedByTeacher => ConsumptionAction.None,
             (true, false) => ConsumptionAction.Consume,
             (false, true) => ConsumptionAction.Reverse,
             _ => ConsumptionAction.None,
@@ -219,14 +224,18 @@ public static class FinanceRules
     public static Guid? PickPackage(IEnumerable<PackageUsage> packages) =>
         packages.Where(p => !p.Closed && p.Remaining > 0).OrderBy(p => p.CreatedAtUtc).ThenBy(p => p.Id).Select(p => (Guid?)p.Id).FirstOrDefault();
 
-    /// <summary>A teacher's correction keeps the package's used lessons between 0 and its size.</summary>
+    /// <summary>
+    /// A teacher's correction keeps the package's used lessons within its size and never below its held lessons that
+    /// were not taken back: such a lesson is given back by reversing its own entry, so an attendance change can always
+    /// take it back later without leaving the package below zero.
+    /// </summary>
     public static void EnsureLessonAdjustment(PackageUsage package, int quantity)
     {
         ArgumentNullException.ThrowIfNull(package);
-        if (package.Used + quantity < 0 || package.Used + quantity > package.LessonCount)
+        if (package.Used + quantity < package.ActiveLessons || package.Used + quantity > package.LessonCount)
         {
             throw new BusinessRuleException(
-                $"The package has {package.LessonCount} lessons and {package.Used} are used; this correction would leave {package.Used + quantity}.",
+                $"The package has {package.LessonCount} lessons, {package.Used} used ({package.ActiveLessons} held); this correction would leave {package.Used + quantity}.",
                 ErrorCodes.PackageLessonsOutOfRange);
         }
     }
