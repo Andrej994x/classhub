@@ -383,6 +383,22 @@ public sealed class NotificationTests(ClassHubApiFixture fixture)
     }
 
     [Fact]
+    public async Task First_preference_saves_at_the_same_moment_all_apply()
+    {
+        using var learner = await fixture.CreateTeacherAsync(); // any account, without saved choices yet
+        var saves = await Task.WhenAll(Enumerable.Range(0, 6).Select(i => learner.Client.PutAsync("/api/me/notification-preferences",
+            i % 2 == 0 ? new { lessonReminders = (bool?)false, homeworkEmails = (bool?)null } : new { lessonReminders = (bool?)null, homeworkEmails = (bool?)false })));
+
+        saves.ShouldAllBe(r => r.StatusCode == HttpStatusCode.OK);
+        foreach (var response in saves)
+        {
+            response.Dispose();
+        }
+
+        (await learner.Client.GetJsonAsync<NotificationPreferencesResponse>("/api/me/notification-preferences")).ShouldBe(new NotificationPreferencesResponse(false, false));
+    }
+
+    [Fact]
     public async Task Recipients_are_resolved_when_sending()
     {
         using var teacher = await fixture.CreateTeacherAsync();
