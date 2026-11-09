@@ -13914,7 +13914,8 @@
           "url",
           "builtInKey",
           "subjectIds",
-          "licenseNote",
+          "licenseNoteMk",
+          "licenseNoteEn",
           "isActive",
           "isFeatured",
           "sortOrder",
@@ -13986,7 +13987,13 @@
               "format": "uuid"
             }
           },
-          "licenseNote": {
+          "licenseNoteMk": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "licenseNoteEn": {
             "type": [
               "null",
               "string"
@@ -15885,7 +15892,8 @@
           "builtInKey",
           "subjectIds",
           "isFeatured",
-          "licenseNote"
+          "licenseNoteMk",
+          "licenseNoteEn"
         ],
         "type": "object",
         "properties": {
@@ -15936,7 +15944,13 @@
           "isFeatured": {
             "type": "boolean"
           },
-          "licenseNote": {
+          "licenseNoteMk": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "licenseNoteEn": {
             "type": [
               "null",
               "string"

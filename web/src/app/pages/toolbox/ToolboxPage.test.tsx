@@ -20,7 +20,8 @@ const tool = (code: string, overrides: Record<string, unknown> = {}) => ({
   builtInKey: null,
   subjectIds: [],
   isFeatured: false,
-  licenseNote: null,
+  licenseNoteMk: null,
+  licenseNoteEn: null,
   ...overrides,
 });
 
@@ -35,7 +36,7 @@ describe('teacher toolbox', () => {
           if (call.path !== `/api/w/${WORKSPACE_ID}/toolbox`) return undefined;
           searches.push(call.search);
           const query = new URLSearchParams(call.search);
-          const all = [tool('geogebra', { isFeatured: true, nameMk: 'GeoGebra', licenseNote: 'Бесплатно' }), tool('desmos', { category: 'Graphing', nameMk: 'Desmos' })];
+          const all = [tool('geogebra', { isFeatured: true, nameMk: 'GeoGebra', licenseNoteMk: 'Бесплатно', licenseNoteEn: 'Free' }), tool('desmos', { category: 'Graphing', nameMk: 'Desmos' })];
           const q = query.get('q')?.toLowerCase();
           const category = query.get('category');
           return json(200, { tools: all.filter((t) => (!q || t.nameMk.toLowerCase().includes(q)) && (!category || t.category === category)), categories: CATEGORIES });
@@ -49,6 +50,7 @@ describe('teacher toolbox', () => {
     expect(geogebra).toHaveTextContent('Издвоено');
     expect(geogebra).toHaveTextContent('Геометрија · Надворешна страница');
     expect(geogebra).toHaveTextContent('Бесплатно');
+    expect(geogebra).not.toHaveTextContent('Free'); // the license note in the UI language
     const open = within(geogebra).getByRole('link', { name: /Отвори GeoGebra/ });
     expect(open).toHaveAttribute('href', 'https://www.geogebra.org/');
     expect(open).toHaveAttribute('target', '_blank');

@@ -81,7 +81,8 @@ function ToolForm({ entry, onDone }: { entry?: AdminTool; onDone?: () => void })
   const [url, setUrl] = useState(tool?.url ?? 'https://');
   const [builtInKey, setBuiltInKey] = useState(tool?.builtInKey ?? BOARDS[0]);
   const [subjectIds, setSubjectIds] = useState<string[]>(tool?.subjectIds ?? []);
-  const [licenseNote, setLicenseNote] = useState(tool?.licenseNote ?? '');
+  const [licenseNoteMk, setLicenseNoteMk] = useState(tool?.licenseNoteMk ?? '');
+  const [licenseNoteEn, setLicenseNoteEn] = useState(tool?.licenseNoteEn ?? '');
   const [sortOrder, setSortOrder] = useState(String(num(entry?.sortOrder) ?? 100));
   const [isFeatured, setFeatured] = useState(tool?.isFeatured ?? false);
   const [isActive, setActive] = useState(entry?.isActive ?? true);
@@ -105,7 +106,8 @@ function ToolForm({ entry, onDone }: { entry?: AdminTool; onDone?: () => void })
           url: kind === 'External' ? url : null,
           builtInKey: kind === 'BuiltIn' ? builtInKey : null,
           subjectIds,
-          licenseNote: licenseNote || null,
+          licenseNoteMk: licenseNoteMk || null,
+          licenseNoteEn: licenseNoteEn || null,
           isActive,
           isFeatured,
           sortOrder: Number(sortOrder),
@@ -169,7 +171,8 @@ function ToolForm({ entry, onDone }: { entry?: AdminTool; onDone?: () => void })
             </select>
           </label>
         )}
-        {input(t('admin.toolbox.license'), licenseNote, setLicenseNote, { maxLength: 300 })}
+        {input(t('admin.toolbox.licenseMk'), licenseNoteMk, setLicenseNoteMk, { maxLength: 300 })}
+        {input(t('admin.toolbox.licenseEn'), licenseNoteEn, setLicenseNoteEn, { maxLength: 300 })}
         {input(t('admin.toolbox.sortOrder'), sortOrder, setSortOrder, { type: 'number', min: 0, max: 10000 })}
       </div>
       <fieldset className="flex flex-col gap-1">

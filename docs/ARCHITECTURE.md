@@ -92,7 +92,7 @@ Details and tests: [SECURITY.md](SECURITY.md#tenant-isolation-r0-p5).
 ## Teaching Toolbox catalog (R3-P1)
 
 - **Module:** `Modules/Toolbox`. The tools are global reference data (like the catalog), not tenant-owned.
-  - A tool has a permanent code, mk/en names and descriptions, a kind (`External` with an official link, or `BuiltIn` with a board key: `drawing-board`, `geometry-board`), a category (Geometry, Graphing, Simulations, Chemistry, Drawing, Other), subjects (none means any), a license note, and active, featured and order flags.
+  - A tool has a permanent code, mk/en names and descriptions, a kind (`External` with an official link, or `BuiltIn` with a board key: `drawing-board`, `geometry-board`), a category (Geometry, Graphing, Simulations, Chemistry, Drawing, Other), subjects (none means any, so a subject filter also shows them), a license note in mk and en, and active, featured and order flags. Kinds and categories are accepted by name only. A built-in board can be active only once it has shipped (`ToolRules.AvailableBuiltInKeys`; teachers never see an unshipped board).
   - Tools are deactivated, never deleted.
 - **Teachers:** `GET /api/w/{id}/toolbox?q=&subjectId=&category=` (`ws:workspace.read`).
   - Returns active tools only, featured first.

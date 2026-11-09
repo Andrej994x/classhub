@@ -50,8 +50,9 @@ On a machine with little free memory, many local workers can exhaust Chromium's 
   - Refused: other schemes, ports, credentials, look-alike and parent domains, IP hosts, overlong links.
 - **Integration:** `ToolboxTests`. The catalog is shared by all tests, so each test uses its own codes and words.
   - Teachers find the seeded tools by search (also the Macedonian description), subject and category. Inactive built-in boards are hidden; featured tools come first. An invalid category or an overlong search is a 400.
+  - **A tool for any subject is found under a subject filter** (fails with the old filter). License notes come in both languages.
   - **Staff add, feature and deactivate a tool:** teachers then no longer see it. A stale version is a 409; the code is permanent and unique. All changes are audited.
-  - **Only official HTTPS links on approved sites** and known boards are accepted; each board has one entry.
+  - **Only official HTTPS links on approved sites** and known boards are accepted; each board has one entry. Kinds and categories are names, never numbers. **A board that has not shipped cannot be activated.**
   - **Only platform staff manage tools:** a teacher gets 403, an anonymous caller 401.
 - **Vitest:** `ToolboxPage.test.tsx`.
   - Cards, search and category filters, and the external link with `target` and `rel`.

@@ -70,7 +70,9 @@ internal sealed class ToolboxService(ClassHubDbContext db, ICatalogLookup catalo
 
     public async Task<ToolboxResponse> SearchAsync(string? q, Guid? subjectId, string? category, CancellationToken cancellationToken)
     {
-        var tools = db.Set<Tool>().AsNoTracking().Where(t => t.IsActive);
+        // Active tools only; a board that has not shipped stays hidden even if a row says otherwise.
+        var available = ToolRules.AvailableBuiltInKeys.ToList();
+        var tools = db.Set<Tool>().AsNoTracking().Where(t => t.IsActive && (t.Kind == ToolKind.External || available.Contains(t.BuiltInKey!)));
         if (!string.IsNullOrWhiteSpace(q))
         {
             var text = q.Trim();
@@ -84,16 +86,18 @@ internal sealed class ToolboxService(ClassHubDbContext db, ICatalogLookup catalo
 
         if (subjectId is { } subject)
         {
-            tools = tools.Where(t => db.Set<ToolSubject>().Any(s => s.ToolId == t.Id && s.SubjectId == subject));
+            // Tools for that subject, and tools for any subject (none listed).
+            tools = tools.Where(t => db.Set<ToolSubject>().Any(s => s.ToolId == t.Id && s.SubjectId == subject) || !db.Set<ToolSubject>().Any(s => s.ToolId == t.Id));
         }
 
         if (category is not null)
         {
-            if (!Enum.TryParse<ToolCategory>(category, ignoreCase: false, out var parsed) || !Enum.IsDefined(parsed))
+            if (!Names<ToolCategory>().Contains(category))
             {
                 throw Invalid("category", "Unknown category.");
             }
 
+            var parsed = Enum.Parse<ToolCategory>(category);
             tools = tools.Where(t => t.Category == parsed);
         }
 
@@ -185,8 +189,14 @@ internal sealed class ToolboxService(ClassHubDbContext db, ICatalogLookup catalo
         tool.Category = Enum.Parse<ToolCategory>(request.Category!);
         tool.Url = kind == ToolKind.External ? url : null;
         tool.BuiltInKey = kind == ToolKind.BuiltIn ? request.BuiltInKey : null;
-        tool.LicenseNote = string.IsNullOrWhiteSpace(request.LicenseNote) ? null : request.LicenseNote.Trim();
+        tool.LicenseNoteMk = string.IsNullOrWhiteSpace(request.LicenseNoteMk) ? null : request.LicenseNoteMk.Trim();
+        tool.LicenseNoteEn = string.IsNullOrWhiteSpace(request.LicenseNoteEn) ? null : request.LicenseNoteEn.Trim();
         tool.IsActive = request.IsActive ?? tool.IsActive;
+        if (tool.IsActive && !ToolRules.CanBeActive(kind, tool.BuiltInKey))
+        {
+            throw Invalid("isActive", "This board is not available yet; keep it inactive.");
+        }
+
         tool.IsFeatured = request.IsFeatured ?? tool.IsFeatured;
         tool.SortOrder = request.SortOrder ?? tool.SortOrder;
         tool.UpdatedAtUtc = now;
@@ -201,7 +211,7 @@ internal sealed class ToolboxService(ClassHubDbContext db, ICatalogLookup catalo
 
     private static ToolResponse ToResponse(Tool t, ILookup<Guid, Guid> subjects) =>
         new(t.Id, t.Code, t.NameMk, t.NameEn, t.DescriptionMk, t.DescriptionEn, t.Kind.ToString(), t.Category.ToString(), t.Url, t.BuiltInKey,
-            [.. subjects[t.Id].Order()], t.IsFeatured, t.LicenseNote);
+            [.. subjects[t.Id].Order()], t.IsFeatured, t.LicenseNoteMk, t.LicenseNoteEn);
 
     private static AdminToolResponse ToAdmin(Tool t, ILookup<Guid, Guid> subjects) => new(ToResponse(t, subjects), t.IsActive, t.SortOrder, t.UpdatedAtUtc, t.Version);
 
@@ -226,6 +236,10 @@ internal sealed class ToolboxService(ClassHubDbContext db, ICatalogLookup catalo
 
     private static RequestValidationException Invalid(string field, string message) =>
         new(new Dictionary<string, string[]>(StringComparer.Ordinal) { [field] = [message] });
+
+    /// <summary>An enum's names (never numbers: "2" is not a kind).</summary>
+    internal static string[] Names<TEnum>()
+        where TEnum : struct, Enum => Enum.GetNames<TEnum>();
 }
 
 internal sealed partial class SaveToolRequestValidator : AbstractValidator<SaveToolRequest>
@@ -238,11 +252,12 @@ internal sealed partial class SaveToolRequestValidator : AbstractValidator<SaveT
         RuleFor(x => x.NameEn).Must(n => Fits(n, Tool.NameMaxLength)).WithMessage("Enter a name (up to 100 characters).");
         RuleFor(x => x.DescriptionMk).Must(n => Fits(n, Tool.DescriptionMaxLength)).WithMessage("Enter a description (up to 600 characters).");
         RuleFor(x => x.DescriptionEn).Must(n => Fits(n, Tool.DescriptionMaxLength)).WithMessage("Enter a description (up to 600 characters).");
-        RuleFor(x => x.Kind).Must(k => k is not null && Enum.TryParse<ToolKind>(k, ignoreCase: false, out var v) && Enum.IsDefined(v)).WithMessage("Choose External or BuiltIn.");
-        RuleFor(x => x.Category).Must(c => c is not null && Enum.TryParse<ToolCategory>(c, ignoreCase: false, out var v) && Enum.IsDefined(v)).WithMessage("Choose a category.");
+        RuleFor(x => x.Kind).Must(k => k is not null && ToolboxService.Names<ToolKind>().Contains(k)).WithMessage("Choose External or BuiltIn.");
+        RuleFor(x => x.Category).Must(c => c is not null && ToolboxService.Names<ToolCategory>().Contains(c)).WithMessage("Choose a category.");
         RuleFor(x => x.BuiltInKey).Must(k => k is not null && ToolRules.BuiltInKeys.Contains(k)).When(x => x.Kind == nameof(ToolKind.BuiltIn))
             .WithMessage("Choose one of the built-in boards.");
-        RuleFor(x => x.LicenseNote).MaximumLength(Tool.LicenseNoteMaxLength);
+        RuleFor(x => x.LicenseNoteMk).MaximumLength(Tool.LicenseNoteMaxLength);
+        RuleFor(x => x.LicenseNoteEn).MaximumLength(Tool.LicenseNoteMaxLength);
         RuleFor(x => x.SubjectIds).Must(s => s is null || s.Count <= 20).WithMessage("Choose at most 20 subjects.");
         RuleFor(x => x.SortOrder).InclusiveBetween(0, 10_000);
     }

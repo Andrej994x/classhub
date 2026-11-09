@@ -52,8 +52,10 @@ public sealed class Tool
     /// <summary>Built-in tools: which board (<see cref="ToolRules.BuiltInKeys"/>).</summary>
     public string? BuiltInKey { get; set; }
 
-    /// <summary>Why the tool may be offered (its license or terms of use).</summary>
-    public string? LicenseNote { get; set; }
+    /// <summary>Why the tool may be offered (its license or terms of use), in both UI languages.</summary>
+    public string? LicenseNoteMk { get; set; }
+
+    public string? LicenseNoteEn { get; set; }
 
     public bool IsActive { get; set; } = true;
 
@@ -80,6 +82,16 @@ public static class ToolRules
 {
     /// <summary>The boards built into ClassHub (R3-P3, R3-P4).</summary>
     public static readonly IReadOnlyList<string> BuiltInKeys = ["drawing-board", "geometry-board"];
+
+    /// <summary>
+    /// The boards that have shipped: only these may be active (a board's tool opens its page). Each board's phase adds
+    /// its key here.
+    /// </summary>
+    public static readonly IReadOnlyList<string> AvailableBuiltInKeys = [];
+
+    /// <summary>Whether a tool may be shown to teachers: external, or a board that has shipped.</summary>
+    public static bool CanBeActive(ToolKind kind, string? builtInKey) =>
+        kind == ToolKind.External || (builtInKey is not null && AvailableBuiltInKeys.Contains(builtInKey));
 
     /// <summary>
     /// An official link: absolute HTTPS on the default port, no credentials, and its host is an allowed domain or a

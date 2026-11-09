@@ -382,7 +382,8 @@
       "kind": "Kind",
       "url": "Official link (HTTPS)",
       "board": "Built-in board",
-      "license": "License or terms",
+      "licenseMk": "License or terms (Macedonian)",
+      "licenseEn": "License or terms (English)",
       "sortOrder": "Order",
       "active": "Active",
       "inactive": "Inactive"

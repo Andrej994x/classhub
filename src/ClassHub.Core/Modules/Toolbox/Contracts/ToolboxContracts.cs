@@ -17,7 +17,8 @@ public sealed record ToolResponse(
     string? BuiltInKey,
     IReadOnlyList<Guid> SubjectIds,
     bool IsFeatured,
-    string? LicenseNote);
+    string? LicenseNoteMk,
+    string? LicenseNoteEn);
 
 /// <summary>The teacher catalog: the active tools that match, featured first; and every category for the filter.</summary>
 public sealed record ToolboxResponse(IReadOnlyList<ToolResponse> Tools, IReadOnlyList<string> Categories);
@@ -40,7 +41,8 @@ public sealed record SaveToolRequest(
     string? Url,
     string? BuiltInKey,
     IReadOnlyList<Guid>? SubjectIds,
-    string? LicenseNote,
+    string? LicenseNoteMk,
+    string? LicenseNoteEn,
     bool? IsActive,
     bool? IsFeatured,
     int? SortOrder,

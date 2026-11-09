@@ -27,7 +27,8 @@ internal sealed class ToolConfiguration : IEntityTypeConfiguration<Tool>
         builder.Property(x => x.Url).HasMaxLength(Tool.UrlMaxLength).IsUnicode(false);
         builder.Property(x => x.BuiltInKey).HasMaxLength(Tool.CodeMaxLength).IsUnicode(false);
         builder.HasIndex(x => x.BuiltInKey).IsUnique().HasFilter("[BuiltInKey] IS NOT NULL");
-        builder.Property(x => x.LicenseNote).HasMaxLength(Tool.LicenseNoteMaxLength);
+        builder.Property(x => x.LicenseNoteMk).HasMaxLength(Tool.LicenseNoteMaxLength);
+        builder.Property(x => x.LicenseNoteEn).HasMaxLength(Tool.LicenseNoteMaxLength);
         builder.Property(x => x.Version).IsConcurrencyToken();
         builder.HasData(ToolboxSeed.Tools());
     }
@@ -55,38 +56,38 @@ internal static class ToolboxSeed
     private static readonly DateTime Seeded = new(2026, 11, 10, 0, 0, 0, DateTimeKind.Utc);
 
     private static readonly (string Code, ToolKind Kind, ToolCategory Category, string? Url, string? Key, bool Active, bool Featured,
-        string NameMk, string NameEn, string DescriptionMk, string DescriptionEn, string License, string[] Subjects)[] Rows =
+        string NameMk, string NameEn, string DescriptionMk, string DescriptionEn, string LicenseMk, string LicenseEn, string[] Subjects)[] Rows =
     [
         ("geogebra", ToolKind.External, ToolCategory.Geometry, "https://www.geogebra.org/classic", null, true, true,
             "GeoGebra", "GeoGebra",
             "Геометрија, алгебра, графици и табели во едно; конструкции со точки, прави, кругови и функции.",
             "Geometry, algebra, graphs and spreadsheets in one; constructions with points, lines, circles and functions.",
-            "Free for non-commercial use under the GeoGebra license; opened on geogebra.org.", ["math", "physics"]),
+            "Бесплатно за некомерцијална употреба според лиценцата на GeoGebra; се отвора на geogebra.org.", "Free for non-commercial use under the GeoGebra license; opened on geogebra.org.", ["math", "physics"]),
         ("desmos", ToolKind.External, ToolCategory.Graphing, "https://www.desmos.com/calculator", null, true, true,
             "Desmos калкулатор за графици", "Desmos graphing calculator",
             "Цртање графици на функции, неравенки и табели, со лизгачи за параметри.",
             "Plot functions, inequalities and tables, with sliders for parameters.",
-            "Free to use on desmos.com under the Desmos terms of service.", ["math"]),
+            "Бесплатно на desmos.com според условите за користење на Desmos.", "Free to use on desmos.com under the Desmos terms of service.", ["math"]),
         ("phet", ToolKind.External, ToolCategory.Simulations, "https://phet.colorado.edu/", null, true, true,
             "PhET интерактивни симулации", "PhET interactive simulations",
             "Интерактивни симулации по физика, хемија, математика и биологија.",
             "Interactive simulations for physics, chemistry, mathematics and biology.",
-            "Free simulations (CC BY 4.0) by the University of Colorado Boulder; opened on phet.colorado.edu.", ["physics", "chemistry", "math", "biology"]),
+            "Бесплатни симулации (CC BY 4.0) од Универзитетот во Колорадо Болдер; се отвораат на phet.colorado.edu.", "Free simulations (CC BY 4.0) by the University of Colorado Boulder; opened on phet.colorado.edu.", ["physics", "chemistry", "math", "biology"]),
         ("molview", ToolKind.External, ToolCategory.Chemistry, "https://molview.org/", null, true, false,
             "MolView", "MolView",
             "Цртање и 3D приказ на молекули.",
             "Draw molecules and view them in 3D.",
-            "Free web application; opened on molview.org.", ["chemistry", "biology"]),
+            "Бесплатна веб-апликација; се отвора на molview.org.", "Free web application; opened on molview.org.", ["chemistry", "biology"]),
         ("drawing-board", ToolKind.BuiltIn, ToolCategory.Drawing, null, "drawing-board", false, false,
             "Табла за цртање", "Drawing board",
             "Слободно цртање, текст, форми, стрелки и дијаграми; зачувување и повторно отворање.",
             "Free drawing, text, shapes, arrows and diagrams; save and reopen.",
-            "Built into ClassHub.", []),
+            "Вградена во ClassHub.", "Built into ClassHub.", []),
         ("geometry-board", ToolKind.BuiltIn, ToolCategory.Geometry, null, "geometry-board", false, false,
             "Геометриска табла", "Geometry board",
             "Точки, прави, агли, триаголници, кругови, координатен систем и графици; зачувување и повторно отворање.",
             "Points, lines, angles, triangles, circles, a coordinate system and graphs; save and reopen.",
-            "Built into ClassHub.", ["math"]),
+            "Вградена во ClassHub.", "Built into ClassHub.", ["math"]),
     ];
 
     public static Guid IdFor(string code)
@@ -113,7 +114,8 @@ internal static class ToolboxSeed
             NameEn = r.NameEn,
             DescriptionMk = r.DescriptionMk,
             DescriptionEn = r.DescriptionEn,
-            LicenseNote = r.License,
+            LicenseNoteMk = r.LicenseMk,
+            LicenseNoteEn = r.LicenseEn,
             SortOrder = (i + 1) * 10,
             CreatedAtUtc = Seeded,
             UpdatedAtUtc = Seeded,

@@ -97,7 +97,7 @@ function ToolCard({ workspaceId, tool, en }: { workspaceId: string; tool: Tool; 
         {t(`toolbox.categories.${tool.category}`)} · {t(`toolbox.kinds.${tool.kind}`)}
       </p>
       <p className="flex-1 text-sm">{en ? tool.descriptionEn : tool.descriptionMk}</p>
-      {tool.licenseNote && <p className="text-xs text-muted-foreground">{tool.licenseNote}</p>}
+      {(en ? tool.licenseNoteEn : tool.licenseNoteMk) && <p className="text-xs text-muted-foreground">{en ? tool.licenseNoteEn : tool.licenseNoteMk}</p>}
       {tool.kind === 'External' && tool.url ? (
         <a href={tool.url} target="_blank" rel="noopener noreferrer" className={open}>
           {t('toolbox.open', { name })}

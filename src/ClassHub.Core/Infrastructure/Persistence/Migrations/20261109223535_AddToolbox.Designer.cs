@@ -12,7 +12,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace ClassHub.Core.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(ClassHubDbContext))]
-    [Migration("20261109212208_AddToolbox")]
+    [Migration("20261109223535_AddToolbox")]
     partial class AddToolbox
     {
         /// <inheritdoc />
@@ -3480,7 +3480,11 @@ namespace ClassHub.Core.Infrastructure.Persistence.Migrations
                     b.Property<int>("Kind")
                         .HasColumnType("int");
 
-                    b.Property<string>("LicenseNote")
+                    b.Property<string>("LicenseNoteEn")
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)");
+
+                    b.Property<string>("LicenseNoteMk")
                         .HasMaxLength(300)
                         .HasColumnType("nvarchar(300)");
 
@@ -3540,7 +3544,8 @@ namespace ClassHub.Core.Infrastructure.Persistence.Migrations
                             IsActive = true,
                             IsFeatured = true,
                             Kind = 1,
-                            LicenseNote = "Free for non-commercial use under the GeoGebra license; opened on geogebra.org.",
+                            LicenseNoteEn = "Free for non-commercial use under the GeoGebra license; opened on geogebra.org.",
+                            LicenseNoteMk = "Бесплатно за некомерцијална употреба според лиценцата на GeoGebra; се отвора на geogebra.org.",
                             NameEn = "GeoGebra",
                             NameMk = "GeoGebra",
                             SortOrder = 10,
@@ -3559,7 +3564,8 @@ namespace ClassHub.Core.Infrastructure.Persistence.Migrations
                             IsActive = true,
                             IsFeatured = true,
                             Kind = 1,
-                            LicenseNote = "Free to use on desmos.com under the Desmos terms of service.",
+                            LicenseNoteEn = "Free to use on desmos.com under the Desmos terms of service.",
+                            LicenseNoteMk = "Бесплатно на desmos.com според условите за користење на Desmos.",
                             NameEn = "Desmos graphing calculator",
                             NameMk = "Desmos калкулатор за графици",
                             SortOrder = 20,
@@ -3578,7 +3584,8 @@ namespace ClassHub.Core.Infrastructure.Persistence.Migrations
                             IsActive = true,
                             IsFeatured = true,
                             Kind = 1,
-                            LicenseNote = "Free simulations (CC BY 4.0) by the University of Colorado Boulder; opened on phet.colorado.edu.",
+                            LicenseNoteEn = "Free simulations (CC BY 4.0) by the University of Colorado Boulder; opened on phet.colorado.edu.",
+                            LicenseNoteMk = "Бесплатни симулации (CC BY 4.0) од Универзитетот во Колорадо Болдер; се отвораат на phet.colorado.edu.",
                             NameEn = "PhET interactive simulations",
                             NameMk = "PhET интерактивни симулации",
                             SortOrder = 30,
@@ -3597,7 +3604,8 @@ namespace ClassHub.Core.Infrastructure.Persistence.Migrations
                             IsActive = true,
                             IsFeatured = false,
                             Kind = 1,
-                            LicenseNote = "Free web application; opened on molview.org.",
+                            LicenseNoteEn = "Free web application; opened on molview.org.",
+                            LicenseNoteMk = "Бесплатна веб-апликација; се отвора на molview.org.",
                             NameEn = "MolView",
                             NameMk = "MolView",
                             SortOrder = 40,
@@ -3617,7 +3625,8 @@ namespace ClassHub.Core.Infrastructure.Persistence.Migrations
                             IsActive = false,
                             IsFeatured = false,
                             Kind = 2,
-                            LicenseNote = "Built into ClassHub.",
+                            LicenseNoteEn = "Built into ClassHub.",
+                            LicenseNoteMk = "Вградена во ClassHub.",
                             NameEn = "Drawing board",
                             NameMk = "Табла за цртање",
                             SortOrder = 50,
@@ -3636,7 +3645,8 @@ namespace ClassHub.Core.Infrastructure.Persistence.Migrations
                             IsActive = false,
                             IsFeatured = false,
                             Kind = 2,
-                            LicenseNote = "Built into ClassHub.",
+                            LicenseNoteEn = "Built into ClassHub.",
+                            LicenseNoteMk = "Вградена во ClassHub.",
                             NameEn = "Geometry board",
                             NameMk = "Геометриска табла",
                             SortOrder = 60,

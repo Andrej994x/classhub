@@ -3818,7 +3818,8 @@ export interface components {
             url: null | string;
             builtInKey: null | string;
             subjectIds: null | string[];
-            licenseNote: null | string;
+            licenseNoteMk: null | string;
+            licenseNoteEn: null | string;
             isActive: null | boolean;
             isFeatured: null | boolean;
             /** Format: int32 */
@@ -4262,7 +4263,8 @@ export interface components {
             builtInKey: null | string;
             subjectIds: string[];
             isFeatured: boolean;
-            licenseNote: null | string;
+            licenseNoteMk: null | string;
+            licenseNoteEn: null | string;
         };
         TwoFactorLoginRequest: {
             code: null | string;

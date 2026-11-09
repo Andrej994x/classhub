@@ -36,6 +36,8 @@ public sealed class ToolboxTests(ClassHubApiFixture fixture)
         var geogebra = (await SearchAsync(teacher, "?q=geogebra")).Tools.ShouldHaveSingleItem();
         (geogebra.Kind, geogebra.Category, geogebra.Url).ShouldBe(("External", "Geometry", "https://www.geogebra.org/classic"));
         geogebra.SubjectIds.ShouldContain(Subject("math"));
+        geogebra.LicenseNoteMk!.ShouldStartWith("Бесплатно"); // license notes in both UI languages
+        geogebra.LicenseNoteEn!.ShouldStartWith("Free");
         (await SearchAsync(teacher, "?q=молекули")).Tools.Select(t => t.Code).ShouldContain("molview"); // the Macedonian description
 
         var chemistry = (await SearchAsync(teacher, $"?subjectId={Subject("chemistry")}")).Tools.Select(t => t.Code).ToList();
@@ -61,6 +63,12 @@ public sealed class ToolboxTests(ClassHubApiFixture fixture)
         (created.IsActive, created.Version, created.Tool.SubjectIds.Single()).ShouldBe((true, 1, physics));
         var found = (await SearchAsync(teacher, $"?q={word}")).Tools.ShouldHaveSingleItem();
         (found.Code, found.Url, found.IsFeatured).ShouldBe((code, "https://phet.colorado.edu/en/simulations/forces", false));
+
+        // A tool for any subject (none listed) is found under every subject filter, next to the subject's own tools.
+        var general = await ReadAsync<AdminToolResponse>(await admin.Client.PostAsync("/api/admin/toolbox", Body(NewCode(), word + "Општо", "https://www.geogebra.org/", [])));
+        var underPhysics = (await SearchAsync(teacher, $"?q={word}&subjectId={physics}")).Tools.Select(t => t.Id).ToList();
+        underPhysics.ShouldBe([created.Tool.Id, general.Tool.Id], ignoreOrder: true);
+        await ReadAsync<AdminToolResponse>(await admin.Client.PutAsync($"/api/admin/toolbox/{general.Tool.Id}", Body(null, word + "Општо", "https://www.geogebra.org/", [], version: 1, active: false)));
 
         // Featured, then deactivated: teachers no longer see it; staff still do.
         var featured = await ReadAsync<AdminToolResponse>(await admin.Client.PutAsync($"/api/admin/toolbox/{created.Tool.Id}", Body(null, word, "https://phet.colorado.edu/", [physics], version: 1, featured: true)));
@@ -101,9 +109,24 @@ public sealed class ToolboxTests(ClassHubApiFixture fixture)
         await ExpectInvalidAsync(Body(NewCode(), word, "javascript:alert(1)", []), "url");
         await ExpectInvalidAsync(new { code = NewCode(), nameMk = word, nameEn = word, descriptionMk = "о", descriptionEn = "d", kind = "BuiltIn", category = "Drawing", builtInKey = "chess-board" }, "builtInKey");
         await ExpectInvalidAsync(Body(NewCode(), word, "https://www.geogebra.org/", [Guid.NewGuid()]), "subjectIds");
+        // Kinds and categories by name only: "2" is not a kind (it would skip the board checks).
+        await ExpectInvalidAsync(new { code = NewCode(), nameMk = word, nameEn = word, descriptionMk = "о", descriptionEn = "d", kind = "2", category = "Drawing" }, "kind");
+        await ExpectInvalidAsync(new { code = NewCode(), nameMk = word, nameEn = word, descriptionMk = "о", descriptionEn = "d", kind = "External", category = "5", url = "https://www.geogebra.org/" }, "category");
+
+        // A board that has not shipped cannot be activated (its page does not exist yet).
+        var board = (await admin.Client.GetJsonAsync<List<AdminToolResponse>>("/api/admin/toolbox")).Single(t => t.Tool.Code == "geometry-board");
+        using (var activate = await admin.Client.PutAsync($"/api/admin/toolbox/{board.Tool.Id}", new
+        {
+            nameMk = board.Tool.NameMk, nameEn = board.Tool.NameEn, descriptionMk = board.Tool.DescriptionMk, descriptionEn = board.Tool.DescriptionEn,
+            kind = "BuiltIn", category = board.Tool.Category, builtInKey = "geometry-board", subjectIds = board.Tool.SubjectIds, isActive = true, version = board.Version,
+        }))
+        {
+            activate.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
+            (await activate.ReadJsonAsync()).GetProperty("errors").TryGetProperty("isActive", out _).ShouldBeTrue();
+        }
 
         // Each board has one catalog entry (the seeded one).
-        (await admin.Client.PostAsync("/api/admin/toolbox", new { code = NewCode(), nameMk = word, nameEn = word, descriptionMk = "о", descriptionEn = "d", kind = "BuiltIn", category = "Drawing", builtInKey = "drawing-board" }))
+        (await admin.Client.PostAsync("/api/admin/toolbox", new { code = NewCode(), nameMk = word, nameEn = word, descriptionMk = "о", descriptionEn = "d", kind = "BuiltIn", category = "Drawing", builtInKey = "drawing-board", isActive = false }))
             .StatusCode.ShouldBe(HttpStatusCode.Conflict);
     }
 
@@ -133,7 +156,8 @@ public sealed class ToolboxTests(ClassHubApiFixture fixture)
         category = "Simulations",
         url,
         subjectIds = subjects,
-        licenseNote = "CC BY 4.0",
+        licenseNoteMk = "CC BY 4.0 (бесплатно)",
+        licenseNoteEn = "CC BY 4.0 (free)",
         isActive = active,
         isFeatured = featured,
         sortOrder = 900,
