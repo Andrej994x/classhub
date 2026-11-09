@@ -139,7 +139,10 @@ internal sealed class LessonSeriesService(
             return 0;
         }
 
-        var (created, _) = await MaterializeAsync(series, nowUtc, cancellationToken);
+        // A series that had no lesson yet (it started beyond the horizon, or its first dates were all taken) is announced
+        // with its first lesson (once per series and student, like at creation).
+        var firstLessons = !await db.Set<Lesson>().AnyAsync(l => l.SeriesId == series.Id, cancellationToken);
+        var (created, _) = await MaterializeAsync(series, nowUtc, cancellationToken, announce: firstLessons);
         await transaction.CommitAsync(cancellationToken);
         return created;
     }
@@ -147,7 +150,8 @@ internal sealed class LessonSeriesService(
     /// <summary>Creates (or skips) every occurrence from <c>NextIndex</c> whose date is within the horizon.</summary>
     /// <summary>
     /// Creates the series' lessons up to the horizon. <paramref name="announce"/>: a new or replaced series is announced to
-    /// its students once (each lesson then gets its reminder); extending to the horizon announces nothing.
+    /// its students once (each lesson then gets its reminder) when its first lesson is created; extending a series that
+    /// already has lessons announces nothing.
     /// </summary>
     private async Task<(int Created, IReadOnlyList<SeriesSkipResponse> Conflicts)> MaterializeAsync(LessonSeries series, DateTime nowUtc, CancellationToken cancellationToken, bool announce = false)
     {

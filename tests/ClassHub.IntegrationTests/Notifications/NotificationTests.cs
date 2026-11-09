@@ -4,6 +4,7 @@ using System.Net.Http.Json;
 using ClassHub.Core.Modules.Groups.Contracts;
 using ClassHub.Core.Modules.Homework.Contracts;
 using ClassHub.Core.Modules.Lessons.Contracts;
+using ClassHub.Core.Modules.Lessons.Jobs;
 using ClassHub.Core.Modules.Notifications.Contracts;
 using ClassHub.Core.Modules.Notifications.Domain;
 using ClassHub.Core.Modules.Notifications.Jobs;
@@ -210,6 +211,33 @@ public sealed class NotificationTests(ClassHubApiFixture fixture)
         (await EmailsAsync(ana.Email!, "notify.series-ended", since)).ShouldBe(1);
         (await EmailsAsync(ana.Email!, "notify.series-scheduled", since)).ShouldBe(1);
         (await EmailsAsync(ana.Email!, "notify.lesson-reminder", since)).ShouldBe(1);
+    }
+
+    [Fact]
+    public async Task A_series_starting_beyond_the_horizon_is_announced_with_its_first_lesson()
+    {
+        using var teacher = await fixture.CreateTeacherAsync();
+        var ana = await StudentAsync(teacher, "Ана", ApiTestExtensions.UniqueEmail("ana"));
+        var since = DateTime.UtcNow.AddSeconds(-1);
+        var start = DateOnly.FromDateTime(TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, Skopje)).AddDays(14 * 7); // 14 weeks ahead
+        using var created = await teacher.Client.PostAsync($"/api/w/{teacher.WorkspaceId}/lesson-series", new
+        {
+            kind = "Individual", studentId = ana.Id, title = "Шпански", startDate = start, startTime = "17:00:00", durationMinutes = 60, intervalWeeks = 1, count = 3, mode = "Online",
+        });
+        created.StatusCode.ShouldBe(HttpStatusCode.Created);
+        (await created.Content.ReadFromJsonAsync<SeriesResultResponse>(Ct))!.Created.ShouldBe(0); // nothing within 12 weeks yet
+        await RunAsync(DateTime.UtcNow);
+
+        // Weeks later the horizon reaches it: its first lessons are created and the series is announced (once).
+        var horizon = fixture.Factory.Services.GetRequiredService<LessonSeriesHorizonJob>();
+        await horizon.RunAtAsync(DateTime.UtcNow.AddDays(21), Ct);
+        await horizon.RunAtAsync(DateTime.UtcNow.AddDays(28), Ct);
+        await RunAsync(DateTime.UtcNow);
+
+        var announcement = await fixture.WaitForEmailAsync(ana.Email!, "notify.series-scheduled", since);
+        announcement.Subject.ShouldContain("Шпански");
+        await Task.Delay(500, Ct); // the outbox delivers anything left
+        (await EmailsAsync(ana.Email!, "notify.series-scheduled", since)).ShouldBe(1);
     }
 
     [Fact]
