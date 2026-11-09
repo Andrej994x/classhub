@@ -294,6 +294,12 @@ internal sealed class HomeworkService(
             await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
             var assignment = await db.Set<HomeworkAssignment>().SingleOrDefaultAsync(a => a.Id == assignmentId && a.StudentId == studentId, cancellationToken)
                 ?? throw new NotFoundException();
+            // Archived meanwhile (e.g. during the upload): no more answers. Held until the commit, so archiving waits.
+            if (!await queries.LockActiveAsync(assignment.HomeworkId, workspaceId, cancellationToken))
+            {
+                throw new NotFoundException();
+            }
+
             if (assignment.Version != row.Assignment.Version)
             {
                 throw Conflict();

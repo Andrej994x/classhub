@@ -13,4 +13,14 @@ internal sealed class HomeworkQueries(ClassHubDbContext db)
         var homework = db.Set<HomeworkTask>().IgnoreQueryFilters([TenancyFilters.Archived]);
         return tracking ? homework : homework.AsNoTracking();
     }
+
+    /// <summary>
+    /// Inside the caller's transaction: whether the homework is still active, holding an update lock on its row until
+    /// the commit. Archiving (an update of that row) therefore waits for an answer being saved, or wins and the answer
+    /// is refused; a locking read sees the latest committed row (not the snapshot).
+    /// </summary>
+    public async Task<bool> LockActiveAsync(Guid homeworkId, Guid workspaceId, CancellationToken cancellationToken) =>
+        await db.Database.SqlQuery<int>(
+                $"SELECT COUNT(*) AS [Value] FROM [Homework] WITH (UPDLOCK, HOLDLOCK) WHERE [Id] = {homeworkId} AND [WorkspaceId] = {workspaceId} AND [ArchivedAtUtc] IS NULL")
+            .SingleAsync(cancellationToken) > 0;
 }

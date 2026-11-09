@@ -9,7 +9,10 @@ using ClassHub.Core.Modules.Lessons.Contracts;
 using ClassHub.Core.Modules.Students.Contracts;
 using ClassHub.Core.SharedKernel.Errors;
 using ClassHub.IntegrationTests.Infrastructure;
+using Microsoft.AspNetCore.TestHost;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace ClassHub.IntegrationTests.Homework;
 
@@ -192,6 +195,37 @@ public sealed class HomeworkTests(ClassHubApiFixture fixture)
         (await StoredFilesAsync(teacher.WorkspaceId)).ShouldBe(1); // only the filler
         Directory.EnumerateFiles(HomeworkRoot(teacher.WorkspaceId)).ShouldBeEmpty();
         (await learner.Client.GetJsonAsync<StudentHomeworkResponse>(Portal(teacher.WorkspaceId, $"/{assignment.Id}"))).AnswerText.ShouldBe("Само текст");
+    }
+
+    [Fact]
+    public async Task Homework_archived_while_an_answer_is_uploaded_refuses_the_answer()
+    {
+        using var teacher = await fixture.CreateTeacherAsync();
+        using var learner = await fixture.CreateTeacherAsync();
+        var ana = await LinkedStudentAsync(teacher, learner, "Ана");
+        var homework = await CreateAsync(teacher, new { title = "Се архивира" });
+        var assignment = (await AssignAsync(teacher, homework.Id, new { studentIds = new[] { ana } })).Assignments.Single();
+
+        // The teacher archives the homework while the student's file is being written (after the answer was checked).
+        var archiveDuringUpload = new ArchivingFileStorage(fixture, homework.Id);
+        using var factory = fixture.Factory.WithWebHostBuilder(builder => builder.ConfigureTestServices(services =>
+            services.Replace(ServiceDescriptor.Singleton<IFileStorage>(sp => archiveDuringUpload.Wrap(ActivatorUtilities.CreateInstance(sp, LocalDiskStorageType()) as IFileStorage)))));
+        using var student = await ApiClient.CreateAsync(factory);
+        using (var login = await student.PostAsync("/api/auth/login", new { email = learner.Email, password = learner.Password }))
+        {
+            login.StatusCode.ShouldBe(HttpStatusCode.OK);
+        }
+
+        using var content = Form("Одговор", ("odgovor.pdf", PdfBytes), removeFile: false);
+        using var response = await student.SendContentAsync(HttpMethod.Post, Portal(teacher.WorkspaceId, $"/{assignment.Id}/submission"), content);
+
+        archiveDuringUpload.Archived.ShouldBeTrue();
+        response.StatusCode.ShouldBe(HttpStatusCode.NotFound);
+        var saved = (await teacher.Client.GetJsonAsync<HomeworkResponse>(Path(teacher, $"/{homework.Id}"))).Assignments.Single();
+        saved.Status.ShouldBe("Assigned");
+        saved.AnswerText.ShouldBeNull();
+        (await StoredFilesAsync(teacher.WorkspaceId)).ShouldBe(0);
+        Directory.EnumerateFiles(HomeworkRoot(teacher.WorkspaceId)).ShouldBeEmpty();
     }
 
     [Fact]
@@ -378,6 +412,40 @@ public sealed class HomeworkTests(ClassHubApiFixture fixture)
         var path = System.IO.Path.Combine(fixture.Factory.FileRoot, workspaceId.ToString("N"), "homework");
         Directory.CreateDirectory(path);
         return path;
+    }
+
+    private static Type LocalDiskStorageType() =>
+        typeof(IFileStorage).Assembly.GetType("ClassHub.Core.Infrastructure.Files.LocalDiskFileStorage", throwOnError: true)!;
+
+    /// <summary>Archives the homework (as the teacher would, in its own committed transaction) when an answer file is written.</summary>
+    private sealed class ArchivingFileStorage(ClassHubApiFixture fixture, Guid homeworkId)
+    {
+        public bool Archived { get; private set; }
+
+        public IFileStorage Wrap(IFileStorage? inner) => new Storage(this, inner ?? throw new InvalidOperationException("No file storage."));
+
+        private async Task ArchiveAsync()
+        {
+            await using var db = fixture.CreateDbContext();
+            await db.Database.ExecuteSqlAsync($"UPDATE [Homework] SET [ArchivedAtUtc] = SYSUTCDATETIME(), [Version] = [Version] + 1 WHERE [Id] = {homeworkId}", Ct);
+            Archived = true;
+        }
+
+        private sealed class Storage(ArchivingFileStorage owner, IFileStorage inner) : IFileStorage
+        {
+            public async Task WriteAsync(string key, ReadOnlyMemory<byte> content, CancellationToken cancellationToken)
+            {
+                await inner.WriteAsync(key, content, cancellationToken);
+                if (key.Contains("/homework/", StringComparison.Ordinal))
+                {
+                    await owner.ArchiveAsync();
+                }
+            }
+
+            public Task<Stream?> OpenReadAsync(string key, CancellationToken cancellationToken) => inner.OpenReadAsync(key, cancellationToken);
+
+            public Task DeleteAsync(string key, CancellationToken cancellationToken) => inner.DeleteAsync(key, cancellationToken);
+        }
     }
 
     private static async Task<T> ReadAsync<T>(HttpResponseMessage response)
