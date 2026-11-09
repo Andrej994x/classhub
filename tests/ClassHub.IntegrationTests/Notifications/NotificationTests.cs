@@ -254,6 +254,36 @@ public sealed class NotificationTests(ClassHubApiFixture fixture)
     }
 
     [Fact]
+    public async Task Ending_a_series_names_the_individually_changed_lesson_that_stays()
+    {
+        using var teacher = await fixture.CreateTeacherAsync();
+        var ana = await StudentAsync(teacher, "Ана", ApiTestExtensions.UniqueEmail("ana"));
+        var since = DateTime.UtcNow.AddSeconds(-1);
+        var tomorrow = DateOnly.FromDateTime(TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, Skopje)).AddDays(1);
+        using var created = await teacher.Client.PostAsync($"/api/w/{teacher.WorkspaceId}/lesson-series", new
+        {
+            kind = "Individual", studentId = ana.Id, title = "Руски", startDate = tomorrow, startTime = "17:00:00", durationMinutes = 60, intervalWeeks = 1, count = 3, mode = "Online",
+        });
+        created.StatusCode.ShouldBe(HttpStatusCode.Created);
+        var series = (await created.Content.ReadFromJsonAsync<SeriesResultResponse>(Ct))!;
+        await RunAsync(DateTime.UtcNow);
+        await fixture.WaitForEmailAsync(ana.Email!, "notify.series-scheduled", since);
+
+        // The third lesson is moved on its own (it stays when the series ends); then the series ends from tomorrow.
+        var lessons = await teacher.Client.GetJsonAsync<List<LessonResponse>>($"/api/w/{teacher.WorkspaceId}/lessons?from={tomorrow:yyyy-MM-dd}&to={tomorrow.AddDays(20):yyyy-MM-dd}");
+        var third = lessons.OrderBy(l => l.StartUtc).Last();
+        var moved = await ReadAsync<LessonResponse>(await teacher.Client.PutAsync($"/api/w/{teacher.WorkspaceId}/lessons/{third.Id}",
+            LessonBody(ana.Id, third.StartUtc.AddHours(1), third.Version)));
+        await ReadAsync<SeriesResponse>(await teacher.Client.PostAsync($"/api/w/{teacher.WorkspaceId}/lesson-series/{series.Series.Id}/end",
+            new { fromDate = tomorrow, version = series.Series.Version }));
+        await RunAsync(DateTime.UtcNow);
+
+        var ended = await fixture.WaitForEmailAsync(ana.Email!, "notify.series-ended", since);
+        ended.TextBody.ShouldContain("посебно изменети остануваат закажани");
+        ended.TextBody.ShouldContain(NotificationRules.LocalTime(moved.StartUtc, "Europe/Skopje", "mk"));
+    }
+
+    [Fact]
     public async Task A_series_starting_beyond_the_horizon_is_announced_with_its_first_lesson()
     {
         using var teacher = await fixture.CreateTeacherAsync();

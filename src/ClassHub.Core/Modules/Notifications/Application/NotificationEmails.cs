@@ -6,7 +6,8 @@ using ClassHub.Core.Modules.Notifications.Domain;
 namespace ClassHub.Core.Modules.Notifications.Application;
 
 /// <summary>What a notification says: the teacher, the lesson or homework and its time (never anyone else's data).</summary>
-internal sealed record NotificationContent(string TeacherName, string StudentFirstName, string Title, string? When, DateOnly? DueDate, string? Link);
+/// <remarks><paramref name="Kept"/>: when a series ends, its next lesson that stays (changed on its own, so kept).</remarks>
+internal sealed record NotificationContent(string TeacherName, string StudentFirstName, string Title, string? When, DateOnly? DueDate, string? Link, string? Kept = null);
 
 /// <summary>Localized (mk/en) notification emails (R2-P11). Lesson times are local to the lesson's time zone and name it.</summary>
 internal static class NotificationEmails
@@ -37,8 +38,10 @@ internal static class NotificationEmails
                 : ($"Нови редовни часови со {content.TeacherName}: {content.Title}",
                     $"{content.TeacherName} ви закажа редовни часови: {content.Title}, почнувајќи од {content.When}. Пред секој час ќе добиете потсетник."),
             NotificationKind.SeriesEnded => en
-                ? ($"Recurring lessons cancelled: {content.Title}", $"{content.TeacherName} cancelled your recurring lessons {content.Title} from {content.When} on.")
-                : ($"Редовните часови се откажани: {content.Title}", $"{content.TeacherName} ги откажа редовните часови {content.Title} од {content.When} натаму."),
+                ? ($"Recurring lessons cancelled: {content.Title}", $"{content.TeacherName} cancelled your recurring lessons {content.Title} from {content.When} on."
+                    + (content.Kept is null ? string.Empty : $" Lessons that were changed individually stay as scheduled; the next one is {content.Kept}."))
+                : ($"Редовните часови се откажани: {content.Title}", $"{content.TeacherName} ги откажа редовните часови {content.Title} од {content.When} натаму."
+                    + (content.Kept is null ? string.Empty : $" Часовите што беа посебно изменети остануваат закажани; следниот е {content.Kept}.")),
             NotificationKind.LessonRescheduled => en
                 ? ($"Lesson moved: {content.Title}", $"{content.TeacherName} moved your lesson {content.Title} to {content.When}.")
                 : ($"Часот е преместен: {content.Title}", $"{content.TeacherName} го премести часот {content.Title} за {content.When}."),

@@ -122,9 +122,13 @@ internal sealed class NotificationSender(
         }
         else if (n.Kind == NotificationKind.SeriesEnded)
         {
-            // Named as the series' first removed lesson was (it is gone).
+            // Named as the series' first removed lesson was (it is gone). Lessons changed on their own stay: the next one of
+            // them is named, so the student does not miss it.
+            var from = n.LessonStartUtc!.Value;
+            var kept = await lessons.NextInSeriesAsync(n.SeriesId!.Value, n.StudentId, from > nowUtc ? from : nowUtc, cancellationToken);
             content = new NotificationContent(teacher, contact.FirstName, n.LessonTitle ?? string.Empty,
-                NotificationRules.LocalTime(n.LessonStartUtc!.Value, n.LessonTimeZone!, locale), null, portal);
+                NotificationRules.LocalTime(from, n.LessonTimeZone!, locale), null, portal,
+                kept is null ? null : NotificationRules.LocalTime(kept.StartUtc, kept.TimeZone, locale));
         }
         else if (n.Kind == NotificationKind.LessonCancelled)
         {
