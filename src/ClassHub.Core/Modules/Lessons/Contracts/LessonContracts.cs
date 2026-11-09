@@ -308,6 +308,16 @@ public interface ILessonLookup
     Task<LessonSummary?> NextInSeriesAsync(Guid seriesId, Guid studentId, DateTime afterUtc, CancellationToken cancellationToken);
 }
 
+/// <summary>
+/// Records of another module that point at lessons (homework linked to a lesson, finance entries): a lesson they point at
+/// is never deleted. Modules that reference lessons implement it; the Lessons module asks all of them.
+/// </summary>
+public interface ILessonReferences
+{
+    /// <summary>Which of <paramref name="lessonIds"/> (of the current workspace) this module's records point at.</summary>
+    Task<IReadOnlySet<Guid>> ReferencedAsync(IReadOnlyCollection<Guid> lessonIds, CancellationToken cancellationToken);
+}
+
 /// <summary>A lesson ahead for the teacher's dashboard (R2-P12), with its students.</summary>
 public sealed record LessonAhead(Guid Id, string Title, DateTime StartUtc, DateTime EndUtc, string TimeZone, LessonKind Kind, IReadOnlyList<Guid> StudentIds);
 
@@ -323,7 +333,8 @@ public interface ILessonOutlook
 
 /// <summary>
 /// A lesson as its student sees it in the portal (R2-P12): never the teacher's private note or the other students. The
-/// meeting link only while the lesson is ahead; attendance and the shared summary once it is held.
+/// meeting link only while the lesson is ahead; attendance and the shared summary once it is held. Mode, status and
+/// attendance by name, like <see cref="LessonResponse"/>.
 /// </summary>
 public sealed record StudentLessonResponse(
     Guid Id,
@@ -332,11 +343,11 @@ public sealed record StudentLessonResponse(
     DateTime StartUtc,
     DateTime EndUtc,
     string TimeZone,
-    LessonMode Mode,
+    string Mode,
     string? MeetingUrl,
     string? Location,
-    LessonStatus Status,
-    AttendanceStatus? Attendance,
+    string Status,
+    string? Attendance,
     string? SharedSummary);
 
 /// <summary>The student's own attendance over their held lessons.</summary>

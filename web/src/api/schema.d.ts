@@ -2578,7 +2578,6 @@ export interface components {
             version: null | number | string;
             attendance: null | components["schemas"]["AttendanceItem"][];
         };
-        AttendanceStatus: number;
         AuthenticatorSetupRequest: {
             code: null | string;
             recoveryCode: null | string;
@@ -2782,7 +2781,7 @@ export interface components {
             /** Format: date-time */
             endUtc: string;
             timeZone: string;
-            kind: components["schemas"]["LessonKind"];
+            kind: string;
             students: string[];
         };
         DashboardLessons: {
@@ -3237,8 +3236,6 @@ export interface components {
             /** Format: int32 */
             pageSize: number | string;
         };
-        LessonKind: number;
-        LessonMode: number;
         LessonNotesRequest: {
             /** Format: int32 */
             version: null | number | string;
@@ -3292,7 +3289,6 @@ export interface components {
             privateNote: null | string;
             sharedSummary: null | string;
         };
-        LessonStatus: number;
         LoginRequest: {
             email: null | string;
             password: null | string;
@@ -3942,11 +3938,11 @@ export interface components {
             /** Format: date-time */
             endUtc: string;
             timeZone: string;
-            mode: components["schemas"]["LessonMode"];
+            mode: string;
             meetingUrl: null | string;
             location: null | string;
-            status: components["schemas"]["LessonStatus"];
-            attendance: null | components["schemas"]["AttendanceStatus"];
+            status: string;
+            attendance: null | string;
             sharedSummary: null | string;
         };
         StudentLessonsResponse: {

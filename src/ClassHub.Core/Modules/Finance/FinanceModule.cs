@@ -4,6 +4,7 @@ using ClassHub.Core.Modules.Finance.Contracts;
 using ClassHub.Core.Modules.Finance.Domain;
 using ClassHub.Core.Modules.Finance.Jobs;
 using ClassHub.Core.Modules.Finance.Persistence;
+using ClassHub.Core.Modules.Lessons.Contracts;
 using ClassHub.Core.Modules.Workspaces;
 using ClassHub.Core.SharedKernel.Security;
 using FluentValidation;
@@ -23,6 +24,7 @@ public sealed class FinanceModule : IModule
         services.AddScoped<FinanceQueries>();
         services.AddScoped<FinanceService>();
         services.AddScoped<IFinanceStats>(sp => sp.GetRequiredService<FinanceService>());
+        services.AddScoped<ILessonReferences, FinanceLessonReferences>();
         services.AddScoped<LessonConsumption>();
         services.Configure<FinanceOptions>(configuration.GetSection(FinanceOptions.SectionName));
         services.AddSingleton<LessonConsumptionJob>();
