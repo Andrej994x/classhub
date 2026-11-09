@@ -31,6 +31,8 @@ internal sealed class LessonConfiguration : IEntityTypeConfiguration<Lesson>
         builder.Property(x => x.MeetingUrl).HasMaxLength(Lesson.MeetingUrlMaxLength);
         builder.Property(x => x.Location).HasMaxLength(Lesson.LocationMaxLength);
         builder.Property(x => x.CancellationReason).HasMaxLength(Lesson.ReasonMaxLength);
+        builder.Property(x => x.PrivateNote).HasMaxLength(Lesson.PrivateNoteMaxLength);
+        builder.Property(x => x.SharedSummary).HasMaxLength(Lesson.SharedSummaryMaxLength);
         builder.Property(x => x.Version).IsConcurrencyToken();
         // The calendar reads a workspace's time range; the overlap check reads a teacher's.
         builder.HasIndex(x => new { x.WorkspaceId, x.StartUtc });
@@ -107,7 +109,7 @@ internal sealed class LessonParticipantConfiguration : IEntityTypeConfiguration<
 {
     public void Configure(EntityTypeBuilder<LessonParticipant> builder)
     {
-        builder.ToTable("LessonParticipants");
+        builder.ToTable("LessonParticipants", t => t.HasCheckConstraint("CK_LessonParticipants_Attendance", "[Attendance] IS NULL OR [Attendance] BETWEEN 1 AND 3"));
         builder.HasKey(x => new { x.LessonId, x.StudentId });
         builder.HasIndex(x => new { x.WorkspaceId, x.StudentId });
         builder.HasTenantReference<LessonParticipant, Lesson>(nameof(LessonParticipant.LessonId));
@@ -194,5 +196,20 @@ internal sealed class BookingRequestConfiguration : IEntityTypeConfiguration<Boo
             .HasForeignKey(nameof(BookingRequest.WorkspaceId), nameof(BookingRequest.LessonId))
             .HasPrincipalKey(nameof(Lesson.WorkspaceId), nameof(Lesson.Id))
             .OnDelete(DeleteBehavior.NoAction);
+    }
+}
+
+internal sealed class LessonEventConfiguration : IEntityTypeConfiguration<LessonEvent>
+{
+    public void Configure(EntityTypeBuilder<LessonEvent> builder)
+    {
+        builder.ToTable("LessonEvents");
+        builder.HasKey(x => x.Id);
+        builder.Property(x => x.Kind).HasMaxLength(40).IsRequired();
+        builder.Property(x => x.PayloadJson).IsRequired();
+        // A lesson is completed once: at most one completion event, whatever races.
+        builder.HasIndex(x => new { x.LessonId, x.Kind }).IsUnique().HasFilter("[Kind] = N'LessonCompleted'");
+        builder.HasIndex(x => new { x.ProcessedAtUtc, x.OccurredAtUtc });
+        builder.HasTenantReference<LessonEvent, Lesson>(nameof(LessonEvent.LessonId));
     }
 }

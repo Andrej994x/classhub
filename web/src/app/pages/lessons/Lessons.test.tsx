@@ -67,6 +67,20 @@ function lessonsApi() {
       state.lessons[index] = lesson({ ...current, ...(call.body as object), version: current.version + 1 });
       return json(200, state.lessons[index]);
     }
+    if (match[2] === '/complete') {
+      const attendance = (call.body as { attendance: { studentId: string; status: string }[] }).attendance;
+      state.lessons[index] = lesson({
+        ...current,
+        status: 'Completed',
+        participants: current.participants.map((p) => ({ ...p, attendance: attendance.find((a) => a.studentId === p.studentId)?.status ?? 'Present' })),
+        version: current.version + 1,
+      });
+      return json(200, state.lessons[index]);
+    }
+    if (match[2] === '/notes') {
+      state.lessons[index] = lesson({ ...current, ...(call.body as object), version: current.version + 1 });
+      return json(200, state.lessons[index]);
+    }
     if (match[2] === '/cancel') {
       state.lessons[index] = lesson({ ...current, status: 'Cancelled', cancellationReason: (call.body as { reason: string }).reason, version: current.version + 1 });
       return json(200, state.lessons[index]);
@@ -111,6 +125,77 @@ describe('calendar', () => {
     await user.click(await screen.findByRole('button', { name: /12 ноември: 1 час/ }));
     expect(await screen.findByRole('button', { name: 'Ден', pressed: true })).toBeInTheDocument();
     expect(await screen.findByRole('link', { name: /Математика/ })).toBeInTheDocument();
+  });
+});
+
+describe('attendance and notes', () => {
+  it('marks a held lesson with each student\'s attendance, then corrects it and keeps notes', async () => {
+    const user = userEvent.setup();
+    const { api, state } = lessonsApi();
+    state.lessons[0] = lesson({
+      startUtc: '2024-03-05T16:00:00Z',
+      endUtc: '2024-03-05T17:00:00Z',
+      startLocal: '2024-03-05T17:00:00',
+      endLocal: '2024-03-05T18:00:00',
+      kind: 'Group',
+      groupId: 'g1',
+      groupName: 'Алгебра 8',
+      participants: [
+        { studentId: 's1', firstName: 'Ана', lastName: 'Илиева', attendance: null },
+        { studentId: 's2', firstName: 'Борис', lastName: 'Трајков', attendance: null },
+      ],
+    });
+    await renderRoute(`/app/w/${WORKSPACE_ID}/lessons/l1`);
+
+    await user.click(await screen.findByRole('button', { name: 'Означи како одржан' }));
+    const boris = within(screen.getByRole('list', { name: 'Присуство' })).getByRole('group', { name: 'Борис Трајков' });
+    await user.click(within(boris).getByLabelText('Отсутен'));
+    await user.click(screen.getByRole('button', { name: 'Означи како одржан' }));
+
+    await expect.poll(() => api.to(`${BASE}/l1/complete`).length).toBe(1);
+    expect(api.to(`${BASE}/l1/complete`)[0]!.body).toEqual({
+      version: 0,
+      attendance: [
+        { studentId: 's1', status: 'Present' },
+        { studentId: 's2', status: 'Absent' },
+      ],
+    });
+    expect(await screen.findByRole('button', { name: 'Зачувај присуство' })).toBeInTheDocument(); // held: attendance can be corrected
+
+    await user.type(screen.getByLabelText('Приватна белешка'), 'Борис да ја повтори темата.');
+    await user.type(screen.getByLabelText('Резиме за учениците'), 'Линеарни равенки.');
+    await user.click(screen.getByRole('button', { name: 'Зачувај белешки' }));
+    await expect.poll(() => api.to(`${BASE}/l1/notes`).length).toBe(1);
+    expect(api.to(`${BASE}/l1/notes`)[0]!.body).toEqual({ version: 1, privateNote: 'Борис да ја повтори темата.', sharedSummary: 'Линеарни равенки.' });
+  });
+
+  it('shows a student\'s lessons with attendance on the student page', async () => {
+    const history = {
+      items: [
+        { id: 'l9', title: 'Равенки', status: 'Completed', startUtc: '2024-03-05T16:00:00Z', startLocal: '2024-03-05T17:00:00', timeZone: 'Europe/Skopje', groupName: 'Алгебра 8', attendance: 'Absent' },
+      ],
+      total: 1,
+      page: 1,
+      pageSize: 10,
+    };
+    const student = {
+      id: 's1', firstName: 'Ана', lastName: 'Илиева', email: null, phone: null, isMinor: false, guardianName: null, guardianEmail: null, guardianPhone: null,
+      subjectIds: [], sourceLeadId: null, archived: false, createdAtUtc: '2030-11-01T09:00:00Z', updatedAtUtc: '2030-11-01T09:00:00Z', version: 0, accountLinked: false, invitation: null,
+    };
+    fakeApi({
+      me: teacher(),
+      extra: [
+        (call) => (call.path === `${BASE}/history` ? json(200, history) : undefined),
+        (call) => (call.path === `/api/w/${WORKSPACE_ID}/students/s1` ? json(200, student) : undefined),
+        (call) => (call.path === `/api/w/${WORKSPACE_ID}/students/s1/notes` ? json(200, []) : undefined),
+        (call) => (call.path === `/api/w/${WORKSPACE_ID}/groups` ? json(200, []) : undefined),
+      ],
+    });
+    await renderRoute(`/app/w/${WORKSPACE_ID}/students/s1`);
+
+    const list = await screen.findByRole('list', { name: 'Часови' });
+    expect(within(list).getByRole('link', { name: /Равенки \(Алгебра 8\)/ })).toHaveAttribute('href', `/app/w/${WORKSPACE_ID}/lessons/l9`);
+    expect(list).toHaveTextContent('Одржан · Отсутен');
   });
 });
 

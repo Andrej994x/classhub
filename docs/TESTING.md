@@ -41,6 +41,12 @@ npm run e2e                                # builds the SPA and the API, then ru
 
 Flows (each in **mk and en**, on **desktop and mobile**): register → dev mailbox → confirm → sign in → the dashboard shows the workspace → sign out; forgot password → reset link → the old password fails, the new one works; a second teacher opening the first teacher's workspace URL sees "not found". Texts come from the app's locale files, so wording changes do not break tests. CI job `e2e` uploads the HTML report and traces on failure.
 
+## Attendance tests (R2-P7)
+
+- Integration: `AttendanceTests` (completion records attendance with Present by default and one `LessonCompleted` event, repeated completion returns the held lesson and records nothing; **six parallel completions → one transition, one event, all answered with the held lesson** (fails when a lost race is not answered idempotently); attendance corrected only on held lessons, `AttendanceChanged` event, strangers and unknown statuses refused; a cancelled lesson is never held; notes with version check and limits; history per student and group, newest first with attendance, validation and isolation).
+- Vitest: `Lessons.test.tsx` (held with per-student attendance, then correction and notes; history with attendance on the student page).
+- E2E: `lessons.spec.ts` (mark a past lesson held with an excused student; the student's history shows it).
+
 ## Booking tests (R2-P6)
 
 - Unit: `BookingSlotsTests` (step and fit, busy lessons with touching allowed, notice, days off, weekdays, past and horizon, several intervals, the spring clock change, a lesson must end within the working hours in real time on that day).

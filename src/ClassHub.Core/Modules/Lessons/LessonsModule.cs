@@ -62,10 +62,30 @@ public sealed class LessonsModule : IModule
             .RequireAuthorization(manage)
             .WithName("UpdateLesson");
 
-        lessons.MapPost("/{lessonId:guid}/complete", async (Guid lessonId, LessonVersionRequest request, LessonService service, CancellationToken ct) =>
+        lessons.MapPost("/{lessonId:guid}/complete", async (Guid lessonId, CompleteLessonRequest request, LessonService service, CancellationToken ct) =>
                 TypedResults.Ok(await service.CompleteAsync(lessonId, request, ct)))
+            .WithValidation<CompleteLessonRequest>()
             .RequireAuthorization(manage)
-            .WithName("CompleteLesson");
+            .WithName("CompleteLesson")
+            .WithSummary("Mark as held with attendance (left out: Present). Idempotent: a held lesson is returned as it is.");
+
+        lessons.MapPut("/{lessonId:guid}/attendance", async (Guid lessonId, AttendanceRequest request, LessonService service, CancellationToken ct) =>
+                TypedResults.Ok(await service.UpdateAttendanceAsync(lessonId, request, ct)))
+            .WithValidation<AttendanceRequest>()
+            .RequireAuthorization(manage)
+            .WithName("UpdateLessonAttendance");
+
+        lessons.MapPut("/{lessonId:guid}/notes", async (Guid lessonId, LessonNotesRequest request, LessonService service, CancellationToken ct) =>
+                TypedResults.Ok(await service.UpdateNotesAsync(lessonId, request, ct)))
+            .WithValidation<LessonNotesRequest>()
+            .RequireAuthorization(manage)
+            .WithName("UpdateLessonNotes");
+
+        lessons.MapGet("/history", async (Guid? studentId, Guid? groupId, int? page, int? pageSize, LessonService service, CancellationToken ct) =>
+                TypedResults.Ok(await service.HistoryAsync(studentId, groupId, page ?? 1, pageSize ?? 20, ct)))
+            .RequireAuthorization(read)
+            .WithName("LessonHistory")
+            .WithSummary("A student's or a group's lessons, newest first.");
 
         lessons.MapPost("/{lessonId:guid}/cancel", async (Guid lessonId, CancelLessonRequest request, LessonService service, CancellationToken ct) =>
                 TypedResults.Ok(await service.CancelAsync(lessonId, request, ct)))
@@ -273,5 +293,40 @@ internal sealed class RescheduleBookingRequestValidator : AbstractValidator<Resc
     {
         RuleFor(x => x.Version).NotNull();
         RuleFor(x => x.StartLocal).NotNull();
+    }
+}
+
+internal sealed class AttendanceItemValidator : AbstractValidator<AttendanceItem>
+{
+    public AttendanceItemValidator() => RuleFor(x => x.Status).Cascade(CascadeMode.Stop).NotNull().IsEnumName(typeof(AttendanceStatus), caseSensitive: true);
+}
+
+internal sealed class CompleteLessonRequestValidator : AbstractValidator<CompleteLessonRequest>
+{
+    public CompleteLessonRequestValidator()
+    {
+        RuleFor(x => x.Version).NotNull();
+        RuleFor(x => x.Attendance).Must(a => a is null || (a.Count <= 200 && a.All(i => i is not null))).WithMessage("At most 200 entries.");
+        RuleForEach(x => x.Attendance).SetValidator(new AttendanceItemValidator()).When(x => x.Attendance is not null && x.Attendance.All(i => i is not null));
+    }
+}
+
+internal sealed class AttendanceRequestValidator : AbstractValidator<AttendanceRequest>
+{
+    public AttendanceRequestValidator()
+    {
+        RuleFor(x => x.Version).NotNull();
+        RuleFor(x => x.Attendance).Cascade(CascadeMode.Stop).NotNull().Must(a => a!.Count is >= 1 and <= 200 && a.All(i => i is not null)).WithMessage("Give 1 to 200 entries.");
+        RuleForEach(x => x.Attendance).SetValidator(new AttendanceItemValidator()).When(x => x.Attendance is not null && x.Attendance.All(i => i is not null));
+    }
+}
+
+internal sealed class LessonNotesRequestValidator : AbstractValidator<LessonNotesRequest>
+{
+    public LessonNotesRequestValidator()
+    {
+        RuleFor(x => x.Version).NotNull();
+        RuleFor(x => x.PrivateNote).MaximumLength(Lesson.PrivateNoteMaxLength);
+        RuleFor(x => x.SharedSummary).MaximumLength(Lesson.SharedSummaryMaxLength);
     }
 }

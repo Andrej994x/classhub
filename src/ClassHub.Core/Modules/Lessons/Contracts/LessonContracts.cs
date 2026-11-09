@@ -34,6 +34,21 @@ public enum SeriesSkipReason
     Unavailable = 3,
 }
 
+/// <summary>D-22: attendance per participant of a held lesson.</summary>
+public enum AttendanceStatus
+{
+    Present = 1,
+    Absent = 2,
+    Excused = 3,
+}
+
+/// <summary>Kinds of <c>LessonEvents</c> (for Finance, R2-P10).</summary>
+public static class LessonEventKinds
+{
+    public const string Completed = "LessonCompleted";
+    public const string AttendanceChanged = "AttendanceChanged";
+}
+
 /// <summary>D-22: Scheduled → Completed or Cancelled. Both end states are final; a cancelled lesson never counts as held.</summary>
 public enum LessonStatus
 {
@@ -48,7 +63,8 @@ public static class LessonForeignKeyTargets
     public static readonly Type Lesson = typeof(Domain.Lesson);
 }
 
-public sealed record LessonParticipantResponse(Guid StudentId, string FirstName, string? LastName);
+/// <summary>A participant; <c>Attendance</c> (Present/Absent/Excused) once the lesson is held.</summary>
+public sealed record LessonParticipantResponse(Guid StudentId, string FirstName, string? LastName, string? Attendance);
 
 /// <summary>
 /// A lesson (kind, mode and status are the enum names). <c>StartLocal</c>/<c>EndLocal</c> are wall-clock times in <c>TimeZone</c>, the
@@ -78,7 +94,9 @@ public sealed record LessonResponse(
     int Version,
     Guid? SeriesId,
     int? SeriesIndex,
-    bool SeriesException);
+    bool SeriesException,
+    string? PrivateNote,
+    string? SharedSummary);
 
 /// <summary>
 /// Schedule (no version) or change a scheduled lesson (the version that was loaded). The start is a wall-clock time in
@@ -99,6 +117,24 @@ public sealed record SaveLessonRequest(
     int? Version);
 
 public sealed record LessonVersionRequest(int? Version);
+
+public sealed record AttendanceItem(Guid StudentId, string? Status);
+
+/// <summary>
+/// Marks a lesson held (idempotent: a held lesson is returned as it is). Participants left out are Present; the version
+/// is the loaded one.
+/// </summary>
+public sealed record CompleteLessonRequest(int? Version, IReadOnlyList<AttendanceItem>? Attendance);
+
+/// <summary>Corrects the attendance of a held lesson (Finance is told, R2-P10).</summary>
+public sealed record AttendanceRequest(int? Version, IReadOnlyList<AttendanceItem>? Attendance);
+
+public sealed record LessonNotesRequest(int? Version, string? PrivateNote, string? SharedSummary);
+
+/// <summary>A lesson in a student's or group's history; <c>Attendance</c> is the student's when filtered by student.</summary>
+public sealed record LessonHistoryItem(Guid Id, string Title, string Status, DateTime StartUtc, DateTime StartLocal, string TimeZone, string? GroupName, string? Attendance);
+
+public sealed record LessonHistoryResponse(IReadOnlyList<LessonHistoryItem> Items, int Total, int Page, int PageSize);
 
 public sealed record CancelLessonRequest(int? Version, string? Reason);
 

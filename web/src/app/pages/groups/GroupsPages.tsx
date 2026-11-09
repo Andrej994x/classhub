@@ -12,6 +12,7 @@ import { useAddMember, useArchiveGroup, useGroup, useGroups, useRemoveMember, us
 import { num } from '../../../teacher/offers.ts';
 import { useCatalog } from '../../../teacher/queries.ts';
 import { useStudents } from '../../../teacher/students.ts';
+import { LessonHistory } from '../lessons/LessonCards.tsx';
 import { NotFoundContent } from '../Pages.tsx';
 
 const select = 'h-11 w-full rounded-md border border-input bg-background px-3 text-base sm:h-10 sm:text-sm';
@@ -174,6 +175,7 @@ function GroupEditor({ workspaceId, group }: { workspaceId: string; group: Group
       </form>
 
       {group && <Members workspaceId={workspaceId} groupId={group.id} />}
+      {group && <LessonHistory workspaceId={workspaceId} groupId={group.id} />}
       {group && version !== null && <ArchiveGroup workspaceId={workspaceId} group={group} version={version} onChanged={(changed) => setVersion(num(changed.version) ?? 0)} />}
     </section>
   );

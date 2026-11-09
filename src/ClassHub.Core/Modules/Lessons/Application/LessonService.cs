@@ -136,10 +136,23 @@ internal sealed class LessonService(
         return await GetAsync(lesson.Id, cancellationToken);
     }
 
-    /// <summary>Marks a lesson as held. Only a scheduled lesson that has started; a held lesson is never recorded again.</summary>
-    public async Task<LessonResponse> CompleteAsync(Guid lessonId, LessonVersionRequest request, CancellationToken cancellationToken)
+    /// <summary>
+    /// Marks a lesson as held, with each participant's attendance (left out: Present). Idempotent: a held lesson is
+    /// returned as it is and never recorded again; parallel completions make one transition and one Finance event.
+    /// </summary>
+    public async Task<LessonResponse> CompleteAsync(Guid lessonId, CompleteLessonRequest request, CancellationToken cancellationToken)
     {
-        var lesson = await LoadForChangeAsync(lessonId, request.Version, cancellationToken);
+        var lesson = await LoadAsync(lessonId, tracking: true, cancellationToken);
+        if (lesson.Status == LessonStatus.Completed)
+        {
+            return await GetAsync(lesson.Id, cancellationToken);
+        }
+
+        if (lesson.Version != request.Version)
+        {
+            throw Conflict();
+        }
+
         ThrowIfCannotChange(lesson, LessonStatus.Completed);
         var now = clock.GetUtcNow().UtcDateTime;
         if (lesson.StartUtc > now)
@@ -147,12 +160,123 @@ internal sealed class LessonService(
             throw new BusinessRuleException("A lesson can be marked as held once it has started.", ErrorCodes.InvalidStatusTransition);
         }
 
+        var participants = await ApplyAttendanceAsync(lesson, request.Attendance, defaultPresent: true, cancellationToken);
         lesson.Status = LessonStatus.Completed;
         lesson.CompletedAtUtc = now;
+        Touch(lesson);
+        AddEvent(lesson, LessonEventKinds.Completed, participants, now);
+        try
+        {
+            await db.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateException ex) when (ex is DbUpdateConcurrencyException || SqlServerErrors.IsUniqueViolation(ex))
+        {
+            // Completed at the same moment elsewhere: the lesson is held once, so this request sees that result.
+            db.ChangeTracker.Clear();
+            var current = await LoadAsync(lessonId, tracking: false, cancellationToken);
+            return current.Status == LessonStatus.Completed ? await GetAsync(lessonId, cancellationToken) : throw Conflict();
+        }
+
+        return await GetAsync(lesson.Id, cancellationToken);
+    }
+
+    /// <summary>Corrects the attendance of a held lesson; Finance is told with an event.</summary>
+    public async Task<LessonResponse> UpdateAttendanceAsync(Guid lessonId, AttendanceRequest request, CancellationToken cancellationToken)
+    {
+        var lesson = await LoadForChangeAsync(lessonId, request.Version, cancellationToken);
+        if (lesson.Status != LessonStatus.Completed)
+        {
+            throw new BusinessRuleException("Attendance is recorded for held lessons.", ErrorCodes.InvalidStatusTransition);
+        }
+
+        var participants = await ApplyAttendanceAsync(lesson, request.Attendance, defaultPresent: false, cancellationToken);
+        Touch(lesson);
+        AddEvent(lesson, LessonEventKinds.AttendanceChanged, participants, clock.GetUtcNow().UtcDateTime);
+        await SaveAsync(cancellationToken);
+        return await GetAsync(lesson.Id, cancellationToken);
+    }
+
+    /// <summary>The private note and the shared summary (D-40), in any status.</summary>
+    public async Task<LessonResponse> UpdateNotesAsync(Guid lessonId, LessonNotesRequest request, CancellationToken cancellationToken)
+    {
+        var lesson = await LoadForChangeAsync(lessonId, request.Version, cancellationToken);
+        lesson.PrivateNote = Clean(request.PrivateNote);
+        lesson.SharedSummary = Clean(request.SharedSummary);
         Touch(lesson);
         await SaveAsync(cancellationToken);
         return await GetAsync(lesson.Id, cancellationToken);
     }
+
+    /// <summary>A student's or a group's lessons, newest first (one of the two is required).</summary>
+    public async Task<LessonHistoryResponse> HistoryAsync(Guid? studentId, Guid? groupId, int page, int pageSize, CancellationToken cancellationToken)
+    {
+        if ((studentId is null) == (groupId is null))
+        {
+            throw new BadRequestException("Choose a student or a group.");
+        }
+
+        if (page is < 1 or > 10_000 || pageSize is < 1 or > 100)
+        {
+            throw new BadRequestException("The page must be 1 to 10000 and the page size 1 to 100.");
+        }
+
+        var lessons = db.Set<Lesson>().AsNoTracking();
+        lessons = studentId is { } student
+            ? lessons.Where(l => db.Set<LessonParticipant>().Any(p => p.LessonId == l.Id && p.StudentId == student))
+            : lessons.Where(l => l.GroupId == groupId);
+        var total = await lessons.CountAsync(cancellationToken);
+        var rows = await lessons.OrderByDescending(l => l.StartUtc).ThenBy(l => l.Id).Skip((page - 1) * pageSize).Take(pageSize).ToListAsync(cancellationToken);
+        var ids = rows.Select(r => r.Id).ToList();
+        var attendance = studentId is { } who
+            ? await db.Set<LessonParticipant>().AsNoTracking().Where(p => ids.Contains(p.LessonId) && p.StudentId == who)
+                .ToDictionaryAsync(p => p.LessonId, p => p.Attendance, cancellationToken)
+            : [];
+        var groupNames = await groups.FindAsync([.. rows.Where(l => l.GroupId is not null).Select(l => l.GroupId!.Value).Distinct()], cancellationToken);
+        var zoneId = await workspace.GetTimeZoneAsync(cancellationToken);
+        var zone = TimeZoneInfo.FindSystemTimeZoneById(zoneId);
+        return new LessonHistoryResponse(
+            [.. rows.Select(l => new LessonHistoryItem(l.Id, l.Title, l.Status.ToString(), l.StartUtc, LessonTime.ToLocal(l.StartUtc, zone), zoneId,
+                l.GroupId is { } g && groupNames.TryGetValue(g, out var group) ? group.Name : null,
+                attendance.TryGetValue(l.Id, out var a) ? a?.ToString() : null))],
+            total, page, pageSize);
+    }
+
+    /// <summary>Sets the participants' attendance from the request (only the lesson's participants may be named).</summary>
+    private async Task<IReadOnlyList<LessonParticipant>> ApplyAttendanceAsync(Lesson lesson, IReadOnlyList<AttendanceItem>? items, bool defaultPresent, CancellationToken cancellationToken)
+    {
+        var participants = await db.Set<LessonParticipant>().Where(p => p.LessonId == lesson.Id).ToListAsync(cancellationToken);
+        foreach (var item in items ?? [])
+        {
+            var participant = participants.SingleOrDefault(p => p.StudentId == item.StudentId) ?? throw Invalid("attendance", "Only the lesson's students have attendance.");
+            participant.Attendance = Enum.Parse<AttendanceStatus>(item.Status!);
+        }
+
+        if (defaultPresent)
+        {
+            foreach (var participant in participants.Where(p => p.Attendance is null))
+            {
+                participant.Attendance = AttendanceStatus.Present;
+            }
+        }
+
+        return participants;
+    }
+
+    private void AddEvent(Lesson lesson, string kind, IReadOnlyList<LessonParticipant> participants, DateTime now) =>
+        db.Set<LessonEvent>().Add(new LessonEvent
+        {
+            Id = Guid.CreateVersion7(),
+            WorkspaceId = lesson.WorkspaceId,
+            LessonId = lesson.Id,
+            Kind = kind,
+            PayloadJson = System.Text.Json.JsonSerializer.Serialize(new
+            {
+                lessonId = lesson.Id,
+                completedAtUtc = lesson.CompletedAtUtc,
+                attendance = participants.Select(p => new { studentId = p.StudentId, status = p.Attendance?.ToString() }),
+            }),
+            OccurredAtUtc = now,
+        });
 
     /// <summary>Cancels a scheduled lesson with a reason; its time is free again and it never counts as held.</summary>
     public async Task<LessonResponse> CancelAsync(Guid lessonId, CancelLessonRequest request, CancellationToken cancellationToken)
@@ -252,8 +376,8 @@ internal sealed class LessonService(
     {
         var ids = lessons.Select(l => l.Id).ToList();
         var participants = (await db.Set<LessonParticipant>().AsNoTracking().Where(p => ids.Contains(p.LessonId)).ToListAsync(cancellationToken))
-            .ToLookup(p => p.LessonId, p => p.StudentId);
-        var names = await students.FindAsync([.. participants.SelectMany(p => p).Distinct()], cancellationToken);
+            .ToLookup(p => p.LessonId);
+        var names = await students.FindAsync([.. participants.SelectMany(p => p).Select(p => p.StudentId).Distinct()], cancellationToken);
         var groupNames = await groups.FindAsync([.. lessons.Where(l => l.GroupId is not null).Select(l => l.GroupId!.Value).Distinct()], cancellationToken);
         // Local times are always in the workspace's current zone, the same one the calendar reads days in.
         var zoneId = await workspace.GetTimeZoneAsync(cancellationToken);
@@ -261,11 +385,12 @@ internal sealed class LessonService(
         return [.. lessons.Select(l =>
             new LessonResponse(
                 l.Id, l.Kind.ToString(), l.GroupId, l.GroupId is { } g && groupNames.TryGetValue(g, out var group) ? group.Name : null,
-                [.. participants[l.Id].Where(names.ContainsKey).Select(id => new LessonParticipantResponse(id, names[id].FirstName, names[id].LastName))
+                [.. participants[l.Id].Where(p => names.ContainsKey(p.StudentId))
+                    .Select(p => new LessonParticipantResponse(p.StudentId, names[p.StudentId].FirstName, names[p.StudentId].LastName, p.Attendance?.ToString()))
                     .OrderBy(p => p.LastName ?? p.FirstName).ThenBy(p => p.FirstName)],
                 l.SubjectId, l.Title, l.Topic, l.StartUtc, l.EndUtc, LessonTime.ToLocal(l.StartUtc, zone), LessonTime.ToLocal(l.EndUtc, zone), zoneId,
                 l.Mode.ToString(), l.MeetingUrl, l.Location, l.Status.ToString(), l.CancellationReason, l.CreatedAtUtc, l.UpdatedAtUtc, l.Version,
-                l.SeriesId, l.SeriesIndex, l.SeriesException))];
+                l.SeriesId, l.SeriesIndex, l.SeriesException, l.PrivateNote, l.SharedSummary))];
     }
 
     private static ConflictException Conflict() =>

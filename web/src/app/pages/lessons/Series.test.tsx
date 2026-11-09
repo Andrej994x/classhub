@@ -147,7 +147,7 @@ describe('recurring lessons', () => {
     await renderRoute(`/app/w/${WORKSPACE_ID}/lessons/l5`);
 
     await user.click(await screen.findByLabelText('Овој и следните часови'));
-    await expect.poll(() => (screen.getByRole('button', { name: /Зачувај|Се вчитува/ }) as HTMLButtonElement).disabled).toBe(false);
+    await expect.poll(() => (screen.getByRole('button', { name: /^(Зачувај|Се вчитува…)$/ }) as HTMLButtonElement).disabled).toBe(false);
     await user.click(screen.getByRole('button', { name: 'Зачувај' }));
 
     await expect.poll(() => api.to(`${SERIES}/r1`, 'PUT').length).toBe(1);
@@ -160,7 +160,7 @@ describe('recurring lessons', () => {
     await renderRoute(`/app/w/${WORKSPACE_ID}/lessons/l5`);
 
     await user.click(await screen.findByLabelText('Овој и следните часови'));
-    const save = screen.getByRole('button', { name: /Зачувај|Се вчитува/ });
+    const save = screen.getByRole('button', { name: /^(Зачувај|Се вчитува…)$/ });
     expect(save).toBeDisabled();
     await user.click(save);
     expect(api.to(`/api/w/${WORKSPACE_ID}/lessons/l5`, 'PUT')).toHaveLength(0);

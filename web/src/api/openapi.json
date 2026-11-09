@@ -2709,6 +2709,7 @@
         "tags": [
           "Lessons"
         ],
+        "summary": "Mark as held with attendance (left out: Present). Idempotent: a held lesson is returned as it is.",
         "operationId": "CompleteLesson",
         "parameters": [
           {
@@ -2734,7 +2735,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/LessonVersionRequest"
+                "$ref": "#/components/schemas/CompleteLessonRequest"
               }
             }
           },
@@ -2747,6 +2748,208 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/LessonResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpValidationProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/w/{workspaceId}/lessons/{lessonId}/attendance": {
+      "put": {
+        "tags": [
+          "Lessons"
+        ],
+        "operationId": "UpdateLessonAttendance",
+        "parameters": [
+          {
+            "name": "lessonId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "workspaceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AttendanceRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LessonResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpValidationProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/w/{workspaceId}/lessons/{lessonId}/notes": {
+      "put": {
+        "tags": [
+          "Lessons"
+        ],
+        "operationId": "UpdateLessonNotes",
+        "parameters": [
+          {
+            "name": "lessonId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "workspaceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LessonNotesRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LessonResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpValidationProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/w/{workspaceId}/lessons/history": {
+      "get": {
+        "tags": [
+          "Lessons"
+        ],
+        "summary": "A student's or a group's lessons, newest first.",
+        "operationId": "LessonHistory",
+        "parameters": [
+          {
+            "name": "studentId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "groupId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          },
+          {
+            "name": "workspaceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LessonHistoryResponse"
                 }
               }
             }
@@ -6414,6 +6617,52 @@
           }
         }
       },
+      "AttendanceItem": {
+        "required": [
+          "studentId",
+          "status"
+        ],
+        "type": "object",
+        "properties": {
+          "studentId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "AttendanceRequest": {
+        "required": [
+          "version",
+          "attendance"
+        ],
+        "type": "object",
+        "properties": {
+          "version": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "attendance": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/AttendanceItem"
+            }
+          }
+        }
+      },
       "AuthenticatorSetupRequest": {
         "required": [
           "code",
@@ -6914,6 +7163,33 @@
               "string"
             ],
             "format": "int32"
+          }
+        }
+      },
+      "CompleteLessonRequest": {
+        "required": [
+          "version",
+          "attendance"
+        ],
+        "type": "object",
+        "properties": {
+          "version": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "attendance": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/AttendanceItem"
+            }
           }
         }
       },
@@ -8210,11 +8486,132 @@
           }
         }
       },
+      "LessonHistoryItem": {
+        "required": [
+          "id",
+          "title",
+          "status",
+          "startUtc",
+          "startLocal",
+          "timeZone",
+          "groupName",
+          "attendance"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "title": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "startUtc": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "startLocal": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "timeZone": {
+            "type": "string"
+          },
+          "groupName": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "attendance": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "LessonHistoryResponse": {
+        "required": [
+          "items",
+          "total",
+          "page",
+          "pageSize"
+        ],
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LessonHistoryItem"
+            }
+          },
+          "total": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "page": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "pageSize": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
+      "LessonNotesRequest": {
+        "required": [
+          "version",
+          "privateNote",
+          "sharedSummary"
+        ],
+        "type": "object",
+        "properties": {
+          "version": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "privateNote": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "sharedSummary": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
       "LessonParticipantResponse": {
         "required": [
           "studentId",
           "firstName",
-          "lastName"
+          "lastName",
+          "attendance"
         ],
         "type": "object",
         "properties": {
@@ -8226,6 +8623,12 @@
             "type": "string"
           },
           "lastName": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "attendance": {
             "type": [
               "null",
               "string"
@@ -8258,7 +8661,9 @@
           "version",
           "seriesId",
           "seriesIndex",
-          "seriesException"
+          "seriesException",
+          "privateNote",
+          "sharedSummary"
         ],
         "type": "object",
         "properties": {
@@ -8381,23 +8786,18 @@
           },
           "seriesException": {
             "type": "boolean"
-          }
-        }
-      },
-      "LessonVersionRequest": {
-        "required": [
-          "version"
-        ],
-        "type": "object",
-        "properties": {
-          "version": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
+          },
+          "privateNote": {
             "type": [
               "null",
-              "integer",
               "string"
-            ],
-            "format": "int32"
+            ]
+          },
+          "sharedSummary": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },

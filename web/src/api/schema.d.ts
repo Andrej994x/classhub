@@ -880,7 +880,57 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /** Mark as held with attendance (left out: Present). Idempotent: a held lesson is returned as it is. */
         post: operations["CompleteLesson"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/w/{workspaceId}/lessons/{lessonId}/attendance": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["UpdateLessonAttendance"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/w/{workspaceId}/lessons/{lessonId}/notes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["UpdateLessonNotes"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/w/{workspaceId}/lessons/history": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** A student's or a group's lessons, newest first. */
+        get: operations["LessonHistory"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -1923,6 +1973,16 @@ export interface components {
             questionId: string;
             optionIds: null | string[];
         };
+        AttendanceItem: {
+            /** Format: uuid */
+            studentId: string;
+            status: null | string;
+        };
+        AttendanceRequest: {
+            /** Format: int32 */
+            version: null | number | string;
+            attendance: null | components["schemas"]["AttendanceItem"][];
+        };
         AuthenticatorSetupRequest: {
             code: null | string;
             recoveryCode: null | string;
@@ -2040,6 +2100,11 @@ export interface components {
             status: null | string;
             /** Format: int32 */
             version: null | number | string;
+        };
+        CompleteLessonRequest: {
+            /** Format: int32 */
+            version: null | number | string;
+            attendance: null | components["schemas"]["AttendanceItem"][];
         };
         ConfirmEmailRequest: {
             /** Format: uuid */
@@ -2366,11 +2431,40 @@ export interface components {
             /** Format: int32 */
             version: null | number | string;
         };
+        LessonHistoryItem: {
+            /** Format: uuid */
+            id: string;
+            title: string;
+            status: string;
+            /** Format: date-time */
+            startUtc: string;
+            /** Format: date-time */
+            startLocal: string;
+            timeZone: string;
+            groupName: null | string;
+            attendance: null | string;
+        };
+        LessonHistoryResponse: {
+            items: components["schemas"]["LessonHistoryItem"][];
+            /** Format: int32 */
+            total: number | string;
+            /** Format: int32 */
+            page: number | string;
+            /** Format: int32 */
+            pageSize: number | string;
+        };
+        LessonNotesRequest: {
+            /** Format: int32 */
+            version: null | number | string;
+            privateNote: null | string;
+            sharedSummary: null | string;
+        };
         LessonParticipantResponse: {
             /** Format: uuid */
             studentId: string;
             firstName: string;
             lastName: null | string;
+            attendance: null | string;
         };
         LessonResponse: {
             /** Format: uuid */
@@ -2409,10 +2503,8 @@ export interface components {
             /** Format: int32 */
             seriesIndex: null | number | string;
             seriesException: boolean;
-        };
-        LessonVersionRequest: {
-            /** Format: int32 */
-            version: null | number | string;
+            privateNote: null | string;
+            sharedSummary: null | string;
         };
         LoginRequest: {
             email: null | string;
@@ -4882,7 +4974,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["LessonVersionRequest"];
+                "application/json": components["schemas"]["CompleteLessonRequest"];
             };
         };
         responses: {
@@ -4893,6 +4985,114 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["LessonResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["HttpValidationProblemDetails"];
+                };
+            };
+        };
+    };
+    UpdateLessonAttendance: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                lessonId: string;
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AttendanceRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LessonResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["HttpValidationProblemDetails"];
+                };
+            };
+        };
+    };
+    UpdateLessonNotes: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                lessonId: string;
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LessonNotesRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LessonResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["HttpValidationProblemDetails"];
+                };
+            };
+        };
+    };
+    LessonHistory: {
+        parameters: {
+            query?: {
+                studentId?: string;
+                groupId?: string;
+                page?: number | string;
+                pageSize?: number | string;
+            };
+            header?: never;
+            path: {
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LessonHistoryResponse"];
                 };
             };
         };

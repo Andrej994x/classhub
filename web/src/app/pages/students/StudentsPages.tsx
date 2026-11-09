@@ -13,6 +13,7 @@ import { num } from '../../../teacher/offers.ts';
 import { useCatalog } from '../../../teacher/queries.ts';
 import { useAddStudentNote, useArchiveStudent, useSaveStudent, useStudent, useStudentAccount, useStudentNotes, useStudents, type Student, type StudentInput } from '../../../teacher/students.ts';
 import { StudentGroups } from '../groups/GroupsPages.tsx';
+import { LessonHistory } from '../lessons/LessonCards.tsx';
 import { NotFoundContent } from '../Pages.tsx';
 
 const browserTimeZone = new Intl.DateTimeFormat().resolvedOptions().timeZone;
@@ -271,6 +272,7 @@ function StudentEditor({ workspaceId, student }: { workspaceId: string; student:
       {student && version !== null && <ArchiveCard workspaceId={workspaceId} student={student} version={version} onChanged={(changed) => setVersion(num(changed.version) ?? 0)} />}
       {student && <AccountCard workspaceId={workspaceId} student={student} />}
       {student && <StudentGroups workspaceId={workspaceId} studentId={student.id} />}
+      {student && <LessonHistory workspaceId={workspaceId} studentId={student.id} />}
       {student && <NotesCard workspaceId={workspaceId} studentId={student.id} />}
     </section>
   );

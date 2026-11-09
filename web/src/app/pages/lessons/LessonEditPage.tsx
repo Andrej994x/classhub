@@ -21,6 +21,7 @@ import {
   useSeries,
   useUpdateSeries,
   seriesEnd,
+  type Attendance,
   type Lesson,
   type LessonInput,
   type SeriesInput,
@@ -29,6 +30,7 @@ import { num } from '../../../teacher/offers.ts';
 import { useCatalog } from '../../../teacher/queries.ts';
 import { useStarted } from '../../../lib/useStarted.ts';
 import { StudentPicker } from '../../components/StudentPicker.tsx';
+import { AttendanceCard, AttendanceFields, attendanceItems, NotesCard } from './LessonCards.tsx';
 import { NotFoundContent } from '../Pages.tsx';
 
 const field = 'h-11 w-full rounded-md border border-input bg-background px-3 text-base sm:h-10 sm:text-sm';
@@ -427,6 +429,29 @@ function LessonEditor({ workspaceId, lesson }: { workspaceId: string; lesson: Le
         </fieldset>
       </form>
 
+      {current && current.status === 'Completed' && version !== null && (
+        <AttendanceCard
+          key={`attendance-${num(current.version)}`}
+          workspaceId={workspaceId}
+          lesson={current}
+          version={version}
+          onChanged={(changed) => {
+            setCurrent(changed);
+            setVersion(num(changed.version) ?? 0);
+          }}
+        />
+      )}
+      {current && version !== null && (
+        <NotesCard
+          workspaceId={workspaceId}
+          lesson={current}
+          version={version}
+          onChanged={(changed) => {
+            setCurrent(changed);
+            setVersion(num(changed.version) ?? 0);
+          }}
+        />
+      )}
       {current && current.status === 'Scheduled' && version !== null && (
         <StatusCard
           workspaceId={workspaceId}
@@ -449,6 +474,8 @@ function StatusCard({ workspaceId, lesson, version, onChanged }: { workspaceId: 
   const cancel = useCancelLesson(workspaceId, lesson.id);
   const [reason, setReason] = useState('');
   const [cancelling, setCancelling] = useState(false);
+  const [holding, setHolding] = useState(false);
+  const [attendance, setAttendance] = useState<Record<string, Attendance>>({});
   const started = useStarted(lesson.startUtc);
   const error = complete.error ?? cancel.error;
 
@@ -461,16 +488,32 @@ function StatusCard({ workspaceId, lesson, version, onChanged }: { workspaceId: 
       <CardContent className="flex flex-col gap-3">
         {error && <Alert variant="error">{error instanceof ApiError && error.code === 'CONCURRENCY_CONFLICT' ? t('lessons.changedElsewhere') : errorMessage(error, t)}</Alert>}
         <div className="flex flex-wrap gap-2">
-          <Button type="button" disabled={!started || complete.isPending} onClick={() => complete.mutate(version, { onSuccess: onChanged })}>
-            {t('lessons.complete')}
-          </Button>
-          {!cancelling && (
+          {!holding && (
+            <Button type="button" disabled={!started} onClick={() => setHolding(true)}>
+              {t('lessons.complete')}
+            </Button>
+          )}
+          {!cancelling && !holding && (
             <Button type="button" variant="outline" onClick={() => setCancelling(true)}>
               {t('lessons.cancel')}
             </Button>
           )}
         </div>
         {!started && <p className="text-sm text-muted-foreground">{t('lessons.completeLater')}</p>}
+        {holding && (
+          <div className="flex flex-col gap-3">
+            <p className="text-sm">{t('lessons.attendance.lead')}</p>
+            <AttendanceFields lesson={lesson} value={attendance} onChange={setAttendance} />
+            <div className="flex gap-2">
+              <Button type="button" disabled={complete.isPending} onClick={() => complete.mutate({ version, attendance: attendanceItems(lesson, attendance) }, { onSuccess: onChanged })}>
+                {t('lessons.attendance.confirmHeld')}
+              </Button>
+              <Button type="button" variant="ghost" onClick={() => setHolding(false)}>
+                {t('common.cancel')}
+              </Button>
+            </div>
+          </div>
+        )}
         {cancelling && (
           <form
             className="flex flex-col gap-2"

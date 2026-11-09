@@ -7,10 +7,10 @@ This is the live status of the autonomous implementation loop ([ROADMAP.md](ROAD
 | Field | Value |
 |---|---|
 | Release | R2 — Teaching operations (R0 and R1 complete) |
-| Current phase | R2-P6 — Availability & booking |
-| Branch | `feature/r2-p6-booking` (from `main` @ `153f1b5`) |
+| Current phase | R2-P7 — Attendance, notes & history |
+| Branch | `feature/r2-p7-attendance` (from `main` @ `eecfd7b`) |
 | Workflow step | 5 — signed Codex review, then PR |
-| Next action | R2-P6 PR; then R2-P7 (attendance, notes & history) |
+| Next action | R2-P7 PR; then R2-P8 (materials) |
 | Open blockers | None. User actions (optional): direct-push probe (R0-P8); remove the now redundant required `pr-gate` check (see Decisions) |
 
 ## Phase status
@@ -47,8 +47,8 @@ Status values: `not started`, `in progress`, `in review` (PR open), `merged`, `b
 | R2-P3 | Student accounts & invitations | merged | `feature/r2-p3-student-accounts` | [#27](https://github.com/Andrej994x/classhub/pull/27) | `29dd0ff` | 1 round: no actionable defects | green | Migration applied to local `ClassHubDb` |
 | R2-P4 | Lessons core & calendar | merged | `feature/r2-p4-lessons-calendar` | [#28](https://github.com/Andrej994x/classhub/pull/28) | `c01eae0` | 5 rounds: 5 × P2 fixed (time zone change grouping, held timer, picker label, repeated-hour instant, timer after reschedule); round 5 clean | green | Migration applied to local `ClassHubDb` |
 | R2-P5 | Recurring lessons | merged | `feature/r2-p5-recurring-lessons` | [#29](https://github.com/Andrej994x/classhub/pull/29) | `153f1b5` | 7 rounds: 9 × P2 fixed (job starvation, scope fallback, started lessons, date-ended catch-up, one end condition, edit zone, next unstarted lesson, series-zone today, instant cutoff); round 7 clean | green | Migration applied to local `ClassHubDb` |
-| R2-P6 | Availability & booking | in progress | `feature/r2-p6-booking` | | | | | Plan: working hours, days off, slot rules; free slots minus the teacher's lessons; `/{slug}/book` (Razor + booking island) through the protected request form; confirm (student + lesson after a conflict check under the schedule lock), decline, reschedule, cancel with visitor emails; D-23 |
-| R2-P7 | Attendance, notes & history | not started | | | | | | |
+| R2-P6 | Availability & booking | merged | `feature/r2-p6-booking` | [#30](https://github.com/Andrej994x/classhub/pull/30) | `eecfd7b` | 4 rounds: 7 × P2 fixed (atomic confirmation, lesson-editor sync, null-safe settings, archived students, paged requests, real slot ends, bookable durations); round 4 clean | green | Migration applied to local `ClassHubDb` |
+| R2-P7 | Attendance, notes & history | in progress | `feature/r2-p7-attendance` | | | | | Plan: idempotent completion with attendance per participant (D-22), one completion event for Finance (outbox `LessonEvents`), attendance corrections, private note + shared summary (D-40), history per student and group |
 | R2-P8 | Materials | not started | | | | | | |
 | R2-P9 | Homework | not started | | | | | | |
 | R2-P10 | Packages & payments | not started | | | | | | |

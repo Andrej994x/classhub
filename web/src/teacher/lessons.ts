@@ -62,10 +62,37 @@ export function useSaveLesson(workspaceId: string, lessonId?: string) {
   );
 }
 
+export type Attendance = 'Present' | 'Absent' | 'Excused';
+export type AttendanceItem = { studentId: string; status: Attendance };
+
+/** Mark as held with attendance (students left out are Present); idempotent on the server. */
 export function useCompleteLesson(workspaceId: string, lessonId: string) {
-  return useLessonMutation(workspaceId, async (version: number) =>
-    (await api.client.POST('/api/w/{workspaceId}/lessons/{lessonId}/complete', { params: { path: { workspaceId, lessonId } }, body: { version } })).data!,
+  return useLessonMutation(workspaceId, async ({ version, attendance }: { version: number; attendance: AttendanceItem[] }) =>
+    (await api.client.POST('/api/w/{workspaceId}/lessons/{lessonId}/complete', { params: { path: { workspaceId, lessonId } }, body: { version, attendance } })).data!,
   );
+}
+
+export function useLessonAttendance(workspaceId: string, lessonId: string) {
+  return useLessonMutation(workspaceId, async ({ version, attendance }: { version: number; attendance: AttendanceItem[] }) =>
+    (await api.client.PUT('/api/w/{workspaceId}/lessons/{lessonId}/attendance', { params: { path: { workspaceId, lessonId } }, body: { version, attendance } })).data!,
+  );
+}
+
+export function useLessonNotes(workspaceId: string, lessonId: string) {
+  return useLessonMutation(workspaceId, async ({ version, privateNote, sharedSummary }: { version: number; privateNote: string | null; sharedSummary: string | null }) =>
+    (await api.client.PUT('/api/w/{workspaceId}/lessons/{lessonId}/notes', { params: { path: { workspaceId, lessonId } }, body: { version, privateNote, sharedSummary } })).data!,
+  );
+}
+
+/** A student's or a group's lessons, newest first. */
+export function useLessonHistory(workspaceId: string, of: { studentId?: string; groupId?: string }, page: number) {
+  return useQuery({
+    queryKey: ['w', workspaceId, 'lessons', 'history', of.studentId ?? null, of.groupId ?? null, page],
+    placeholderData: keepPreviousData,
+    queryFn: async () =>
+      (await api.client.GET('/api/w/{workspaceId}/lessons/history', { params: { path: { workspaceId }, query: { studentId: of.studentId, groupId: of.groupId, page, pageSize: 10 } } }))
+        .data!,
+  });
 }
 
 export function useCancelLesson(workspaceId: string, lessonId: string) {
