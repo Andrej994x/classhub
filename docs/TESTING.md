@@ -43,6 +43,17 @@ Flows (each in **mk and en**, on **desktop and mobile**): register → dev mailb
 
 On a machine with little free memory, many local workers can exhaust Chromium's blob storage: a request then fails in the browser (`net::ERR_BLOB_OUT_OF_MEMORY` in the trace's network log) and the app shows "no connection to the server", in any test. Run with fewer workers (`npx playwright test --workers=3`; CI uses 2) rather than retrying.
 
+## Dashboard tests (R2-P12)
+
+- Integration: `TeachingDashboardTests`:
+  - zeros and six empty months for a new teacher;
+  - **the numbers match a fixture**: lessons in and outside the 7 days, a cancelled one, an archived student with a lesson held without a package, debts in two currencies, a running-low package, payments this month and last month;
+  - **another teacher sees none of it** and gets the cross-tenant 404;
+  - **a student sees only their own lessons**: no other student's lesson, no cancelled one, the meeting link only ahead, attendance and the shared summary once held, never the private note; their attendance counts; 404 for another workspace's portal and for a teacher on the student route.
+- Vitest:
+  - `TeachingOverview.test.tsx`: tiles and links, next lessons, debts per currency, running low, the income table, and the empty states.
+  - `StudentPortalPages.test.tsx`: next lesson with its join link, later lessons, past lessons with attendance and summary, the attendance sentence.
+
 ## Notification tests (R2-P11)
 
 - Unit: `NotificationRulesTests` (keys per change: lesson revision, reminder start and attempt, homework assignment; reminder timing incl. late planning and the last hour, optional kinds and preferences, lesson times local to the lesson's zone in summer and winter and in another zone).

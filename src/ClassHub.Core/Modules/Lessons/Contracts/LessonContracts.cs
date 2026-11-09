@@ -308,6 +308,43 @@ public interface ILessonLookup
     Task<LessonSummary?> NextInSeriesAsync(Guid seriesId, Guid studentId, DateTime afterUtc, CancellationToken cancellationToken);
 }
 
+/// <summary>A lesson ahead for the teacher's dashboard (R2-P12), with its students.</summary>
+public sealed record LessonAhead(Guid Id, string Title, DateTime StartUtc, DateTime EndUtc, string TimeZone, LessonKind Kind, IReadOnlyList<Guid> StudentIds);
+
+/// <summary>The scheduled lessons of a window: how many, and the first few in start order.</summary>
+public sealed record LessonsAhead(int Count, IReadOnlyList<LessonAhead> First);
+
+/// <summary>The current workspace's schedule ahead (R2-P12 dashboard).</summary>
+public interface ILessonOutlook
+{
+    /// <summary>Scheduled lessons not over at <paramref name="nowUtc"/> that start before <paramref name="untilUtc"/>.</summary>
+    Task<LessonsAhead> AheadAsync(DateTime nowUtc, DateTime untilUtc, int max, CancellationToken cancellationToken);
+}
+
+/// <summary>
+/// A lesson as its student sees it in the portal (R2-P12): never the teacher's private note or the other students. The
+/// meeting link only while the lesson is ahead; attendance and the shared summary once it is held.
+/// </summary>
+public sealed record StudentLessonResponse(
+    Guid Id,
+    string Title,
+    string? Topic,
+    DateTime StartUtc,
+    DateTime EndUtc,
+    string TimeZone,
+    LessonMode Mode,
+    string? MeetingUrl,
+    string? Location,
+    LessonStatus Status,
+    AttendanceStatus? Attendance,
+    string? SharedSummary);
+
+/// <summary>The student's own attendance over their held lessons.</summary>
+public sealed record StudentAttendanceResponse(int Held, int Present, int Absent, int Excused);
+
+/// <summary>The student's lessons with one teacher: the next ones, the most recent past ones, and their attendance.</summary>
+public sealed record StudentLessonsResponse(IReadOnlyList<StudentLessonResponse> Upcoming, IReadOnlyList<StudentLessonResponse> Past, StudentAttendanceResponse Attendance);
+
 /// <summary>A scheduled lesson starting soon, with its students (reminders, R2-P11).</summary>
 public sealed record UpcomingLesson(Guid LessonId, Guid WorkspaceId, Guid TeacherUserId, DateTime StartUtc, IReadOnlyList<Guid> StudentIds);
 

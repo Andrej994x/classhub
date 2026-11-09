@@ -8,6 +8,7 @@ import { useMyWorkspaces } from '../../auth/session.ts';
 import { Alert } from '../../components/ui/alert.tsx';
 import { loadFromServer } from '../../lib/navigation.ts';
 import { DashboardOverview } from './dashboard/DashboardOverview.tsx';
+import { TeachingOverview } from './dashboard/TeachingOverview.tsx';
 import { OnboardingChecklist } from './profile/OnboardingChecklist.tsx';
 import { buttonVariants } from '../../components/ui/button.tsx';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card.tsx';
@@ -55,6 +56,7 @@ export function WorkspaceDashboardPage() {
         <p className="text-sm text-muted-foreground">{t('dashboard.title')}</p>
         <h1 className="text-2xl font-semibold tracking-tight">{workspace.data.name}</h1>
       </div>
+      <TeachingOverview workspaceId={workspaceId} />
       <DashboardOverview workspaceId={workspaceId} />
       <OnboardingChecklist workspaceId={workspaceId} />
     </section>

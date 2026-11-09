@@ -615,6 +615,38 @@
         }
       }
     },
+    "/api/w/{workspaceId}/dashboard/teaching": {
+      "get": {
+        "tags": [
+          "Dashboard"
+        ],
+        "summary": "Lessons of the next 7 days, active students, what students owe, lessons left in packages and payments received per month.",
+        "operationId": "GetTeachingDashboard",
+        "parameters": [
+          {
+            "name": "workspaceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TeachingDashboardResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/public/sites/{slug}/tests/{testSlug}": {
       "get": {
         "tags": [
@@ -3742,6 +3774,38 @@
               "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/HttpValidationProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/student/w/{workspaceId}/lessons": {
+      "get": {
+        "tags": [
+          "Student portal"
+        ],
+        "summary": "The signed-in student's next lessons, most recent past lessons (attendance, shared summary) and attendance counts.",
+        "operationId": "GetMyLessons",
+        "parameters": [
+          {
+            "name": "workspaceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StudentLessonsResponse"
                 }
               }
             }
@@ -8642,6 +8706,9 @@
           }
         }
       },
+      "AttendanceStatus": {
+        "type": "integer"
+      },
       "AuthenticatorSetupRequest": {
         "required": [
           "code",
@@ -9272,6 +9339,26 @@
           }
         }
       },
+      "CurrencyAmountResponse": {
+        "required": [
+          "currency",
+          "amountMinor"
+        ],
+        "type": "object",
+        "properties": {
+          "currency": {
+            "type": "string"
+          },
+          "amountMinor": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          }
+        }
+      },
       "CurrencyBalanceResponse": {
         "required": [
           "currency",
@@ -9447,6 +9534,70 @@
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/CountByKey"
+            }
+          }
+        }
+      },
+      "DashboardLesson": {
+        "required": [
+          "id",
+          "title",
+          "startUtc",
+          "endUtc",
+          "timeZone",
+          "kind",
+          "students"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "title": {
+            "type": "string"
+          },
+          "startUtc": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "endUtc": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "timeZone": {
+            "type": "string"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/LessonKind"
+          },
+          "students": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "DashboardLessons": {
+        "required": [
+          "next7Days",
+          "next"
+        ],
+        "type": "object",
+        "properties": {
+          "next7Days": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "next": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DashboardLesson"
             }
           }
         }
@@ -10024,6 +10175,61 @@
               "string"
             ],
             "format": "int32"
+          }
+        }
+      },
+      "FinanceSnapshotResponse": {
+        "required": [
+          "outstanding",
+          "studentsOwing",
+          "remainingLessons",
+          "unpaidLessons",
+          "runningLow",
+          "income"
+        ],
+        "type": "object",
+        "properties": {
+          "outstanding": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CurrencyAmountResponse"
+            }
+          },
+          "studentsOwing": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "remainingLessons": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "unpaidLessons": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "runningLow": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PackageRunningLowResponse"
+            }
+          },
+          "income": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MonthlyIncomeResponse"
+            }
           }
         }
       },
@@ -11196,6 +11402,12 @@
           }
         }
       },
+      "LessonKind": {
+        "type": "integer"
+      },
+      "LessonMode": {
+        "type": "integer"
+      },
       "LessonNotesRequest": {
         "required": [
           "version",
@@ -11421,6 +11633,9 @@
             ]
           }
         }
+      },
+      "LessonStatus": {
+        "type": "integer"
       },
       "LoginRequest": {
         "required": [
@@ -11799,6 +12014,24 @@
           }
         }
       },
+      "MonthlyIncomeResponse": {
+        "required": [
+          "month",
+          "received"
+        ],
+        "type": "object",
+        "properties": {
+          "month": {
+            "type": "string"
+          },
+          "received": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CurrencyAmountResponse"
+            }
+          }
+        }
+      },
       "MyWorkspaceResponse": {
         "required": [
           "id",
@@ -12067,6 +12300,31 @@
             "format": "date-time"
           },
           "version": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
+      "PackageRunningLowResponse": {
+        "required": [
+          "studentId",
+          "name",
+          "remainingLessons"
+        ],
+        "type": "object",
+        "properties": {
+          "studentId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "remainingLessons": {
             "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": [
               "integer",
@@ -13943,6 +14201,49 @@
           }
         }
       },
+      "StudentAttendanceResponse": {
+        "required": [
+          "held",
+          "present",
+          "absent",
+          "excused"
+        ],
+        "type": "object",
+        "properties": {
+          "held": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "present": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "absent": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "excused": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
       "StudentFinanceResponse": {
         "required": [
           "studentId",
@@ -14169,6 +14470,108 @@
           "expiresAtUtc": {
             "type": "string",
             "format": "date-time"
+          }
+        }
+      },
+      "StudentLessonResponse": {
+        "required": [
+          "id",
+          "title",
+          "topic",
+          "startUtc",
+          "endUtc",
+          "timeZone",
+          "mode",
+          "meetingUrl",
+          "location",
+          "status",
+          "attendance",
+          "sharedSummary"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "title": {
+            "type": "string"
+          },
+          "topic": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "startUtc": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "endUtc": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "timeZone": {
+            "type": "string"
+          },
+          "mode": {
+            "$ref": "#/components/schemas/LessonMode"
+          },
+          "meetingUrl": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "location": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "status": {
+            "$ref": "#/components/schemas/LessonStatus"
+          },
+          "attendance": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/AttendanceStatus"
+              }
+            ]
+          },
+          "sharedSummary": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "StudentLessonsResponse": {
+        "required": [
+          "upcoming",
+          "past",
+          "attendance"
+        ],
+        "type": "object",
+        "properties": {
+          "upcoming": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/StudentLessonResponse"
+            }
+          },
+          "past": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/StudentLessonResponse"
+            }
+          },
+          "attendance": {
+            "$ref": "#/components/schemas/StudentAttendanceResponse"
           }
         }
       },
@@ -14974,6 +15377,30 @@
               "string"
             ],
             "format": "int32"
+          }
+        }
+      },
+      "TeachingDashboardResponse": {
+        "required": [
+          "lessons",
+          "activeStudents",
+          "finance"
+        ],
+        "type": "object",
+        "properties": {
+          "lessons": {
+            "$ref": "#/components/schemas/DashboardLessons"
+          },
+          "activeStudents": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "finance": {
+            "$ref": "#/components/schemas/FinanceSnapshotResponse"
           }
         }
       },

@@ -89,6 +89,23 @@ Details and tests: [SECURITY.md](SECURITY.md#tenant-isolation-r0-p5).
 - API access: `src/api/client.ts` wraps `openapi-fetch` with the generated types. It sends cookies, keeps the antiforgery request token in memory, fetches it from `GET /api/auth/antiforgery` before the first unsafe request, adopts tokens re-issued in the `X-XSRF-TOKEN` response header, retries once on `ANTIFORGERY_INVALID`, and turns ProblemDetails into `ApiError`. `errorMessage()` shows only translated messages for error codes, never server text. TanStack Query is provided in `src/app/Providers.tsx`.
 - Hosting: `npm run build` writes to `src/ClassHub.Api/wwwroot/dist` (git-ignored, base `/dist/`). `Platform/SpaHosting.cs` serves static files before routing (hashed `/dist/assets` immutable, everything else `no-cache`) and maps `dist/index.html` as the fallback for the SPA prefixes only (`/` is the Razor landing page since R1-P4; the SPA's `/` route hands over with a full page load). `/api`, health checks and unknown paths never get the SPA, and the deny-by-default policy still applies to them.
 
+## Dashboards (R2-P12)
+
+- **Teacher:** `GET /api/w/{id}/dashboard/teaching` needs `ws:lessons.read`, `ws:students.read` and `ws:finance.read` (all three). `TeachingDashboardService` (Dashboard module) reads other modules' contracts, all tenant-filtered:
+  - `ILessonOutlook` (Lessons): scheduled lessons not over yet that start within 7 days; the count and the first five with their students' names (`IStudentLookup`).
+  - `IStudentLookup.CountActiveAsync`: active (not archived) students.
+  - `IFinanceStats` (Finance, `FinanceService.SnapshotAsync`): what students owe per currency (only debts: one student's credit never lowers another's debt), how many owe; lessons left in open packages of active students and who has at most one left; lessons held without a package; payments received per month for the last 6 months by the day they were paid (reversals included).
+  - Money is the teacher's own income from lessons and is always per currency; ClassHub's subscription revenue is not part of it.
+  - Conversions stay in the R1-P8 funnel.
+- **Student:** `GET /api/student/w/{id}/lessons` (`StudentSelf`) → `StudentLessons`, only lessons the student takes part in:
+  - the next 10 (meeting link included);
+  - the 10 most recent past ones (held or over but not recorded): their own attendance and the shared summary once held, never the private note or other participants;
+  - their attendance counts over held lessons.
+  Homework, materials and reviews already come from their own portal endpoints.
+- **SPA:**
+  - Workspace home: a "Teaching" section above the R1-P8 numbers. Tiles link to the calendar, students and finance. Next lessons link to the editor; running-low students link to their page. Payments received are a month × currency table.
+  - Student portal (`/student/w/{id}`): next lesson (join link or place, topic), the lessons after it, past lessons with attendance and summaries, and the attendance sentence, above subjects, homework and materials.
+
 ## Notifications (R2-P11)
 
 - `Modules/Notifications`: `Notification` (tenant-owned; kind, unique `DedupeKey`, student, the teacher it is sent for, lesson and its planned start or homework, due time, status Pending/Sent/Suppressed/Cancelled/Failed, lease, attempts, outcome, version) and `NotificationPreference` (per user: lesson reminders, homework emails; missing means on). Email only (D-26), through the existing outbox; the invitation, new-lead and booking emails stay where they are.

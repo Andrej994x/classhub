@@ -5,6 +5,14 @@ import type { components } from '../api/schema';
 export type StudentTeacher = components['schemas']['StudentTeacherResponse'];
 export type NotificationPreferences = components['schemas']['NotificationPreferencesResponse'];
 export type InvitationPreview = components['schemas']['InvitationPreviewResponse'];
+type MyLessonWire = components['schemas']['StudentLessonResponse'];
+/** A lesson in the portal; the API sends its enums as names. */
+export type MyLesson = Omit<MyLessonWire, 'mode' | 'status' | 'attendance'> & {
+  mode: 'Online' | 'InPerson';
+  status: 'Scheduled' | 'Completed' | 'Cancelled';
+  attendance: 'Present' | 'Absent' | 'Excused' | null;
+};
+export type MyLessons = Omit<components['schemas']['StudentLessonsResponse'], 'upcoming' | 'past'> & { upcoming: MyLesson[]; past: MyLesson[] };
 
 /** The teachers the signed-in user is a student of (D-16: the portal groups everything per teacher). */
 export function useMyTeachers() {
@@ -18,6 +26,15 @@ export function useMyStudentProfile(workspaceId: string) {
   return useQuery({
     queryKey: ['student', 'w', workspaceId, 'profile'],
     queryFn: async () => (await api.client.GET('/api/student/w/{workspaceId}/profile', { params: { path: { workspaceId } } })).data!,
+  });
+}
+
+/** The student's own lessons with one teacher (R2-P12): the next ones, recent past ones and their attendance. */
+export function useMyLessons(workspaceId: string) {
+  return useQuery({
+    queryKey: ['student', 'w', workspaceId, 'lessons'],
+    refetchOnMount: 'always',
+    queryFn: async () => (await api.client.GET('/api/student/w/{workspaceId}/lessons', { params: { path: { workspaceId } } })).data as unknown as MyLessons,
   });
 }
 

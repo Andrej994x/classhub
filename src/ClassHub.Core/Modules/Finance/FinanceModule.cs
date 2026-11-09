@@ -22,6 +22,7 @@ public sealed class FinanceModule : IModule
     {
         services.AddScoped<FinanceQueries>();
         services.AddScoped<FinanceService>();
+        services.AddScoped<IFinanceStats>(sp => sp.GetRequiredService<FinanceService>());
         services.AddScoped<LessonConsumption>();
         services.Configure<FinanceOptions>(configuration.GetSection(FinanceOptions.SectionName));
         services.AddSingleton<LessonConsumptionJob>();

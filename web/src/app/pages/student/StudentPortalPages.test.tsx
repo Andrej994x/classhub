@@ -15,6 +15,12 @@ const preview = (overrides: Record<string, unknown> = {}) => ({
 });
 const linked = { workspaceId: WORKSPACE_ID, teacherName: 'Математика со Ана', studentId: 's1', firstName: 'Марко', lastName: 'Стојанов' };
 
+/** A portal lesson as the API sends it (enums by name). */
+const lesson = (id: string, title: string, startUtc: string, extra: Record<string, unknown> = {}) => ({
+  id, title, topic: null, startUtc, endUtc: startUtc.replace('T16', 'T17'), timeZone: 'Europe/Skopje',
+  mode: 'Online', meetingUrl: null, location: null, status: 'Scheduled', attendance: null, sharedSummary: null, ...extra,
+});
+
 function portalApi({ signedIn = false, invitation = preview() as ReturnType<typeof preview> | null, teachers = [linked] } = {}) {
   const handler = (call: FakeCall) => {
     if (call.path === '/api/student-invitations/preview') return invitation ? json(200, invitation) : problem(400, 'INVALID_TOKEN');
@@ -132,6 +138,39 @@ describe('student portal', () => {
 
     await router.navigate(`/student/w/${OTHER_WORKSPACE}`);
     expect(await screen.findByText('Страницата не е пронајдена')).toBeInTheDocument();
+  });
+
+  it('shows the next lesson with its link, the ones after it and past lessons with attendance and summaries', async () => {
+    const lessons = {
+      upcoming: [
+        lesson('n1', 'Математика', '2026-11-12T16:00:00Z', { topic: 'Дропки', meetingUrl: 'https://meet.example.com/ana' }),
+        lesson('n2', 'Математика', '2026-11-19T16:00:00Z'),
+      ],
+      past: [
+        lesson('p1', 'Повторување', '2026-11-05T16:00:00Z', { status: 'Completed', attendance: 'Present', sharedSummary: 'Вежбавме дропки' }),
+        lesson('p2', 'Тест', '2026-11-01T16:00:00Z', { status: 'Scheduled', mode: 'InPerson', location: 'Скопје' }),
+      ],
+      attendance: { held: 3, present: 2, absent: 1, excused: 0 },
+    };
+    fakeApi({
+      me: teacher(),
+      extra: [
+        (call) => (call.path === '/api/student/teachers' ? json(200, [linked]) : undefined),
+        (call) => (call.path === `/api/student/w/${WORKSPACE_ID}/profile` ? json(200, { ...linked, subjectIds: [] }) : undefined),
+        (call) => (call.path === `/api/student/w/${WORKSPACE_ID}/lessons` ? json(200, lessons) : undefined),
+      ],
+    });
+    await renderRoute(`/student/w/${WORKSPACE_ID}`);
+
+    expect(await screen.findByText('Дропки')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Приклучи се на часот' })).toHaveAttribute('href', 'https://meet.example.com/ana');
+    expect(within(screen.getByRole('list', { name: 'Потоа' })).getAllByRole('listitem')).toHaveLength(1);
+
+    const past = screen.getByRole('list', { name: 'Претходни часови' });
+    expect(past).toHaveTextContent('Присутен');
+    expect(past).toHaveTextContent('Вежбавме дропки');
+    expect(past).toHaveTextContent('Сè уште не е евидентирано');
+    expect(screen.getByText('Присуствувавте на 2 од 3 одржани часови (отсуства: 1, оправдани: 0).')).toBeInTheDocument();
   });
 
   it('a signed-in account without a workspace lands in the student portal', async () => {
