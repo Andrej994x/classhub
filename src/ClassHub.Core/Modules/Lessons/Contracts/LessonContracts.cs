@@ -12,6 +12,15 @@ public enum LessonMode
     InPerson = 2,
 }
 
+/// <summary>A visitor's booking request (R2-P6, D-23).</summary>
+public enum BookingStatus
+{
+    Pending = 1,
+    Confirmed = 2,
+    Declined = 3,
+    Cancelled = 4,
+}
+
 /// <summary>Why an occurrence of a series was not created.</summary>
 public enum SeriesSkipReason
 {
@@ -152,3 +161,92 @@ public sealed record SeriesResponse(
 
 /// <summary>The series after a create or edit, how many lessons were created now, and the occurrences that were skipped now.</summary>
 public sealed record SeriesResultResponse(SeriesResponse Series, int Created, IReadOnlyList<SeriesSkipResponse> Conflicts);
+
+// --- Booking (R2-P6) ---
+
+public sealed record WorkingHoursItem(DayOfWeek DayOfWeek, TimeOnly Start, TimeOnly End);
+
+public sealed record TimeOffItem(DateOnly StartDate, DateOnly EndDate, string? Note);
+
+/// <summary>Self-service booking settings; working hours and days off are in <c>TimeZone</c> (the workspace's).</summary>
+public sealed record BookingSettingsResponse(
+    bool Enabled,
+    int SlotStepMinutes,
+    int MinNoticeHours,
+    int HorizonDays,
+    IReadOnlyList<WorkingHoursItem> WorkingHours,
+    IReadOnlyList<TimeOffItem> TimeOff,
+    string TimeZone,
+    int Version);
+
+public sealed record SaveBookingSettingsRequest(
+    bool Enabled,
+    int? SlotStepMinutes,
+    int? MinNoticeHours,
+    int? HorizonDays,
+    IReadOnlyList<WorkingHoursItem>? WorkingHours,
+    IReadOnlyList<TimeOffItem>? TimeOff,
+    int? Version);
+
+/// <summary>A booking request for the teacher (contact details from its request; local times in the workspace zone).</summary>
+public sealed record BookingRequestResponse(
+    Guid Id,
+    Guid LeadId,
+    string Name,
+    string Email,
+    string? Phone,
+    Guid OfferId,
+    string OfferTitle,
+    DateTime StartUtc,
+    DateTime EndUtc,
+    DateTime StartLocal,
+    DateTime EndLocal,
+    string TimeZone,
+    string Status,
+    Guid? LessonId,
+    string? Reason,
+    DateTime CreatedAtUtc,
+    int Version);
+
+/// <summary>One page of booking requests: pending first, then by time.</summary>
+public sealed record BookingRequestListResponse(IReadOnlyList<BookingRequestResponse> Items, int Total, int Page, int PageSize);
+
+public sealed record BookingDecisionRequest(int? Version, string? Reason);
+
+/// <summary>Cancel a confirmed booking (its lesson is cancelled with the reason; the visitor is told).</summary>
+public sealed record CancelBookingRequest(int? Version, string? Reason);
+
+/// <summary>Move a confirmed booking (its lesson) to a new wall-clock start in the workspace zone.</summary>
+public sealed record RescheduleBookingRequest(int? Version, DateTime? StartLocal);
+
+/// <summary>What the public booking page offers (R2-P6): bookable offers and the zone all times are in.</summary>
+public sealed record PublicBookingResponse(bool Available, string TimeZone, int HorizonDays, IReadOnlyList<PublicBookingOffer> Offers);
+
+public sealed record PublicBookingOffer(Guid Id, string Title, int DurationMinutes, string Mode);
+
+public sealed record PublicSlot(DateTime StartUtc, string Time);
+
+public sealed record PublicSlotDay(DateOnly Date, IReadOnlyList<PublicSlot> Slots);
+
+public sealed record PublicSlotsResponse(string TimeZone, IReadOnlyList<PublicSlotDay> Days);
+
+/// <summary>For the public request form (Leads module): a requested slot is checked and then recorded with the request.</summary>
+public interface IBookingIntake
+{
+    /// <summary>
+    /// The offer if <paramref name="startUtc"/> is a free slot of a bookable offer of the current (public, read-only)
+    /// workspace right now; otherwise a validation error on <c>slotStartUtc</c>.
+    /// </summary>
+    Task<BookableOffer> CheckAsync(Guid offerId, DateTime startUtc, CancellationToken cancellationToken);
+
+    /// <summary>Records the booking request for the lead in the caller's unit of work (explicit workspace; it saves).</summary>
+    Task AddAsync(Guid workspaceId, Guid leadId, BookableOffer offer, DateTime startUtc, DateTime nowUtc, CancellationToken cancellationToken);
+}
+
+public sealed record BookableOffer(Guid Id, string Title, Guid? SubjectId, int DurationMinutes, string Mode, string TimeZone);
+
+/// <summary>For the public site page: whether the workspace takes bookings (the page links to <c>/{slug}/book</c>).</summary>
+public interface IBookingAvailability
+{
+    Task<bool> IsEnabledAsync(CancellationToken cancellationToken);
+}

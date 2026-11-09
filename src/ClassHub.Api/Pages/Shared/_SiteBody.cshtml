@@ -177,6 +177,10 @@
                     {
                         <p class="site-text mb-2">@block.Text</p>
                     }
+                    @if (site.BookingEnabled)
+                    {
+                        <p class="mb-4"><a href="/@site.Slug/book" class="bg-site-primary text-site-on-primary inline-block rounded-full px-5 py-2 font-semibold focus:outline-none focus-visible:ring-2 focus-visible:ring-site-text" data-link="book">@PublicText.Get(lang, "site.bookCta")</a></p>
+                    }
                     @if (ViewData["Interactive"] is true)
                     {
                         @* The form loads its own data (token, offers, consent) from the API: nothing user-specific is cached. *@

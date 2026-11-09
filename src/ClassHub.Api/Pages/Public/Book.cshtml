@@ -1,0 +1,39 @@
+@page "/{slug:siteslug}/book"
+@model ClassHub.Api.Pages.Public.BookModel
+@{
+    Layout = "_PublicLayout";
+    var current = Model.Current;
+}
+@if (current is null)
+{
+    ViewData["Lang"] = "mk";
+    ViewData["Title"] = PublicText.Get("mk", "notFound.title");
+    ViewData["Robots"] = "noindex";
+    ViewData["BodyClass"] = "palette-brand";
+    <partial name="_NotFound" model="@("mk")" />
+    return;
+}
+@{
+    var site = current.Site;
+    var lang = site.Language;
+    ViewData["Lang"] = lang;
+    ViewData["Title"] = $"{PublicText.Get(lang, "book.title")} · {site.TeacherName ?? site.Slug}";
+    ViewData["Robots"] = "noindex";
+    ViewData["BodyClass"] = $"palette-{site.Palette.Key}";
+}
+<main class="mx-auto flex max-w-3xl flex-col gap-6 px-4 py-8 sm:py-12">
+    <p><a href="/@site.Slug" class="text-sm text-site-primary underline-offset-4 hover:underline">← @(site.TeacherName ?? site.Slug)</a></p>
+    <section class="rounded-2xl bg-site-surface p-6 shadow-sm" data-section="book-intro">
+        <p class="text-xs font-semibold uppercase tracking-wide text-site-muted">@PublicText.Get(lang, "book.kicker")</p>
+        <h1 class="mt-1 text-3xl font-bold leading-tight text-site-primary">@PublicText.Get(lang, "book.title")</h1>
+        <p class="site-text mt-2">@PublicText.Get(lang, "book.lead")</p>
+    </section>
+    <section class="rounded-2xl bg-site-surface p-6 shadow-sm" data-section="book">
+        @* Offers, free times and the form come from the API: nothing visitor-specific is rendered here. *@
+        <vite-island name="booking-widget" props="@(new { slug = site.Slug, language = lang })" />
+        <noscript><p class="text-sm text-site-muted">@PublicText.Get(lang, "book.noScript")</p></noscript>
+    </section>
+</main>
+<footer class="mx-auto max-w-3xl px-4 pb-10 text-sm text-site-muted">
+    <vite-island name="report-abuse" props="@(new { slug = site.Slug, language = lang })" />
+</footer>

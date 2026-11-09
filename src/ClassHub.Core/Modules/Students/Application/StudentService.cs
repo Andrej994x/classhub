@@ -139,63 +139,79 @@ internal sealed class StudentService(
     /// </summary>
     public async Task<ConvertLeadResponse> ConvertAsync(ConvertLeadRequest request, CancellationToken cancellationToken)
     {
-        Guid studentId;
-        bool created;
+        (Guid StudentId, bool Created) result;
         await using (var transaction = await db.Database.BeginTransactionAsync(cancellationToken))
         {
-            await queries.LockIntakeAsync(tenant.RequireWorkspaceId(), cancellationToken);
-            var lead = await leads.FindAsync(request.LeadId!.Value, cancellationToken) ?? throw new NotFoundException();
-            if (lead.StudentId is { } converted)
-            {
-                return new ConvertLeadResponse(await GetAsync(converted, cancellationToken), Created: false);
-            }
-
-            // Checked before anything is created or linked: the same state machine as the status endpoint.
-            if (!lead.CanConvert)
-            {
-                throw new BusinessRuleException("Reopen the request before turning it into a student.", ErrorCodes.InvalidStatusTransition);
-            }
-
-            var email = StudentNames.NormalizeEmail(lead.Email);
-            var existing = email is null ? null : await queries.WithArchived().Where(s => s.Email == email).Select(s => (Guid?)s.Id).SingleOrDefaultAsync(cancellationToken);
-            if (existing is { } id)
-            {
-                studentId = id;
-                created = false;
-            }
-            else
-            {
-                await EnsureActiveLimitAsync(cancellationToken);
-                var (first, last) = StudentNames.Split(lead.Name);
-                var now = clock.GetUtcNow().UtcDateTime;
-                var student = new Student
-                {
-                    Id = Guid.CreateVersion7(),
-                    WorkspaceId = tenant.RequireWorkspaceId(),
-                    FirstName = first.Length > 0 ? first : email ?? "?",
-                    LastName = last,
-                    Email = email,
-                    Phone = string.IsNullOrWhiteSpace(lead.Phone) ? null : lead.Phone.Trim(),
-                    SourceLeadId = lead.Id,
-                    CreatedAtUtc = now,
-                    UpdatedAtUtc = now,
-                };
-                db.Set<Student>().Add(student);
-                if (lead.SubjectId is { } subjectId)
-                {
-                    db.Set<StudentSubject>().Add(new StudentSubject { WorkspaceId = student.WorkspaceId, StudentId = student.Id, SubjectId = subjectId });
-                }
-
-                studentId = student.Id;
-                created = true;
-            }
-
-            await leads.MarkConvertedAsync(lead.Id, studentId, cancellationToken);
-            await SaveAsync(cancellationToken);
+            result = await ConvertInTransactionAsync(request.LeadId!.Value, cancellationToken);
             await transaction.CommitAsync(cancellationToken);
         }
 
-        return new ConvertLeadResponse(await GetAsync(studentId, cancellationToken), created);
+        return new ConvertLeadResponse(await GetAsync(result.StudentId, cancellationToken), result.Created);
+    }
+
+    /// <summary>
+    /// The conversion inside the caller's transaction (it saves; the caller commits or rolls back), so another operation
+    /// (confirming a booking) can make it part of one atomic change.
+    /// </summary>
+    public async Task<(Guid StudentId, bool Created)> ConvertInTransactionAsync(Guid leadId, CancellationToken cancellationToken)
+    {
+        if (db.Database.CurrentTransaction is null)
+        {
+            throw new InvalidOperationException("The conversion needs the caller's transaction.");
+        }
+
+        await queries.LockIntakeAsync(tenant.RequireWorkspaceId(), cancellationToken);
+        var lead = await leads.FindAsync(leadId, cancellationToken) ?? throw new NotFoundException();
+        if (lead.StudentId is { } converted)
+        {
+            return (converted, false);
+        }
+
+        // Checked before anything is created or linked: the same state machine as the status endpoint.
+        if (!lead.CanConvert)
+        {
+            throw new BusinessRuleException("Reopen the request before turning it into a student.", ErrorCodes.InvalidStatusTransition);
+        }
+
+        Guid studentId;
+        bool created;
+        var email = StudentNames.NormalizeEmail(lead.Email);
+        var existing = email is null ? null : await queries.WithArchived().Where(s => s.Email == email).Select(s => (Guid?)s.Id).SingleOrDefaultAsync(cancellationToken);
+        if (existing is { } id)
+        {
+            studentId = id;
+            created = false;
+        }
+        else
+        {
+            await EnsureActiveLimitAsync(cancellationToken);
+            var (first, last) = StudentNames.Split(lead.Name);
+            var now = clock.GetUtcNow().UtcDateTime;
+            var student = new Student
+            {
+                Id = Guid.CreateVersion7(),
+                WorkspaceId = tenant.RequireWorkspaceId(),
+                FirstName = first.Length > 0 ? first : email ?? "?",
+                LastName = last,
+                Email = email,
+                Phone = string.IsNullOrWhiteSpace(lead.Phone) ? null : lead.Phone.Trim(),
+                SourceLeadId = lead.Id,
+                CreatedAtUtc = now,
+                UpdatedAtUtc = now,
+            };
+            db.Set<Student>().Add(student);
+            if (lead.SubjectId is { } subjectId)
+            {
+                db.Set<StudentSubject>().Add(new StudentSubject { WorkspaceId = student.WorkspaceId, StudentId = student.Id, SubjectId = subjectId });
+            }
+
+            studentId = student.Id;
+            created = true;
+        }
+
+        await leads.MarkConvertedAsync(lead.Id, studentId, cancellationToken);
+        await SaveAsync(cancellationToken);
+        return (studentId, created);
     }
 
     public async Task<IReadOnlyList<StudentNoteResponse>> NotesAsync(Guid studentId, CancellationToken cancellationToken)

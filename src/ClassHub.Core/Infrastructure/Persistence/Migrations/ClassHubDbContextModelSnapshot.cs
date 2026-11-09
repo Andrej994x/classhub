@@ -1339,6 +1339,141 @@ namespace ClassHub.Core.Infrastructure.Persistence.Migrations
                         });
                 });
 
+            modelBuilder.Entity("ClassHub.Core.Modules.Lessons.Domain.BookingRequest", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasPrecision(3)
+                        .HasColumnType("datetime2(3)");
+
+                    b.Property<DateTime?>("DecidedAtUtc")
+                        .HasPrecision(3)
+                        .HasColumnType("datetime2(3)");
+
+                    b.Property<DateTime>("EndUtc")
+                        .HasPrecision(3)
+                        .HasColumnType("datetime2(3)");
+
+                    b.Property<Guid>("LeadId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("LessonId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("Mode")
+                        .HasColumnType("int");
+
+                    b.Property<Guid>("OfferId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("OfferTitle")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("Reason")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<DateTime>("StartUtc")
+                        .HasPrecision(3)
+                        .HasColumnType("datetime2(3)");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.Property<Guid?>("SubjectId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("TimeZone")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<DateTime>("UpdatedAtUtc")
+                        .HasPrecision(3)
+                        .HasColumnType("datetime2(3)");
+
+                    b.Property<int>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("int");
+
+                    b.Property<Guid>("WorkspaceId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("LeadId")
+                        .IsUnique();
+
+                    b.HasIndex("LessonId")
+                        .IsUnique()
+                        .HasFilter("[LessonId] IS NOT NULL");
+
+                    b.HasIndex("WorkspaceId");
+
+                    b.HasIndex("WorkspaceId", "LeadId");
+
+                    b.HasIndex("WorkspaceId", "LessonId");
+
+                    b.HasIndex("WorkspaceId", "OfferId");
+
+                    b.HasIndex("WorkspaceId", "Status", "StartUtc");
+
+                    b.ToTable("BookingRequests", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_BookingRequests_Lesson", "([Status] IN (2, 4)) OR [LessonId] IS NULL");
+
+                            t.HasCheckConstraint("CK_BookingRequests_Mode", "[Mode] IN (1, 2)");
+
+                            t.HasCheckConstraint("CK_BookingRequests_Status", "[Status] BETWEEN 1 AND 4");
+
+                            t.HasCheckConstraint("CK_BookingRequests_Time", "[EndUtc] > [StartUtc]");
+                        });
+                });
+
+            modelBuilder.Entity("ClassHub.Core.Modules.Lessons.Domain.BookingSettings", b =>
+                {
+                    b.Property<Guid>("WorkspaceId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<bool>("Enabled")
+                        .HasColumnType("bit");
+
+                    b.Property<int>("HorizonDays")
+                        .HasColumnType("int");
+
+                    b.Property<int>("MinNoticeHours")
+                        .HasColumnType("int");
+
+                    b.Property<int>("SlotStepMinutes")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("UpdatedAtUtc")
+                        .HasPrecision(3)
+                        .HasColumnType("datetime2(3)");
+
+                    b.Property<int>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("int");
+
+                    b.HasKey("WorkspaceId");
+
+                    b.HasIndex("WorkspaceId");
+
+                    b.ToTable("BookingSettings", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_BookingSettings_Horizon", "[HorizonDays] BETWEEN 7 AND 90");
+
+                            t.HasCheckConstraint("CK_BookingSettings_Notice", "[MinNoticeHours] BETWEEN 0 AND 168");
+
+                            t.HasCheckConstraint("CK_BookingSettings_Step", "[SlotStepMinutes] IN (15, 30, 60)");
+                        });
+                });
+
             modelBuilder.Entity("ClassHub.Core.Modules.Lessons.Domain.Lesson", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1626,6 +1761,69 @@ namespace ClassHub.Core.Infrastructure.Persistence.Migrations
                     b.ToTable("LessonSeriesSkips", null, t =>
                         {
                             t.HasCheckConstraint("CK_LessonSeriesSkips_Reason", "[Reason] BETWEEN 1 AND 3");
+                        });
+                });
+
+            modelBuilder.Entity("ClassHub.Core.Modules.Lessons.Domain.TimeOff", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateOnly>("EndDate")
+                        .HasColumnType("date");
+
+                    b.Property<string>("Note")
+                        .HasMaxLength(120)
+                        .HasColumnType("nvarchar(120)");
+
+                    b.Property<DateOnly>("StartDate")
+                        .HasColumnType("date");
+
+                    b.Property<Guid>("WorkspaceId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("WorkspaceId");
+
+                    b.HasIndex("WorkspaceId", "StartDate");
+
+                    b.ToTable("TimeOff", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_TimeOff_Dates", "[EndDate] >= [StartDate]");
+                        });
+                });
+
+            modelBuilder.Entity("ClassHub.Core.Modules.Lessons.Domain.WorkingHours", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("DayOfWeek")
+                        .HasColumnType("int");
+
+                    b.Property<TimeOnly>("EndTime")
+                        .HasColumnType("time");
+
+                    b.Property<TimeOnly>("StartTime")
+                        .HasColumnType("time");
+
+                    b.Property<Guid>("WorkspaceId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("WorkspaceId");
+
+                    b.HasIndex("WorkspaceId", "DayOfWeek");
+
+                    b.ToTable("WorkingHours", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_WorkingHours_Day", "[DayOfWeek] BETWEEN 0 AND 6");
+
+                            t.HasCheckConstraint("CK_WorkingHours_Time", "[EndTime] > [StartTime]");
                         });
                 });
 
@@ -2872,6 +3070,38 @@ namespace ClassHub.Core.Infrastructure.Persistence.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("ClassHub.Core.Modules.Lessons.Domain.BookingRequest", b =>
+                {
+                    b.HasOne("ClassHub.Core.Modules.Leads.Domain.Lead", null)
+                        .WithMany()
+                        .HasForeignKey("WorkspaceId", "LeadId")
+                        .HasPrincipalKey("WorkspaceId", "Id")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.HasOne("ClassHub.Core.Modules.Lessons.Domain.Lesson", null)
+                        .WithMany()
+                        .HasForeignKey("WorkspaceId", "LessonId")
+                        .HasPrincipalKey("WorkspaceId", "Id")
+                        .OnDelete(DeleteBehavior.NoAction);
+
+                    b.HasOne("ClassHub.Core.Modules.Offers.Domain.Offer", null)
+                        .WithMany()
+                        .HasForeignKey("WorkspaceId", "OfferId")
+                        .HasPrincipalKey("WorkspaceId", "Id")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("ClassHub.Core.Modules.Lessons.Domain.BookingSettings", b =>
+                {
+                    b.HasOne("ClassHub.Core.Modules.Workspaces.Domain.Workspace", null)
+                        .WithMany()
+                        .HasForeignKey("WorkspaceId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("ClassHub.Core.Modules.Lessons.Domain.Lesson", b =>
                 {
                     b.HasOne("ClassHub.Core.Modules.Catalog.Domain.Subject", null)
@@ -2965,6 +3195,24 @@ namespace ClassHub.Core.Infrastructure.Persistence.Migrations
                         .WithMany()
                         .HasForeignKey("WorkspaceId", "SeriesId")
                         .HasPrincipalKey("WorkspaceId", "Id")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("ClassHub.Core.Modules.Lessons.Domain.TimeOff", b =>
+                {
+                    b.HasOne("ClassHub.Core.Modules.Workspaces.Domain.Workspace", null)
+                        .WithMany()
+                        .HasForeignKey("WorkspaceId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("ClassHub.Core.Modules.Lessons.Domain.WorkingHours", b =>
+                {
+                    b.HasOne("ClassHub.Core.Modules.Workspaces.Domain.Workspace", null)
+                        .WithMany()
+                        .HasForeignKey("WorkspaceId")
                         .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
                 });

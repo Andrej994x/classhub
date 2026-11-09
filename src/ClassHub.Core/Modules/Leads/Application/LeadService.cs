@@ -155,6 +155,9 @@ internal sealed class SubmitLeadRequestValidator : AbstractValidator<SubmitLeadR
         RuleFor(x => x.AttemptId).NotNull().When(x => x.Type == nameof(LeadType.Diagnostic)).WithMessage("A test result request needs its attempt.");
         RuleFor(x => x.AttemptId).Null().When(x => x.Type != nameof(LeadType.Diagnostic)).WithMessage("Only test result requests belong to an attempt.");
         RuleFor(x => x.ShareResult).Equal(false).When(x => x.Type != nameof(LeadType.Diagnostic)).WithMessage("Only test result requests can share a result.");
+        // A booked slot (R2-P6) is a lesson request for an offer.
+        RuleFor(x => x.SlotStartUtc).Null().When(x => x.Type != nameof(LeadType.LessonRequest)).WithMessage("Only lesson requests can book a time.");
+        RuleFor(x => x.OfferId).NotNull().When(x => x.SlotStartUtc is not null).WithMessage("Choose what to book.");
         RuleFor(x => x.Name).Cascade(CascadeMode.Stop).NotEmpty().Must(n => n!.Trim().Length > 0).MaximumLength(Lead.NameMaxLength);
         RuleFor(x => x.Email).Cascade(CascadeMode.Stop).NotEmpty().MaximumLength(Lead.EmailMaxLength).EmailAddress();
         RuleFor(x => x.Phone).MaximumLength(Lead.PhoneMaxLength).Matches(@"\A[0-9+()\-./ ]{5,40}\z").When(x => !string.IsNullOrWhiteSpace(x.Phone))

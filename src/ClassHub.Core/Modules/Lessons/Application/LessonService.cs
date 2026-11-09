@@ -25,6 +25,7 @@ internal sealed class LessonService(
     IGroupLookup groups,
     LessonParticipants participantResolver,
     ICatalogLookup catalog,
+    BookingService bookings,
     TimeProvider clock)
 {
     /// <summary>The longest calendar range one request may read.</summary>
@@ -128,6 +129,8 @@ internal sealed class LessonService(
         lesson.SeriesException = lesson.SeriesId is not null;
         Apply(lesson, request, startUtc, endUtc);
         Touch(lesson);
+        // A booked lesson keeps its booking in step (new time, visitor told) in the same save.
+        await bookings.OnLessonChangedAsync(lesson, cancellationToken);
         await SaveAsync(cancellationToken);
         await transaction.CommitAsync(cancellationToken);
         return await GetAsync(lesson.Id, cancellationToken);
@@ -160,6 +163,7 @@ internal sealed class LessonService(
         lesson.CancellationReason = request.Reason!.Trim();
         lesson.CancelledAtUtc = clock.GetUtcNow().UtcDateTime;
         Touch(lesson);
+        await bookings.OnLessonChangedAsync(lesson, cancellationToken);
         await SaveAsync(cancellationToken);
         return await GetAsync(lesson.Id, cancellationToken);
     }

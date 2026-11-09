@@ -13,6 +13,11 @@ public static class PublicText
     {
         ["preview.banner"] = "Преглед — не е објавено",
         ["site.contactCta"] = "Контактирајте ме",
+        ["site.bookCta"] = "Закажете час онлајн",
+        ["book.kicker"] = "Закажување",
+        ["book.title"] = "Закажете час",
+        ["book.lead"] = "Изберете понуда и слободен термин. Наставникот го потврдува барањето и ве известува по е-пошта.",
+        ["book.noScript"] = "За да закажете, вклучете JavaScript во прелистувачот.",
         ["site.subjects"] = "Предмети",
         ["site.levels"] = "Нивоа",
         ["site.languages"] = "Јазици на настава",
@@ -65,6 +70,11 @@ public static class PublicText
     {
         ["preview.banner"] = "Preview — not published",
         ["site.contactCta"] = "Contact me",
+        ["site.bookCta"] = "Book a lesson online",
+        ["book.kicker"] = "Booking",
+        ["book.title"] = "Book a lesson",
+        ["book.lead"] = "Choose an offer and a free time. The teacher confirms the request and lets you know by email.",
+        ["book.noScript"] = "To book, turn on JavaScript in your browser.",
         ["site.subjects"] = "Subjects",
         ["site.levels"] = "Levels",
         ["site.languages"] = "Teaching languages",

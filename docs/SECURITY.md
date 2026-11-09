@@ -88,6 +88,12 @@ ASP.NET Core Identity with cookie sessions. See [ARCHITECTURE.md](ARCHITECTURE.m
 - Names, phones and guardian contacts are redacted in logs.
 - No duplicates by email within a workspace (unique index) and no limit overrun under parallel requests (intake lock; tested).
 
+## Booking (R2-P6)
+
+- Booking requests go through the public lead intake unchanged (D-19: signed token, minimum fill time, honeypot, per-site cap under a lock, per-IP rate limits; D-18 consent); the slot is re-checked on the server, and the booking API only lists offers that are public and active.
+- Public booking reads run in the site's workspace bound read-only; the busy times of the teacher's other workspaces are read as start/end only.
+- Visitor emails carry only the offer, the time with its zone and the teacher's optional note.
+
 ## Recurring lessons (R2-P5)
 
 - The horizon job reads series across workspaces only for identifiers, then works on each in a scope bound to its workspace as its teacher, and only while the teacher is still an active member: no write crosses a workspace boundary and the normal tenant filters apply.

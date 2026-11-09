@@ -24,6 +24,10 @@ public sealed class LessonsModule : IModule
         services.AddScoped<LessonParticipants>();
         services.AddScoped<LessonService>();
         services.AddScoped<LessonSeriesService>();
+        services.AddScoped<BookingService>();
+        services.AddScoped<BookingPublicService>();
+        services.AddScoped<IBookingIntake>(sp => sp.GetRequiredService<BookingPublicService>());
+        services.AddScoped<IBookingAvailability, BookingAvailability>();
         services.Configure<LessonOptions>(configuration.GetSection(LessonOptions.SectionName));
         services.AddSingleton<LessonSeriesHorizonJob>();
         services.AddHostedService(sp => sp.GetRequiredService<LessonSeriesHorizonJob>());
@@ -94,6 +98,54 @@ public sealed class LessonsModule : IModule
             .WithValidation<EndSeriesRequest>()
             .RequireAuthorization(manage)
             .WithName("EndLessonSeries");
+
+        // Self-service booking (R2-P6): the teacher's side.
+        var booking = endpoints.MapGroup($"{WorkspacesModule.WorkspaceRoute}/booking").WithTags("Booking").RequireAntiforgeryHeader();
+        booking.MapGet("/settings", async (BookingService service, CancellationToken ct) => TypedResults.Ok(await service.GetSettingsAsync(ct)))
+            .RequireAuthorization(read)
+            .WithName("GetBookingSettings");
+        booking.MapPut("/settings", async (SaveBookingSettingsRequest request, BookingService service, CancellationToken ct) =>
+                TypedResults.Ok(await service.SaveSettingsAsync(request, ct)))
+            .WithValidation<SaveBookingSettingsRequest>()
+            .RequireAuthorization(manage)
+            .WithName("SaveBookingSettings");
+        booking.MapGet("/requests", async (string? status, int? page, int? pageSize, BookingService service, CancellationToken ct) =>
+                TypedResults.Ok(await service.ListAsync(status, page ?? 1, pageSize ?? BookingService.DefaultPageSize, ct)))
+            .RequireAuthorization(read)
+            .WithName("ListBookingRequests");
+        booking.MapGet("/requests/{bookingId:guid}", async (Guid bookingId, BookingService service, CancellationToken ct) => TypedResults.Ok(await service.GetAsync(bookingId, ct)))
+            .RequireAuthorization(read)
+            .WithName("GetBookingRequest");
+        booking.MapPost("/requests/{bookingId:guid}/confirm", async (Guid bookingId, BookingDecisionRequest request, BookingService service, CancellationToken ct) =>
+                TypedResults.Ok(await service.ConfirmAsync(bookingId, request, ct)))
+            .RequireAuthorization(manage)
+            .WithName("ConfirmBookingRequest")
+            .WithSummary("Creates the student (if needed) and the lesson after a conflict check; 409 LESSON_OVERLAP leaves it pending.");
+        booking.MapPost("/requests/{bookingId:guid}/decline", async (Guid bookingId, BookingDecisionRequest request, BookingService service, CancellationToken ct) =>
+                TypedResults.Ok(await service.DeclineAsync(bookingId, request, ct)))
+            .WithValidation<BookingDecisionRequest>()
+            .RequireAuthorization(manage)
+            .WithName("DeclineBookingRequest");
+        booking.MapPost("/requests/{bookingId:guid}/reschedule", async (Guid bookingId, RescheduleBookingRequest request, BookingService service, CancellationToken ct) =>
+                TypedResults.Ok(await service.RescheduleAsync(bookingId, request, ct)))
+            .WithValidation<RescheduleBookingRequest>()
+            .RequireAuthorization(manage)
+            .WithName("RescheduleBookingRequest");
+        booking.MapPost("/requests/{bookingId:guid}/cancel", async (Guid bookingId, CancelBookingRequest request, BookingService service, CancellationToken ct) =>
+                TypedResults.Ok(await service.CancelAsync(bookingId, request, ct)))
+            .WithValidation<CancelBookingRequest>()
+            .RequireAuthorization(manage)
+            .WithName("CancelBookingRequest");
+
+        // The visitor's side (anonymous): bookable offers and free slots of a published site.
+        var site = endpoints.MapGroup("/public/sites/{slug:siteslug}/booking").WithTags("Public booking").AllowAnonymous();
+        site.MapGet("", async (string slug, BookingPublicService service, CancellationToken ct) => TypedResults.Ok(await service.GetPageAsync(slug, ct)))
+            .RequireRateLimiting(RateLimitPolicies.PublicRead)
+            .WithName("GetPublicBooking");
+        site.MapGet("/slots", async (string slug, Guid offerId, DateOnly from, BookingPublicService service, CancellationToken ct) =>
+                TypedResults.Ok(await service.GetSlotsAsync(slug, offerId, from, ct)))
+            .RequireRateLimiting(RateLimitPolicies.PublicRead)
+            .WithName("GetPublicBookingSlots");
     }
 }
 
@@ -170,5 +222,56 @@ internal sealed class EndSeriesRequestValidator : AbstractValidator<EndSeriesReq
     {
         RuleFor(x => x.FromDate).NotNull();
         RuleFor(x => x.Version).NotNull();
+    }
+}
+
+internal sealed class SaveBookingSettingsRequestValidator : AbstractValidator<SaveBookingSettingsRequest>
+{
+    public SaveBookingSettingsRequestValidator()
+    {
+        // Null-safe throughout: a missing or null field is a validation error, never a server error.
+        RuleFor(x => x.SlotStepMinutes).Cascade(CascadeMode.Stop).NotNull().Must(s => BookingSettings.SlotSteps.Contains(s!.Value)).WithMessage("Choose 15, 30 or 60 minutes.");
+        RuleFor(x => x.MinNoticeHours).Cascade(CascadeMode.Stop).NotNull().InclusiveBetween(0, BookingSettings.MaxNoticeHours);
+        RuleFor(x => x.HorizonDays).Cascade(CascadeMode.Stop).NotNull().InclusiveBetween(BookingSettings.MinHorizonDays, BookingSettings.MaxHorizonDays);
+        RuleFor(x => x.Version).NotNull();
+        RuleFor(x => x.WorkingHours).Cascade(CascadeMode.Stop)
+            .NotNull()
+            .Must(h => h!.Count <= 42).WithMessage("At most 42 intervals.")
+            .Must(h => h!.All(i => i is not null && i.End > i.Start && Enum.IsDefined(i.DayOfWeek))).WithMessage("Each interval ends after it starts.")
+            .Must(h => !h!.GroupBy(i => i.DayOfWeek).Any(day => day.OrderBy(i => i.Start).Zip(day.OrderBy(i => i.Start).Skip(1)).Any(p => p.Second.Start < p.First.End)))
+            .WithMessage("Intervals of one day must not overlap.");
+        RuleFor(x => x.TimeOff).Cascade(CascadeMode.Stop)
+            .NotNull()
+            .Must(o => o!.Count <= 100).WithMessage("At most 100 periods.")
+            .Must(o => o!.All(p => p is not null && p.EndDate >= p.StartDate && (p.Note?.Length ?? 0) <= TimeOff.NoteMaxLength))
+            .WithMessage("Each period ends on or after its start (note up to 120 characters).");
+    }
+}
+
+internal sealed class BookingDecisionRequestValidator : AbstractValidator<BookingDecisionRequest>
+{
+    public BookingDecisionRequestValidator()
+    {
+        RuleFor(x => x.Version).NotNull();
+        RuleFor(x => x.Reason).MaximumLength(BookingRequest.ReasonMaxLength);
+    }
+}
+
+internal sealed class CancelBookingRequestValidator : AbstractValidator<CancelBookingRequest>
+{
+    public CancelBookingRequestValidator()
+    {
+        RuleFor(x => x.Version).NotNull();
+        RuleFor(x => x.Reason).Must(r => r is not null && r.Trim().Length is >= 1 and <= BookingRequest.ReasonMaxLength)
+            .WithMessage($"Give a reason (up to {BookingRequest.ReasonMaxLength} characters).");
+    }
+}
+
+internal sealed class RescheduleBookingRequestValidator : AbstractValidator<RescheduleBookingRequest>
+{
+    public RescheduleBookingRequestValidator()
+    {
+        RuleFor(x => x.Version).NotNull();
+        RuleFor(x => x.StartLocal).NotNull();
     }
 }

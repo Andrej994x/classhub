@@ -102,3 +102,12 @@ public sealed record ConvertLeadRequest(Guid? LeadId);
 
 /// <summary><c>Created</c>: a new student; false when the request was linked to an existing one (or already converted).</summary>
 public sealed record ConvertLeadResponse(StudentResponse Student, bool Created);
+
+/// <summary>
+/// For other modules (booking): the student of a request, converting it if needed (D-12, idempotent), inside the
+/// caller's transaction (it saves; the caller commits), so the conversion is undone with the caller's change.
+/// </summary>
+public interface ILeadStudents
+{
+    Task<Guid> EnsureStudentAsync(Guid leadId, CancellationToken cancellationToken);
+}

@@ -118,3 +118,81 @@ internal sealed class LessonParticipantConfiguration : IEntityTypeConfiguration<
             .OnDelete(DeleteBehavior.NoAction);
     }
 }
+
+internal sealed class BookingSettingsConfiguration : IEntityTypeConfiguration<BookingSettings>
+{
+    public void Configure(EntityTypeBuilder<BookingSettings> builder)
+    {
+        builder.ToTable("BookingSettings", t =>
+        {
+            t.HasCheckConstraint("CK_BookingSettings_Step", "[SlotStepMinutes] IN (15, 30, 60)");
+            t.HasCheckConstraint("CK_BookingSettings_Notice", "[MinNoticeHours] BETWEEN 0 AND 168");
+            t.HasCheckConstraint("CK_BookingSettings_Horizon", "[HorizonDays] BETWEEN 7 AND 90");
+        });
+        builder.HasKey(x => x.WorkspaceId);
+        builder.Property(x => x.Version).IsConcurrencyToken();
+        builder.HasOne(WorkspaceForeignKeyTargets.Workspace, navigationName: null).WithMany().HasForeignKey(nameof(BookingSettings.WorkspaceId)).OnDelete(DeleteBehavior.NoAction);
+    }
+}
+
+internal sealed class WorkingHoursConfiguration : IEntityTypeConfiguration<WorkingHours>
+{
+    public void Configure(EntityTypeBuilder<WorkingHours> builder)
+    {
+        builder.ToTable("WorkingHours", t =>
+        {
+            t.HasCheckConstraint("CK_WorkingHours_Day", "[DayOfWeek] BETWEEN 0 AND 6");
+            t.HasCheckConstraint("CK_WorkingHours_Time", "[EndTime] > [StartTime]");
+        });
+        builder.HasKey(x => x.Id);
+        builder.HasIndex(x => new { x.WorkspaceId, x.DayOfWeek });
+        builder.HasOne(WorkspaceForeignKeyTargets.Workspace, navigationName: null).WithMany().HasForeignKey(nameof(WorkingHours.WorkspaceId)).OnDelete(DeleteBehavior.NoAction);
+    }
+}
+
+internal sealed class TimeOffConfiguration : IEntityTypeConfiguration<TimeOff>
+{
+    public void Configure(EntityTypeBuilder<TimeOff> builder)
+    {
+        builder.ToTable("TimeOff", t => t.HasCheckConstraint("CK_TimeOff_Dates", "[EndDate] >= [StartDate]"));
+        builder.HasKey(x => x.Id);
+        builder.Property(x => x.Note).HasMaxLength(TimeOff.NoteMaxLength);
+        builder.HasIndex(x => new { x.WorkspaceId, x.StartDate });
+        builder.HasOne(WorkspaceForeignKeyTargets.Workspace, navigationName: null).WithMany().HasForeignKey(nameof(TimeOff.WorkspaceId)).OnDelete(DeleteBehavior.NoAction);
+    }
+}
+
+internal sealed class BookingRequestConfiguration : IEntityTypeConfiguration<BookingRequest>
+{
+    public void Configure(EntityTypeBuilder<BookingRequest> builder)
+    {
+        builder.ToTable("BookingRequests", t =>
+        {
+            t.HasCheckConstraint("CK_BookingRequests_Time", "[EndUtc] > [StartUtc]");
+            t.HasCheckConstraint("CK_BookingRequests_Status", "[Status] BETWEEN 1 AND 4");
+            t.HasCheckConstraint("CK_BookingRequests_Mode", "[Mode] IN (1, 2)");
+            t.HasCheckConstraint("CK_BookingRequests_Lesson", "([Status] IN (2, 4)) OR [LessonId] IS NULL");
+        });
+        builder.HasKey(x => x.Id);
+        builder.Property(x => x.OfferTitle).HasMaxLength(200).IsRequired();
+        builder.Property(x => x.TimeZone).HasMaxLength(64).IsRequired();
+        builder.Property(x => x.Reason).HasMaxLength(BookingRequest.ReasonMaxLength);
+        builder.Property(x => x.Version).IsConcurrencyToken();
+        builder.HasIndex(x => new { x.WorkspaceId, x.Status, x.StartUtc });
+        builder.HasIndex(x => x.LeadId).IsUnique();
+        builder.HasIndex(x => x.LessonId).IsUnique().HasFilter("[LessonId] IS NOT NULL");
+        // The request, the offer and the lesson belong to the same workspace (composite tenant FKs).
+        builder.HasOne(ClassHub.Core.Modules.Leads.Contracts.LeadForeignKeyTargets.Lead, navigationName: null).WithMany()
+            .HasForeignKey(nameof(BookingRequest.WorkspaceId), nameof(BookingRequest.LeadId))
+            .HasPrincipalKey("WorkspaceId", "Id")
+            .OnDelete(DeleteBehavior.NoAction);
+        builder.HasOne(ClassHub.Core.Modules.Offers.Contracts.OfferForeignKeyTargets.Offer, navigationName: null).WithMany()
+            .HasForeignKey(nameof(BookingRequest.WorkspaceId), nameof(BookingRequest.OfferId))
+            .HasPrincipalKey("WorkspaceId", "Id")
+            .OnDelete(DeleteBehavior.NoAction);
+        builder.HasOne<Lesson>().WithMany()
+            .HasForeignKey(nameof(BookingRequest.WorkspaceId), nameof(BookingRequest.LessonId))
+            .HasPrincipalKey(nameof(Lesson.WorkspaceId), nameof(Lesson.Id))
+            .OnDelete(DeleteBehavior.NoAction);
+    }
+}
