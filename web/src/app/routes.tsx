@@ -19,6 +19,7 @@ import { OffersPage } from './pages/offers/OffersPage.tsx';
 import { PlanPage } from './pages/plan/PlanPage.tsx';
 import { GroupEditPage, GroupsPage } from './pages/groups/GroupsPages.tsx';
 import { MaterialPage, MaterialsPage } from './pages/materials/MaterialsPages.tsx';
+import { HomeworkEditPage, HomeworkPage, StudentHomeworkPage } from './pages/homework/HomeworkPages.tsx';
 import { BookingPage } from './pages/booking/BookingPage.tsx';
 import { CalendarPage } from './pages/lessons/CalendarPage.tsx';
 import { LessonEditPage } from './pages/lessons/LessonEditPage.tsx';
@@ -77,6 +78,9 @@ export const routes: RouteObject[] = [
       { path: 'w/:workspaceId/groups/:groupId', element: <GroupEditPage /> },
       { path: 'w/:workspaceId/materials', element: <MaterialsPage /> },
       { path: 'w/:workspaceId/materials/:materialId', element: <MaterialPage /> },
+      { path: 'w/:workspaceId/homework', element: <HomeworkPage /> },
+      { path: 'w/:workspaceId/homework/new', element: <HomeworkEditPage /> },
+      { path: 'w/:workspaceId/homework/:homeworkId', element: <HomeworkEditPage /> },
       { path: 'w/:workspaceId/offers', element: <OffersPage /> },
       { path: 'w/:workspaceId/offers/new', element: <OfferEditPage /> },
       { path: 'w/:workspaceId/offers/:offerId', element: <OfferEditPage /> },
@@ -95,6 +99,7 @@ export const routes: RouteObject[] = [
     children: [
       { index: true, element: <StudentHomePage /> },
       { path: 'w/:workspaceId', element: <StudentTeacherPage /> },
+      { path: 'w/:workspaceId/homework/:assignmentId', element: <StudentHomeworkPage /> },
       { path: 'settings', element: <StudentSettingsPage /> },
     ],
   },

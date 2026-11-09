@@ -17,6 +17,7 @@ import { pendingInvitation, useAcceptInvitation, useAcceptWithAccount, useInvita
 import { useCatalog } from '../../../teacher/queries.ts';
 import { applyServerFieldErrors } from '../auth/serverErrors.ts';
 import { NotFoundContent } from '../Pages.tsx';
+import { MyHomeworkList } from '../homework/HomeworkPages.tsx';
 import { MyMaterials } from '../materials/MaterialsPages.tsx';
 
 const linkClass = 'text-primary underline-offset-4 hover:underline';
@@ -216,7 +217,7 @@ export function StudentHomePage() {
   );
 }
 
-/** `/student/w/:workspaceId`: the student's own page with one teacher: subjects and materials (lessons arrive in a later phase). */
+/** `/student/w/:workspaceId`: the student's own page with one teacher: subjects, homework and materials (lessons arrive in a later phase). */
 export function StudentTeacherPage() {
   const { t, i18n } = useTranslation();
   const { workspaceId = '' } = useParams();
@@ -259,6 +260,7 @@ export function StudentTeacherPage() {
           </CardContent>
         </Card>
       )}
+      <MyHomeworkList workspaceId={workspaceId} />
       <MyMaterials workspaceId={workspaceId} />
       <Card>
         <CardHeader>

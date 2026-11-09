@@ -30,6 +30,7 @@ import { num } from '../../../teacher/offers.ts';
 import { useCatalog } from '../../../teacher/queries.ts';
 import { useStarted } from '../../../lib/useStarted.ts';
 import { StudentPicker } from '../../components/StudentPicker.tsx';
+import { LessonHomework } from '../homework/HomeworkPages.tsx';
 import { AttendanceCard, AttendanceFields, attendanceItems, NotesCard } from './LessonCards.tsx';
 import { NotFoundContent } from '../Pages.tsx';
 
@@ -442,6 +443,7 @@ function LessonEditor({ workspaceId, lesson }: { workspaceId: string; lesson: Le
           }}
         />
       )}
+      {current && <LessonHomework workspaceId={workspaceId} lessonId={current.id} />}
       {current && version !== null && (
         <NotesCard
           workspaceId={workspaceId}

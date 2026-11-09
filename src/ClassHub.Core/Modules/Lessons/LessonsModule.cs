@@ -28,6 +28,7 @@ public sealed class LessonsModule : IModule
         services.AddScoped<BookingPublicService>();
         services.AddScoped<IBookingIntake>(sp => sp.GetRequiredService<BookingPublicService>());
         services.AddScoped<IBookingAvailability, BookingAvailability>();
+        services.AddScoped<ILessonLookup, LessonLookup>();
         services.Configure<LessonOptions>(configuration.GetSection(LessonOptions.SectionName));
         services.AddSingleton<LessonSeriesHorizonJob>();
         services.AddHostedService(sp => sp.GetRequiredService<LessonSeriesHorizonJob>());

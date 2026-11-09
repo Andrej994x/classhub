@@ -88,6 +88,12 @@ ASP.NET Core Identity with cookie sessions. See [ARCHITECTURE.md](ARCHITECTURE.m
 - Names, phones and guardian contacts are redacted in logs.
 - No duplicates by email within a workspace (unique index) and no limit overrun under parallel requests (intake lock; tested).
 
+## Homework (R2-P9)
+
+- Students reach only their own assignments (by `student:self` and the student id, never by the URL alone); another student's assignment, answer or file is 404. Teachers see only their workspace's homework.
+- Answer files follow the document allow-list (extension and signature), 20 MB and the teacher's plan storage; downloads use the private file headers (attachment unless an image, nosniff, sandbox CSP, no-store).
+- A reviewed answer cannot be changed, and a review never applies to an answer the teacher did not see (version check).
+
 ## Materials (R2-P8)
 
 - Materials are private: only the teacher's workspace and the students they are assigned to (directly or through a current group) can open them; every other request is 404, never 403. Archived materials leave the portal.

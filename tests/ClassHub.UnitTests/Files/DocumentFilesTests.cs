@@ -1,11 +1,11 @@
 using System.IO.Compression;
 using System.Text;
-using ClassHub.Core.Modules.Materials.Domain;
+using ClassHub.Core.Infrastructure.Files;
 
 namespace ClassHub.UnitTests.Files;
 
-/// <summary>R2-P8: the material upload allow-list (extension and signature) and the safe file name.</summary>
-public sealed class MaterialFilesTests
+/// <summary>R2-P8/R2-P9: the document upload allow-list (extension and signature) and the safe file name.</summary>
+public sealed class DocumentFilesTests
 {
     private static readonly byte[] Pdf = Encoding.ASCII.GetBytes("%PDF-1.7\n");
     private static readonly byte[] Png = [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0x00];
@@ -38,7 +38,7 @@ public sealed class MaterialFilesTests
             _ => Zip(("[Content_Types].xml", 10), ("ppt/presentation.xml", 10)),
         };
 
-        var kind = MaterialFiles.Detect(name, bytes).ShouldNotBeNull();
+        var kind = DocumentFiles.Detect(name, bytes).ShouldNotBeNull();
 
         kind.ContentType.ShouldBe(contentType);
         kind.Inline.ShouldBe(inline);
@@ -47,22 +47,22 @@ public sealed class MaterialFilesTests
     [Fact]
     public void Mismatching_or_unknown_files_are_not_allowed()
     {
-        MaterialFiles.Detect("a.pdf", Png).ShouldBeNull();
-        MaterialFiles.Detect("a.png", Pdf).ShouldBeNull();
-        MaterialFiles.Detect("a.jpg", Png).ShouldBeNull();
-        MaterialFiles.Detect("a.webp", [.. "RIFF"u8, 0, 0, 0, 0, .. "WAVE"u8]).ShouldBeNull();
-        MaterialFiles.Detect("a.webp", "RIFF"u8).ShouldBeNull(); // too short for the WEBP tag
-        MaterialFiles.Detect("a.docx", PlainZip).ShouldBeNull(); // a ZIP, but not Office Open XML
-        MaterialFiles.Detect("a.docx", Zip(("[Content_Types].xml", 10), ("xl/workbook.xml", 10))).ShouldBeNull(); // a workbook named .docx
-        MaterialFiles.Detect("a.xlsx", Zip(("xl/workbook.xml", 10))).ShouldBeNull(); // no content types
-        MaterialFiles.Detect("a.docx", [.. "PK\u0003\u0004"u8, 0x14, 0x00, .. "[Content_Types].xml word/document.xml"u8]).ShouldBeNull(); // not a readable ZIP
-        MaterialFiles.Detect("a.txt", [0x41, 0x00, 0x42]).ShouldBeNull(); // NUL: binary
-        MaterialFiles.Detect("a.txt", [0xC3, 0x28]).ShouldBeNull(); // invalid UTF-8
-        MaterialFiles.Detect("a.exe", [0x4D, 0x5A]).ShouldBeNull();
-        MaterialFiles.Detect("a.html", "<html>"u8).ShouldBeNull();
-        MaterialFiles.Detect("a.svg", "<svg>"u8).ShouldBeNull();
-        MaterialFiles.Detect("pdf", Pdf).ShouldBeNull();
-        MaterialFiles.Detect("a.pdf", []).ShouldBeNull();
+        DocumentFiles.Detect("a.pdf", Png).ShouldBeNull();
+        DocumentFiles.Detect("a.png", Pdf).ShouldBeNull();
+        DocumentFiles.Detect("a.jpg", Png).ShouldBeNull();
+        DocumentFiles.Detect("a.webp", [.. "RIFF"u8, 0, 0, 0, 0, .. "WAVE"u8]).ShouldBeNull();
+        DocumentFiles.Detect("a.webp", "RIFF"u8).ShouldBeNull(); // too short for the WEBP tag
+        DocumentFiles.Detect("a.docx", PlainZip).ShouldBeNull(); // a ZIP, but not Office Open XML
+        DocumentFiles.Detect("a.docx", Zip(("[Content_Types].xml", 10), ("xl/workbook.xml", 10))).ShouldBeNull(); // a workbook named .docx
+        DocumentFiles.Detect("a.xlsx", Zip(("xl/workbook.xml", 10))).ShouldBeNull(); // no content types
+        DocumentFiles.Detect("a.docx", [.. "PK\u0003\u0004"u8, 0x14, 0x00, .. "[Content_Types].xml word/document.xml"u8]).ShouldBeNull(); // not a readable ZIP
+        DocumentFiles.Detect("a.txt", [0x41, 0x00, 0x42]).ShouldBeNull(); // NUL: binary
+        DocumentFiles.Detect("a.txt", [0xC3, 0x28]).ShouldBeNull(); // invalid UTF-8
+        DocumentFiles.Detect("a.exe", [0x4D, 0x5A]).ShouldBeNull();
+        DocumentFiles.Detect("a.html", "<html>"u8).ShouldBeNull();
+        DocumentFiles.Detect("a.svg", "<svg>"u8).ShouldBeNull();
+        DocumentFiles.Detect("pdf", Pdf).ShouldBeNull();
+        DocumentFiles.Detect("a.pdf", []).ShouldBeNull();
     }
 
     [Fact]
@@ -71,7 +71,7 @@ public sealed class MaterialFilesTests
         // Large parts first: the content types entry is far beyond the first kilobytes.
         var document = Zip(("word/media/image1.png", 64 * 1024), ("word/document.xml", 8 * 1024), ("[Content_Types].xml", 10));
 
-        MaterialFiles.Detect("report.docx", document).ShouldNotBeNull().Extension.ShouldBe(".docx");
+        DocumentFiles.Detect("report.docx", document).ShouldNotBeNull().Extension.ShouldBe(".docx");
     }
 
     [Theory]
@@ -87,14 +87,14 @@ public sealed class MaterialFilesTests
     [InlineData(null, ".pdf", "file.pdf")]
     [InlineData("....pdf", ".pdf", "file.pdf")]
     public void Names_are_made_safe(string? uploaded, string extension, string expected) =>
-        MaterialFiles.SafeName(uploaded, extension).ShouldBe(expected);
+        DocumentFiles.SafeName(uploaded, extension).ShouldBe(expected);
 
     [Fact]
     public void Long_names_are_cut_to_the_limit_keeping_the_extension()
     {
-        var name = MaterialFiles.SafeName(new string('а', 300) + ".docx", ".docx");
+        var name = DocumentFiles.SafeName(new string('а', 300) + ".docx", ".docx");
 
-        name.Length.ShouldBe(Material.FileNameMaxLength);
+        name.Length.ShouldBe(DocumentFiles.FileNameMaxLength);
         name.ShouldEndWith(".docx");
     }
 

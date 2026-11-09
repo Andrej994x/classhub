@@ -14,9 +14,6 @@ using Microsoft.EntityFrameworkCore;
 
 namespace ClassHub.Core.Modules.Materials.Application;
 
-/// <summary>An opened material file: stream, type, safe name and whether browsers may show it inline.</summary>
-internal sealed record MaterialFile(Stream Content, string ContentType, string FileName, bool Inline);
-
 /// <summary>
 /// Teaching materials (M10, R2-P8). Uploads are checked against the allow-list by extension and signature and counted
 /// against the plan's storage (all of the workspace's stored files) under the plan lock. Files are private: the teacher
@@ -85,13 +82,13 @@ internal sealed class MaterialService(
             throw new RequestValidationException(errors);
         }
 
-        if (content.Length is 0 or > MaterialFiles.MaxBytes)
+        if (content.Length is 0 or > DocumentFiles.MaxBytes)
         {
             throw new BadRequestException("The file must be at most 20 MB.", ErrorCodes.PayloadTooLarge);
         }
 
-        var kind = MaterialFiles.Detect(uploadedName ?? string.Empty, content)
-            ?? throw new BadRequestException($"This file type is not allowed. Allowed: {string.Join(", ", MaterialFiles.Extensions)}.", ErrorCodes.FileNotAllowed);
+        var kind = DocumentFiles.Detect(uploadedName ?? string.Empty, content)
+            ?? throw new BadRequestException($"This file type is not allowed. Allowed: {string.Join(", ", DocumentFiles.Extensions)}.", ErrorCodes.FileNotAllowed);
         await ThrowIfUnknownSubjectAsync(subjectId, null, cancellationToken);
 
         var workspaceId = tenant.RequireWorkspaceId();
@@ -106,7 +103,7 @@ internal sealed class MaterialService(
             Description = Clean(description),
             SubjectId = subjectId,
             FileId = fileId,
-            FileName = MaterialFiles.SafeName(uploadedName, kind.Extension),
+            FileName = DocumentFiles.SafeName(uploadedName, kind.Extension),
             ContentType = kind.ContentType,
             SizeBytes = content.Length,
             CreatedAtUtc = now,
@@ -264,7 +261,7 @@ internal sealed class MaterialService(
     }
 
     /// <summary>The teacher's download (archived materials included).</summary>
-    public async Task<MaterialFile> OpenAsync(Guid materialId, CancellationToken cancellationToken) =>
+    public async Task<PrivateFile> OpenAsync(Guid materialId, CancellationToken cancellationToken) =>
         await OpenFileAsync(await LoadAsync(materialId, tracking: false, cancellationToken), cancellationToken);
 
     /// <summary>The student's materials (student:self): assigned to them or to one of their current groups, not archived.</summary>
@@ -284,7 +281,7 @@ internal sealed class MaterialService(
     }
 
     /// <summary>The student's download: only an assigned, not archived material; anything else is not found.</summary>
-    public async Task<MaterialFile> OpenForStudentAsync(Guid materialId, CancellationToken cancellationToken)
+    public async Task<PrivateFile> OpenForStudentAsync(Guid materialId, CancellationToken cancellationToken)
     {
         var (studentId, groupIds) = await StudentScopeAsync(cancellationToken);
         var material = await db.Set<Material>().AsNoTracking()
@@ -300,12 +297,11 @@ internal sealed class MaterialService(
         return (studentId, [.. await groups.ActiveGroupsOfStudentAsync(studentId, cancellationToken)]);
     }
 
-    private async Task<MaterialFile> OpenFileAsync(Material material, CancellationToken cancellationToken)
+    private async Task<PrivateFile> OpenFileAsync(Material material, CancellationToken cancellationToken)
     {
         var key = await db.Set<StoredFile>().AsNoTracking().Where(f => f.Id == material.FileId).Select(f => f.StorageKey).SingleAsync(cancellationToken);
         var stream = await files.OpenReadAsync(key, cancellationToken) ?? throw new NotFoundException();
-        // Only images may be shown in the browser; everything else is downloaded (never rendered inline).
-        return new MaterialFile(stream, material.ContentType, material.FileName, material.ContentType.StartsWith("image/", StringComparison.Ordinal));
+        return new PrivateFile(stream, material.ContentType, material.FileName, DocumentUploads.IsInline(material.ContentType));
     }
 
     private async Task ThrowIfUnknownSubjectAsync(Guid? wanted, Guid? saved, CancellationToken cancellationToken)
