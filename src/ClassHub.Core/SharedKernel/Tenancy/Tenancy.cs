@@ -16,6 +16,12 @@ public interface IArchivable
     DateTime? ArchivedAtUtc { get; }
 }
 
+/// <summary>
+/// Marks an append-only record (the finance ledger, R2-P10): rows are only ever added; a correction is a new row. The
+/// save interceptor refuses to update or delete one.
+/// </summary>
+public interface IAppendOnly;
+
 /// <summary>Names of the EF Core named query filters.</summary>
 public static class TenancyFilters
 {

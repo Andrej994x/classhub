@@ -121,6 +121,11 @@ internal sealed class OfferService(
     public Task<bool> CanReceiveRequestsAsync(Guid offerId, CancellationToken cancellationToken) =>
         db.Set<Offer>().AnyAsync(o => o.Id == offerId && o.IsActive, cancellationToken);
 
+    public async Task<OfferTerms?> TermsAsync(Guid offerId, CancellationToken cancellationToken) =>
+        await db.Set<Offer>().AsNoTracking().Where(o => o.Id == offerId)
+            .Select(o => new OfferTerms(o.Id, o.Title, o.Kind == OfferKind.Package ? o.LessonCount ?? 1 : 1, o.PriceMinor, o.Currency))
+            .SingleOrDefaultAsync(cancellationToken);
+
     public Task<int> CountAsync(CancellationToken cancellationToken) => db.Set<Offer>().CountAsync(cancellationToken);
 
     public async Task<(int Active, int Public)> CountActiveAsync(CancellationToken cancellationToken)

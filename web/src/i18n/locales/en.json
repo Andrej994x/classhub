@@ -43,7 +43,8 @@
     "calendar": "Calendar",
     "booking": "Booking",
     "materials": "Materials",
-    "homework": "Homework"
+    "homework": "Homework",
+    "finance": "Finance"
   },
   "layout": {
     "teacherArea": "Teacher workspace",
@@ -384,7 +385,8 @@
       "ACCOUNT_ALREADY_LINKED": "Your account is already linked to a student of this teacher.",
       "EMAIL_REGISTERED": "An account with this email already exists. Sign in to accept the invitation.",
       "LESSON_OVERLAP": "You already have a lesson at this time.",
-      "FILE_NOT_ALLOWED": "This file type is not allowed. Upload a PDF, image (PNG, JPEG, WebP), Word, Excel, PowerPoint or text file."
+      "FILE_NOT_ALLOWED": "This file type is not allowed. Upload a PDF, image (PNG, JPEG, WebP), Word, Excel, PowerPoint or text file.",
+      "PACKAGE_LESSONS_OUT_OF_RANGE": "The correction would leave the package with fewer than 0 or more used lessons than it has."
     }
   },
   "auth": {
@@ -1165,6 +1167,111 @@
       "storageFull": "Your teacher's storage is full, so the file could not be saved. Hand in your answer as text or ask your teacher.",
       "reviewedMeanwhile": "Your teacher has reviewed this homework meanwhile. Reload the page to see the review.",
       "changedMeanwhile": "Your answer was changed in another window or your teacher reviewed it meanwhile. Reload the page to see the current answer."
+    }
+  },
+  "finance": {
+    "title": "Packages and payments",
+    "lead": "Payments are made outside ClassHub; here you keep track of them. Corrections are new entries, never edits.",
+    "pageTitle": "Finance",
+    "pageLead": "What students owe (per currency), the lessons they have left and a report for any period.",
+    "balances": "Balance per currency",
+    "noRecords": "No packages or payments yet.",
+    "owes": "Owes {{amount}}",
+    "credit": "Paid in advance {{amount}}",
+    "settled": "Settled",
+    "chargedPaid": "Charged {{charged}} · paid {{paid}}",
+    "unpaidLessons_one": "{{count}} unpaid lesson (held without a package)",
+    "unpaidLessons_other": "{{count}} unpaid lessons (held without a package)",
+    "currency": "Currency",
+    "otherCurrency": "Other currency…",
+    "reason": "Reason",
+    "saveCorrection": "Save correction",
+    "validation": {
+      "required": "Required.",
+      "amount": "Enter an amount, e.g. 1500 or 25.50.",
+      "reason": "Give a reason."
+    },
+    "package": {
+      "title": "Packages",
+      "none": "No packages yet.",
+      "add": "Assign a package",
+      "fromOffer": "From an offer",
+      "custom": "Custom package",
+      "snapshot": "The offer's title, lessons and price are copied now; later changes to the offer do not affect this package.",
+      "lessons_one": "{{count}} lesson",
+      "lessons_other": "{{count}} lessons",
+      "name": "Name",
+      "lessonCount": "Lessons",
+      "price": "Price of the whole package",
+      "assign": "Assign",
+      "remaining": "{{remaining}} of {{total}} lessons left",
+      "closed": "closed",
+      "close": "Close package"
+    },
+    "lessons": {
+      "correct": "Correct lessons",
+      "quantity": "Lessons (+ used, − given back)",
+      "quantityHint": "For example 1 for a missed lesson that counts."
+    },
+    "payment": {
+      "add": "Record a payment",
+      "outside": "Record a payment the student made in cash, by transfer or otherwise; ClassHub does not take payments.",
+      "amount": "Amount",
+      "paidOn": "Paid on",
+      "method": "Method",
+      "forPackage": "For package (optional)",
+      "noPackage": "No specific package",
+      "note": "Note (optional)",
+      "record": "Record payment"
+    },
+    "methods": {
+      "Cash": "Cash",
+      "BankTransfer": "Bank transfer",
+      "Card": "Card",
+      "Other": "Other"
+    },
+    "adjustment": {
+      "add": "Correct the balance",
+      "direction": "The student owes",
+      "less": "less (discount, credit)",
+      "more": "more (extra charge)",
+      "amount": "Amount"
+    },
+    "history": {
+      "title": "History",
+      "lessons_one": "{{count}} lesson",
+      "lessons_other": "{{count}} lessons",
+      "kinds": {
+        "PackageAssigned": "Package assigned",
+        "Payment": "Payment",
+        "PaymentReversal": "Payment reversed",
+        "Adjustment": "Balance correction",
+        "LessonConsumed": "Lesson held",
+        "LessonAdjusted": "Lessons corrected",
+        "LessonReversed": "Lesson given back"
+      },
+      "reverse": "Reverse…",
+      "reverseReason": "Why is it reversed?",
+      "reverseConfirm": "Reverse",
+      "alreadyReversed": "This was already reversed. Reload the page."
+    },
+    "overview": {
+      "title": "Students",
+      "empty": "No packages or payments recorded yet.",
+      "remaining_one": "{{count}} lesson left",
+      "remaining_other": "{{count}} lessons left"
+    },
+    "report": {
+      "title": "Report",
+      "lead": "Per currency: packages sold, charged and received in the period (days in your time zone).",
+      "from": "From",
+      "to": "To",
+      "show": "Show",
+      "empty": "Nothing recorded in this period.",
+      "packages": "Packages",
+      "charged": "Charged",
+      "received": "Received",
+      "lessons": "Lessons held: {{consumed}}, of them unpaid: {{unpaid}}"
     }
   },
   "studentPortal": {

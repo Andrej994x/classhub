@@ -286,6 +286,9 @@ export function fakeApi({ me = null as FakeMe | null, extra = [] as Handler[] } 
     // Homework (R2-P9): none by default, for the portal and for a lesson.
     if (route === `GET /api/student/w/${WORKSPACE_ID}/homework`) return state.me ? json(200, []) : problem(401, 'UNAUTHORIZED');
     if (route === `GET /api/w/${WORKSPACE_ID}/homework`) return json(200, { items: [], total: 0, page: 1, pageSize: 20 });
+    // Finance (R2-P10): no records by default on a student page.
+    const financeOf = /^GET \/api\/w\/[^/]+\/finance\/students\/([^/]+)$/.exec(route);
+    if (financeOf) return json(200, { studentId: financeOf[1], balances: [], packages: [], unpaidLessons: 0, entries: [] });
     if (route === 'GET /api/me/workspaces') return state.me ? json(200, [{ id: WORKSPACE_ID, name: 'Мој работен простор', role: 'Owner' }]) : problem(401, 'UNAUTHORIZED');
     if (route === `GET /api/w/${WORKSPACE_ID}`) {
       return state.me

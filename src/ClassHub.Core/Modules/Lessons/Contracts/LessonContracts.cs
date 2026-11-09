@@ -290,8 +290,33 @@ public interface IBookingAvailability
 /// <summary>A lesson for other modules (homework linked to a lesson).</summary>
 public sealed record LessonSummary(Guid Id, string Title, DateTime StartUtc, string TimeZone, string Status);
 
+/// <summary>A participant of a lesson and whether they attended (Present).</summary>
+public sealed record LessonPresence(Guid StudentId, bool Present);
+
+/// <summary>A lesson's current state for Finance: held or not, and who was present.</summary>
+public sealed record LessonAttendanceFacts(Guid LessonId, string Title, DateTime StartUtc, bool Held, IReadOnlyList<LessonPresence> Participants);
+
 /// <summary>Lessons of the current workspace, for other modules.</summary>
 public interface ILessonLookup
 {
     Task<IReadOnlyDictionary<Guid, LessonSummary>> FindAsync(IReadOnlyCollection<Guid> ids, CancellationToken cancellationToken);
+
+    /// <summary>The lesson's current attendance (null when it is not a lesson of the current workspace).</summary>
+    Task<LessonAttendanceFacts?> AttendanceAsync(Guid lessonId, CancellationToken cancellationToken);
+}
+
+/// <summary>An unprocessed lesson event (the Finance outbox, R2-P7/R2-P10).</summary>
+public sealed record PendingLessonEvent(Guid Id, Guid WorkspaceId, Guid LessonId, Guid TeacherUserId, string Kind, DateTime OccurredAtUtc);
+
+/// <summary>The lesson events Finance consumes.</summary>
+public interface ILessonEventFeed
+{
+    /// <summary>System scope (every workspace, identifiers only): the oldest unprocessed events.</summary>
+    Task<IReadOnlyList<PendingLessonEvent>> PendingAsync(int max, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// In the current workspace and the caller's transaction: marks the event processed; false when it already was
+    /// (another worker handled it).
+    /// </summary>
+    Task<bool> MarkProcessedAsync(Guid eventId, CancellationToken cancellationToken);
 }

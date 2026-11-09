@@ -375,6 +375,169 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/w/{workspaceId}/finance/overview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Every student with finance records: what they owe per currency, lessons left and unpaid lessons. */
+        get: operations["GetFinanceOverview"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/w/{workspaceId}/finance/report": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** A period (local days, at most a year): packages sold, charged and received per currency, lessons consumed. */
+        get: operations["GetFinanceReport"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/w/{workspaceId}/finance/students/{studentId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetStudentFinance"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/w/{workspaceId}/finance/students/{studentId}/packages": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** From an offer (its terms are copied) or custom; later offer changes never alter the package. */
+        post: operations["AssignPackage"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/w/{workspaceId}/finance/students/{studentId}/payments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["RecordPayment"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/w/{workspaceId}/finance/students/{studentId}/adjustments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["AdjustBalance"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/w/{workspaceId}/finance/packages/{packageId}/close": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["ClosePackage"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/w/{workspaceId}/finance/packages/{packageId}/lesson-adjustments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["AdjustPackageLessons"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/w/{workspaceId}/finance/payments/{paymentId}/reverse": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["ReversePayment"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/w/{workspaceId}/finance/ledger/{entryId}/reverse": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["ReverseLessonEntry"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/w/{workspaceId}/groups": {
         parameters: {
             query?: never;
@@ -2338,6 +2501,16 @@ export interface components {
             /** Format: uuid */
             groupId: null | string;
         };
+        AssignPackageRequest: {
+            /** Format: uuid */
+            offerId: null | string;
+            title: null | string;
+            /** Format: int32 */
+            lessonCount: null | number | string;
+            /** Format: int64 */
+            priceMinor: null | number | string;
+            currency: null | string;
+        };
         AttemptAnswer: {
             /** Format: uuid */
             questionId: string;
@@ -2360,6 +2533,12 @@ export interface components {
         AuthenticatorSetupResponse: {
             sharedKey: string;
             authenticatorUri: string;
+        };
+        BalanceAdjustmentRequest: {
+            /** Format: int64 */
+            amountMinor: null | number | string;
+            currency: null | string;
+            reason: null | string;
         };
         BookingDecisionRequest: {
             /** Format: int32 */
@@ -2494,6 +2673,24 @@ export interface components {
             /** Format: int32 */
             count: number | string;
         };
+        CurrencyBalanceResponse: {
+            currency: string;
+            /** Format: int64 */
+            chargedMinor: number | string;
+            /** Format: int64 */
+            paidMinor: number | string;
+            /** Format: int64 */
+            outstandingMinor: number | string;
+        };
+        CurrencyReportResponse: {
+            currency: string;
+            /** Format: int32 */
+            packagesSold: number | string;
+            /** Format: int64 */
+            chargedMinor: number | string;
+            /** Format: int64 */
+            receivedMinor: number | string;
+        };
         DailyCount: {
             /** Format: date */
             day: string;
@@ -2623,6 +2820,43 @@ export interface components {
             fromDate: null | string;
             /** Format: int32 */
             version: null | number | string;
+        };
+        FinanceEntryResponse: {
+            /** Format: uuid */
+            id: string;
+            kind: string;
+            /** Format: date-time */
+            occurredAtUtc: string;
+            /** Format: int64 */
+            amountMinor: null | number | string;
+            currency: null | string;
+            /** Format: int32 */
+            lessons: null | number | string;
+            /** Format: uuid */
+            packageId: null | string;
+            packageTitle: null | string;
+            /** Format: uuid */
+            lessonId: null | string;
+            lessonTitle: null | string;
+            /** Format: date */
+            paidOn: null | string;
+            method: null | string;
+            note: null | string;
+            reversible: boolean;
+        };
+        FinanceOverviewResponse: {
+            students: components["schemas"]["StudentFinanceSummary"][];
+        };
+        FinanceReportResponse: {
+            /** Format: date */
+            from: string;
+            /** Format: date */
+            to: string;
+            currencies: components["schemas"]["CurrencyReportResponse"][];
+            /** Format: int32 */
+            lessonsConsumed: number | string;
+            /** Format: int32 */
+            unpaidLessons: number | string;
         };
         GroupListItem: {
             /** Format: uuid */
@@ -2886,6 +3120,13 @@ export interface components {
             /** Format: int32 */
             version: null | number | string;
         };
+        LessonAdjustmentRequest: {
+            /** Format: int32 */
+            quantity: null | number | string;
+            reason: null | string;
+            /** Format: uuid */
+            lessonId: null | string;
+        };
         LessonHistoryItem: {
             /** Format: uuid */
             id: string;
@@ -3100,6 +3341,31 @@ export interface components {
             completed: boolean;
             available: boolean;
         };
+        PackageResponse: {
+            /** Format: uuid */
+            id: string;
+            title: string;
+            /** Format: uuid */
+            offerId: null | string;
+            /** Format: int32 */
+            lessonCount: number | string;
+            /** Format: int32 */
+            usedLessons: number | string;
+            /** Format: int32 */
+            remainingLessons: number | string;
+            /** Format: int64 */
+            priceMinor: number | string;
+            currency: string;
+            closed: boolean;
+            /** Format: date-time */
+            createdAtUtc: string;
+            /** Format: int32 */
+            version: number | string;
+        };
+        PackageVersionRequest: {
+            /** Format: int32 */
+            version: null | number | string;
+        };
         PlanLimitUsage: {
             key: string;
             /** Format: int32 */
@@ -3183,6 +3449,17 @@ export interface components {
             /** Format: int32 */
             version: null | number | string;
         };
+        RecordPaymentRequest: {
+            /** Format: int64 */
+            amountMinor: null | number | string;
+            currency: null | string;
+            /** Format: date */
+            paidOn: null | string;
+            method: null | string;
+            note: null | string;
+            /** Format: uuid */
+            packageId: null | string;
+        };
         RecoveryCodesResponse: {
             recoveryCodes: string[];
         };
@@ -3212,6 +3489,9 @@ export interface components {
             sectionType: null | string;
             /** Format: uuid */
             testId: null | string;
+            reason: null | string;
+        };
+        ReverseRequest: {
             reason: null | string;
         };
         ReviewHomeworkRequest: {
@@ -3481,6 +3761,26 @@ export interface components {
             slug: string;
             available: boolean;
             reason: null | string;
+        };
+        StudentFinanceResponse: {
+            /** Format: uuid */
+            studentId: string;
+            balances: components["schemas"]["CurrencyBalanceResponse"][];
+            packages: components["schemas"]["PackageResponse"][];
+            /** Format: int32 */
+            unpaidLessons: number | string;
+            entries: components["schemas"]["FinanceEntryResponse"][];
+        };
+        StudentFinanceSummary: {
+            /** Format: uuid */
+            studentId: string;
+            name: string;
+            archived: boolean;
+            balances: components["schemas"]["CurrencyBalanceResponse"][];
+            /** Format: int32 */
+            remainingLessons: number | string;
+            /** Format: int32 */
+            unpaidLessons: number | string;
         };
         StudentHomeworkResponse: {
             /** Format: uuid */
@@ -4489,6 +4789,319 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["TestAttemptsResponse"];
+                };
+            };
+        };
+    };
+    GetFinanceOverview: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FinanceOverviewResponse"];
+                };
+            };
+        };
+    };
+    GetFinanceReport: {
+        parameters: {
+            query: {
+                from: string;
+                to: string;
+            };
+            header?: never;
+            path: {
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FinanceReportResponse"];
+                };
+            };
+        };
+    };
+    GetStudentFinance: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                studentId: string;
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StudentFinanceResponse"];
+                };
+            };
+        };
+    };
+    AssignPackage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                studentId: string;
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AssignPackageRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StudentFinanceResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["HttpValidationProblemDetails"];
+                };
+            };
+        };
+    };
+    RecordPayment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                studentId: string;
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RecordPaymentRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StudentFinanceResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["HttpValidationProblemDetails"];
+                };
+            };
+        };
+    };
+    AdjustBalance: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                studentId: string;
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BalanceAdjustmentRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StudentFinanceResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["HttpValidationProblemDetails"];
+                };
+            };
+        };
+    };
+    ClosePackage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                packageId: string;
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PackageVersionRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StudentFinanceResponse"];
+                };
+            };
+        };
+    };
+    AdjustPackageLessons: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                packageId: string;
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LessonAdjustmentRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StudentFinanceResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["HttpValidationProblemDetails"];
+                };
+            };
+        };
+    };
+    ReversePayment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                paymentId: string;
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReverseRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StudentFinanceResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["HttpValidationProblemDetails"];
+                };
+            };
+        };
+    };
+    ReverseLessonEntry: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                entryId: string;
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReverseRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StudentFinanceResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["HttpValidationProblemDetails"];
                 };
             };
         };

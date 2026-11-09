@@ -12,6 +12,7 @@ import { formatDateTime } from '../../../lib/format.ts';
 import { num } from '../../../teacher/offers.ts';
 import { useCatalog } from '../../../teacher/queries.ts';
 import { useAddStudentNote, useArchiveStudent, useSaveStudent, useStudent, useStudentAccount, useStudentNotes, useStudents, type Student, type StudentInput } from '../../../teacher/students.ts';
+import { FinanceCard } from '../finance/FinancePages.tsx';
 import { StudentGroups } from '../groups/GroupsPages.tsx';
 import { LessonHistory } from '../lessons/LessonCards.tsx';
 import { NotFoundContent } from '../Pages.tsx';
@@ -273,6 +274,7 @@ function StudentEditor({ workspaceId, student }: { workspaceId: string; student:
       {student && <AccountCard workspaceId={workspaceId} student={student} />}
       {student && <StudentGroups workspaceId={workspaceId} studentId={student.id} />}
       {student && <LessonHistory workspaceId={workspaceId} studentId={student.id} />}
+      {student && <FinanceCard workspaceId={workspaceId} studentId={student.id} archived={student.archived} />}
       {student && <NotesCard workspaceId={workspaceId} studentId={student.id} />}
     </section>
   );

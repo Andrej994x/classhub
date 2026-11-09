@@ -66,6 +66,9 @@ public static class ErrorCodes
     // Materials (R2-P8)
     public const string FileNotAllowed = "FILE_NOT_ALLOWED";
 
+    // Finance (R2-P10)
+    public const string PackageLessonsOutOfRange = "PACKAGE_LESSONS_OUT_OF_RANGE";
+
     /// <summary>Default code for an HTTP status when no specific code was set.</summary>
     public static string ForStatus(int statusCode) => statusCode switch
     {
