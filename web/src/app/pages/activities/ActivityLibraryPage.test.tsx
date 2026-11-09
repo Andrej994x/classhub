@@ -43,6 +43,40 @@ function libraryApi({ boards = [] as string[], duplicate = 'ok' as 'ok' | 'limit
   });
 }
 
+describe('activity library paging', () => {
+  it('moves back to the last page that still exists after deleting the only activity of the last page', async () => {
+    const user = userEvent.setup();
+    let items = Array.from({ length: 21 }, (_, i) => item(`p${i}`, `Активност ${i + 1}`));
+    fakeApi({
+      me: teacher(),
+      extra: [
+        (call: FakeCall) => {
+          if (call.path === `/api/w/${WORKSPACE_ID}/toolbox`) return json(200, { tools: [], categories: [] });
+          if (call.path === BASE && call.method === 'GET') {
+            const page = Number(new URLSearchParams(call.search).get('page'));
+            return json(200, { items: items.slice((page - 1) * 20, page * 20), total: items.length, page, pageSize: 20 });
+          }
+          if (call.path === `${BASE}/p20/delete`) {
+            items = items.filter((i) => i.id !== 'p20');
+            return new Response(null, { status: 204 });
+          }
+          return undefined;
+        },
+      ],
+    });
+    await renderRoute(`/app/w/${WORKSPACE_ID}/activities`);
+
+    await user.click(await screen.findByRole('button', { name: 'Следна' }));
+    const last = await screen.findByRole('article', { name: 'Активност 21' });
+    await user.click(within(last).getByRole('button', { name: 'Избриши' }));
+    await user.click(within(last).getByRole('button', { name: 'Да, избриши' }));
+
+    // Back on page 1 with its 20 activities (not an empty page without controls).
+    expect(await screen.findByRole('article', { name: 'Активност 1' })).toBeInTheDocument();
+    expect(within(screen.getByRole('list', { name: 'Библиотека на активности' })).getAllByRole('article')).toHaveLength(20);
+  });
+});
+
 describe('activity library', () => {
   it('lists, searches and renames with the listed version and the unchanged document', async () => {
     const user = userEvent.setup();

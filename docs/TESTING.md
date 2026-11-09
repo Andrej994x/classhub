@@ -56,6 +56,7 @@ On a machine with little free memory, many local workers can exhaust Chromium's 
   - Rename sends the listed version and the unchanged document.
   - No open link before the board ships; an open link once the toolbox lists it.
   - The plan-limit message on duplicate; delete only after confirming, with the version.
+  - Deleting the only activity of the last page moves back to the page before it (fails without the move).
 
 ## Toolbox tests (R3-P1)
 

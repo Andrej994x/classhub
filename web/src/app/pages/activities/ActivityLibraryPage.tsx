@@ -34,6 +34,10 @@ export function ActivityLibraryPage() {
   };
   const set = (change: Partial<ActivityFilter>) => setFilter((current) => ({ ...current, page: 1, ...change }));
   const pages = activities.data ? Math.max(1, Math.ceil(n(activities.data.total) / n(activities.data.pageSize))) : 1;
+  // Deleting the only activity of a later page: that page is gone, so show the one before it.
+  const deleted = () => {
+    if (filter.page > 1 && activities.data?.items.length === 1) setFilter((current) => ({ ...current, page: current.page - 1 }));
+  };
 
   return (
     <section className="flex flex-col gap-6">
@@ -81,7 +85,7 @@ export function ActivityLibraryPage() {
         <ul aria-label={t('activities.title')} className="flex flex-col gap-3">
           {activities.data.items.map((item) => (
             <li key={`${item.id}-${item.version}`}>
-              <ActivityRow workspaceId={workspaceId} item={item} subject={subjectName(item.subjectId)} canOpen={openable.has(item.toolType)} />
+              <ActivityRow workspaceId={workspaceId} item={item} subject={subjectName(item.subjectId)} canOpen={openable.has(item.toolType)} onDeleted={deleted} />
             </li>
           ))}
         </ul>
@@ -104,7 +108,7 @@ export function ActivityLibraryPage() {
 
 const n = (value: number | string | null | undefined) => num(value) ?? 0;
 
-function ActivityRow({ workspaceId, item, subject, canOpen }: { workspaceId: string; item: ActivityItem; subject: string | null; canOpen: boolean }) {
+function ActivityRow({ workspaceId, item, subject, canOpen, onDeleted }: { workspaceId: string; item: ActivityItem; subject: string | null; canOpen: boolean; onDeleted: () => void }) {
   const { t, i18n } = useTranslation();
   const rename = useRenameActivity(workspaceId);
   const duplicate = useDuplicateActivity(workspaceId);
@@ -181,7 +185,7 @@ function ActivityRow({ workspaceId, item, subject, canOpen }: { workspaceId: str
           </Button>
           {confirming ? (
             <>
-              <Button type="button" size="sm" variant="destructive" disabled={remove.isPending} onClick={() => remove.mutate(item)}>
+              <Button type="button" size="sm" variant="destructive" disabled={remove.isPending} onClick={() => remove.mutate(item, { onSuccess: onDeleted })}>
                 {t('activities.deleteConfirm')}
               </Button>
               <Button type="button" size="sm" variant="outline" onClick={() => setConfirming(false)}>
