@@ -88,6 +88,12 @@ ASP.NET Core Identity with cookie sessions. See [ARCHITECTURE.md](ARCHITECTURE.m
 - Names, phones and guardian contacts are redacted in logs.
 - No duplicates by email within a workspace (unique index) and no limit overrun under parallel requests (intake lock; tested).
 
+## Materials (R2-P8)
+
+- Materials are private: only the teacher's workspace and the students they are assigned to (directly or through a current group) can open them; every other request is 404, never 403. Archived materials leave the portal.
+- Uploads are limited to an allow-list recognized by extension **and** signature (no HTML, SVG, scripts or executables), 20 MB per file and the plan's storage. Malware scanning is decided with hosting (D-20).
+- Downloads send `X-Content-Type-Options: nosniff`, `Content-Security-Policy: sandbox; default-src 'none'; img-src 'self'` and `Cache-Control: private, no-store`; only images may be shown inline, everything else is an attachment with the sanitized file name. Stored names never come from the client (`{workspace}/materials/{fileId}{ext}`).
+
 ## Attendance and notes (R2-P7)
 
 - The private note is the teacher's only: it is never part of a student-facing response (the portal shows the shared summary only, R2-P12).

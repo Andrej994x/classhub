@@ -18,6 +18,7 @@ import { OfferEditPage } from './pages/offers/OfferEditPage.tsx';
 import { OffersPage } from './pages/offers/OffersPage.tsx';
 import { PlanPage } from './pages/plan/PlanPage.tsx';
 import { GroupEditPage, GroupsPage } from './pages/groups/GroupsPages.tsx';
+import { MaterialPage, MaterialsPage } from './pages/materials/MaterialsPages.tsx';
 import { BookingPage } from './pages/booking/BookingPage.tsx';
 import { CalendarPage } from './pages/lessons/CalendarPage.tsx';
 import { LessonEditPage } from './pages/lessons/LessonEditPage.tsx';
@@ -74,6 +75,8 @@ export const routes: RouteObject[] = [
       { path: 'w/:workspaceId/groups', element: <GroupsPage /> },
       { path: 'w/:workspaceId/groups/new', element: <GroupEditPage /> },
       { path: 'w/:workspaceId/groups/:groupId', element: <GroupEditPage /> },
+      { path: 'w/:workspaceId/materials', element: <MaterialsPage /> },
+      { path: 'w/:workspaceId/materials/:materialId', element: <MaterialPage /> },
       { path: 'w/:workspaceId/offers', element: <OffersPage /> },
       { path: 'w/:workspaceId/offers/new', element: <OfferEditPage /> },
       { path: 'w/:workspaceId/offers/:offerId', element: <OfferEditPage /> },

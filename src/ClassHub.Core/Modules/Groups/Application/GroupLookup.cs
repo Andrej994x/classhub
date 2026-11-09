@@ -25,4 +25,10 @@ internal sealed class GroupLookup(ClassHubDbContext db, GroupQueries queries, IS
         return groups.ToDictionary(g => g.Id, g => new GroupSummary(g.Id, g.Name, g.ArchivedAtUtc is not null,
             [.. members.Where(m => m.GroupId == g.Id && names.TryGetValue(m.StudentId, out var s) && !s.Archived).Select(m => m.StudentId)]));
     }
+
+    public async Task<IReadOnlyList<Guid>> ActiveGroupsOfStudentAsync(Guid studentId, CancellationToken cancellationToken) =>
+        await db.Set<GroupMember>().AsNoTracking()
+            .Where(m => m.StudentId == studentId && m.RemovedAtUtc == null && db.Set<Group>().Any(g => g.Id == m.GroupId))
+            .Select(m => m.GroupId)
+            .ToListAsync(cancellationToken);
 }

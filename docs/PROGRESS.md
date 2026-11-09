@@ -7,10 +7,10 @@ This is the live status of the autonomous implementation loop ([ROADMAP.md](ROAD
 | Field | Value |
 |---|---|
 | Release | R2 — Teaching operations (R0 and R1 complete) |
-| Current phase | R2-P7 — Attendance, notes & history |
-| Branch | `feature/r2-p7-attendance` (from `main` @ `eecfd7b`) |
+| Current phase | R2-P8 — Materials |
+| Branch | `feature/r2-p8-materials` (from `main` @ `637aede`) |
 | Workflow step | 5 — signed Codex review, then PR |
-| Next action | R2-P7 PR; then R2-P8 (materials) |
+| Next action | R2-P8 PR; then R2-P9 (homework) |
 | Open blockers | None. User actions (optional): direct-push probe (R0-P8); remove the now redundant required `pr-gate` check (see Decisions) |
 
 ## Phase status
@@ -48,8 +48,8 @@ Status values: `not started`, `in progress`, `in review` (PR open), `merged`, `b
 | R2-P4 | Lessons core & calendar | merged | `feature/r2-p4-lessons-calendar` | [#28](https://github.com/Andrej994x/classhub/pull/28) | `c01eae0` | 5 rounds: 5 × P2 fixed (time zone change grouping, held timer, picker label, repeated-hour instant, timer after reschedule); round 5 clean | green | Migration applied to local `ClassHubDb` |
 | R2-P5 | Recurring lessons | merged | `feature/r2-p5-recurring-lessons` | [#29](https://github.com/Andrej994x/classhub/pull/29) | `153f1b5` | 7 rounds: 9 × P2 fixed (job starvation, scope fallback, started lessons, date-ended catch-up, one end condition, edit zone, next unstarted lesson, series-zone today, instant cutoff); round 7 clean | green | Migration applied to local `ClassHubDb` |
 | R2-P6 | Availability & booking | merged | `feature/r2-p6-booking` | [#30](https://github.com/Andrej994x/classhub/pull/30) | `eecfd7b` | 4 rounds: 7 × P2 fixed (atomic confirmation, lesson-editor sync, null-safe settings, archived students, paged requests, real slot ends, bookable durations); round 4 clean | green | Migration applied to local `ClassHubDb` |
-| R2-P7 | Attendance, notes & history | in progress | `feature/r2-p7-attendance` | | | | | Plan: idempotent completion with attendance per participant (D-22), one completion event for Finance (outbox `LessonEvents`), attendance corrections, private note + shared summary (D-40), history per student and group |
-| R2-P8 | Materials | not started | | | | | | |
+| R2-P7 | Attendance, notes & history | merged | `feature/r2-p7-attendance` | [#31](https://github.com/Andrej994x/classhub/pull/31) | `637aede` | 3 rounds: 3 × P2 fixed (backfill of earlier held lessons, attendance draft kept on notes save, cross-workspace history 404); round 3 clean | green | Migration applied to local `ClassHubDb` |
+| R2-P8 | Materials | in progress | `feature/r2-p8-materials` | | | | | Plan: private materials with an extension + signature allow-list (20 MB), safe file names, plan storage quota under the plan lock, assignments to students or groups, authorized downloads (attachment, nosniff, sandbox CSP), student portal list and download |
 | R2-P9 | Homework | not started | | | | | | |
 | R2-P10 | Packages & payments | not started | | | | | | |
 | R2-P11 | Notifications | not started | | | | | | |
