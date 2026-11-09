@@ -72,6 +72,45 @@ public sealed class NotificationTests(ClassHubApiFixture fixture)
     }
 
     [Fact]
+    public async Task Lessons_known_without_our_announcement_are_told_when_cancelled()
+    {
+        using var teacher = await fixture.CreateTeacherAsync();
+        var ana = await StudentAsync(teacher, "Ана", ApiTestExtensions.UniqueEmail("ana"));
+        var since = DateTime.UtcNow.AddSeconds(-1);
+        var known = await LessonAsync(teacher, ana.Id, StartIn(TimeSpan.FromDays(3)));
+        var fresh = await LessonAsync(teacher, ana.Id, StartIn(TimeSpan.FromDays(4)));
+        var tomorrow = DateOnly.FromDateTime(TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, Skopje)).AddDays(1);
+        using var created = await teacher.Client.PostAsync($"/api/w/{teacher.WorkspaceId}/lesson-series", new
+        {
+            kind = "Individual", studentId = ana.Id, title = "Италијански", startDate = tomorrow.AddDays(7), startTime = "18:00:00", durationMinutes = 60, intervalWeeks = 1, count = 3, mode = "Online",
+        });
+        created.StatusCode.ShouldBe(HttpStatusCode.Created);
+        var series = (await created.Content.ReadFromJsonAsync<SeriesResultResponse>(Ct))!;
+
+        // The lesson and the series were scheduled before notifications existed: no notification rows at all.
+        await using (var db = fixture.CreateDbContext())
+        {
+            (await db.Set<Notification>().IgnoreQueryFilters().Where(n => n.LessonId == known.Id || n.SeriesId == series.Series.Id).ExecuteDeleteAsync(Ct)).ShouldBe(2);
+        }
+
+        // Cancelled: the known lesson is told; the new one, cancelled before its announcement went out, is not.
+        (await teacher.Client.PostAsync($"/api/w/{teacher.WorkspaceId}/lessons/{known.Id}/cancel", new { version = known.Version, reason = "Болест" })).StatusCode.ShouldBe(HttpStatusCode.OK);
+        (await teacher.Client.PostAsync($"/api/w/{teacher.WorkspaceId}/lessons/{fresh.Id}/cancel", new { version = fresh.Version, reason = "Болест" })).StatusCode.ShouldBe(HttpStatusCode.OK);
+        await ReadAsync<SeriesResponse>(await teacher.Client.PostAsync($"/api/w/{teacher.WorkspaceId}/lesson-series/{series.Series.Id}/end",
+            new { fromDate = tomorrow, version = series.Series.Version }));
+        await RunAsync(DateTime.UtcNow);
+
+        (await StatusesAsync(known.Id)).ShouldBe([(NotificationKind.LessonCancelled, NotificationStatus.Sent)]);
+        (await StatusesAsync(fresh.Id)).ShouldBe([(NotificationKind.LessonScheduled, NotificationStatus.Cancelled)]);
+        var cancelled = await fixture.WaitForEmailAsync(ana.Email!, "notify.lesson-cancelled", since);
+        cancelled.TextBody.ShouldContain(NotificationRules.LocalTime(known.StartUtc, "Europe/Skopje", "mk"));
+        (await fixture.WaitForEmailAsync(ana.Email!, "notify.series-ended", since)).Subject.ShouldContain("Италијански");
+        await Task.Delay(500, Ct); // the outbox delivers anything left
+        (await EmailsAsync(ana.Email!, "notify.lesson-cancelled", since)).ShouldBe(1);
+        (await EmailsAsync(ana.Email!, "notify.lesson-scheduled", since)).ShouldBe(0);
+    }
+
+    [Fact]
     public async Task Rescheduling_replaces_the_reminder_with_exactly_one_for_the_new_time()
     {
         using var teacher = await fixture.CreateTeacherAsync();

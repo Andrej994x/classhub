@@ -67,10 +67,12 @@ internal sealed class NotificationScheduler(ClassHubDbContext db, ITenantContext
         foreach (var studentId in studentIds.Distinct())
         {
             Withdraw(await PendingAsync(lesson.LessonId, studentId, cancellationToken), "cancelled");
-            // Only a student who was told about this lesson (announcement, reschedule or reminder) or about its series needs
-            // to hear it is off.
+            // Only a student whose announcement never went out (cancelled before it was sent) does not need to hear it is off.
+            // Told about the lesson or its series, or knowing it without our email (no announcement here: scheduled before
+            // notifications, or otherwise known), they are told.
             if (await ToldAboutLessonAsync(lesson.LessonId, studentId, cancellationToken)
-                || (lesson.SeriesId is { } seriesId && await ToldAboutSeriesAsync(seriesId, studentId, cancellationToken)))
+                || (lesson.SeriesId is { } seriesId && await ToldAboutSeriesAsync(seriesId, studentId, cancellationToken))
+                || !await AnnouncedAsync(lesson, studentId, cancellationToken))
             {
                 await AddLessonAsync(NotificationKind.LessonCancelled, lesson, studentId, cancellationToken);
             }
@@ -97,11 +99,13 @@ internal sealed class NotificationScheduler(ClassHubDbContext db, ITenantContext
             }
         }
 
-        // Told about the series: one email that its lessons are off from the first removed one on.
+        // Told about the series, or knowing it without our announcement (none here: scheduled before notifications): one email
+        // that its lessons are off from the first removed one on.
         var first = removed.MinBy(r => r.Lesson.StartUtc).Lesson;
         foreach (var studentId in removed.SelectMany(r => r.StudentIds).Distinct())
         {
-            if (await ToldAboutSeriesAsync(seriesId, studentId, cancellationToken))
+            if (await ToldAboutSeriesAsync(seriesId, studentId, cancellationToken)
+                || !await db.Set<Notification>().AnyAsync(n => n.SeriesId == seriesId && n.StudentId == studentId && n.Kind == NotificationKind.SeriesScheduled, cancellationToken))
             {
                 await AddAsync(new Notification
                 {
@@ -125,6 +129,12 @@ internal sealed class NotificationScheduler(ClassHubDbContext db, ITenantContext
     private Task<bool> ToldAboutSeriesAsync(Guid seriesId, Guid studentId, CancellationToken cancellationToken) =>
         db.Set<Notification>().AnyAsync(n => n.SeriesId == seriesId && n.StudentId == studentId && n.Status == NotificationStatus.Sent
             && n.Kind == NotificationKind.SeriesScheduled, cancellationToken);
+
+    /// <summary>Whether the student's announcement of this lesson (or of its series) was planned here, sent or not.</summary>
+    private Task<bool> AnnouncedAsync(LessonNotice lesson, Guid studentId, CancellationToken cancellationToken) =>
+        db.Set<Notification>().AnyAsync(n => n.StudentId == studentId
+            && ((n.LessonId == lesson.LessonId && n.Kind == NotificationKind.LessonScheduled)
+                || (lesson.SeriesId != null && n.SeriesId == lesson.SeriesId && n.Kind == NotificationKind.SeriesScheduled)), cancellationToken);
 
     public async Task LessonChangedQuietlyAsync(Guid lessonId, IReadOnlyCollection<Guid> studentIds, CancellationToken cancellationToken)
     {
