@@ -144,14 +144,17 @@ public sealed class TeachingDashboardTests(ClassHubApiFixture fixture)
         var body = await response.Content.ReadAsStringAsync(Ct);
         body.ShouldNotContain("Тајна белешка");
         body.ShouldNotContain("Борис");
+        body.ShouldContain("\"attendance\":\"Present\"");
         var lessons = (await response.Content.ReadFromJsonAsync<StudentLessonsResponse>(Ct))!;
 
         var upcoming = lessons.Upcoming.ShouldHaveSingleItem();
         (upcoming.Id, upcoming.MeetingUrl, upcoming.Attendance).ShouldBe((next.Id, "https://meet.example.com/ana", null));
+        // Enums by name, like the teacher's lesson responses.
+        (upcoming.Mode, upcoming.Status).ShouldBe(("Online", "Scheduled"));
         lessons.Past.Select(l => (l.Id, l.Status, l.Attendance, l.SharedSummary)).ShouldBe([
-            (unrecorded.Id, LessonStatus.Scheduled, null, null),
-            (absent.Id, LessonStatus.Completed, AttendanceStatus.Absent, null),
-            (present.Id, LessonStatus.Completed, AttendanceStatus.Present, "Вежбавме дропки"),
+            (unrecorded.Id, "Scheduled", null, null),
+            (absent.Id, "Completed", "Absent", null),
+            (present.Id, "Completed", "Present", "Вежбавме дропки"),
         ]);
         lessons.Past.ShouldAllBe(l => l.MeetingUrl == null);
         lessons.Attendance.ShouldBe(new StudentAttendanceResponse(2, 1, 1, 0));

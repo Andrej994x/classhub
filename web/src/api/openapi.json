@@ -8706,9 +8706,6 @@
           }
         }
       },
-      "AttendanceStatus": {
-        "type": "integer"
-      },
       "AuthenticatorSetupRequest": {
         "required": [
           "code",
@@ -9569,7 +9566,7 @@
             "type": "string"
           },
           "kind": {
-            "$ref": "#/components/schemas/LessonKind"
+            "type": "string"
           },
           "students": {
             "type": "array",
@@ -11411,12 +11408,6 @@
           }
         }
       },
-      "LessonKind": {
-        "type": "integer"
-      },
-      "LessonMode": {
-        "type": "integer"
-      },
       "LessonNotesRequest": {
         "required": [
           "version",
@@ -11642,9 +11633,6 @@
             ]
           }
         }
-      },
-      "LessonStatus": {
-        "type": "integer"
       },
       "LoginRequest": {
         "required": [
@@ -14524,7 +14512,7 @@
             "type": "string"
           },
           "mode": {
-            "$ref": "#/components/schemas/LessonMode"
+            "type": "string"
           },
           "meetingUrl": {
             "type": [
@@ -14539,16 +14527,12 @@
             ]
           },
           "status": {
-            "$ref": "#/components/schemas/LessonStatus"
+            "type": "string"
           },
           "attendance": {
-            "oneOf": [
-              {
-                "type": "null"
-              },
-              {
-                "$ref": "#/components/schemas/AttendanceStatus"
-              }
+            "type": [
+              "null",
+              "string"
             ]
           },
           "sharedSummary": {

@@ -129,6 +129,40 @@ On a machine with little free memory, many local workers can exhaust Chromium's 
 - Architecture: `StudentPrivacyTests` (no Students contract except the notes ones carries a note).
 - Vitest: `StudentsPages.test.tsx` (list and search, add a minor with guardian and the duplicate-email message, edit with the loaded version, archive, notes, conversion from the request page). E2E: `leads.spec.ts` now ends with the conversion into a student.
 
+## Release 2 hardening (R2-P13)
+
+- **Release journey, E2E `release2.spec.ts`**, desktop and phone:
+  1. A visitor books on the public page.
+  2. The teacher confirms it; the visitor becomes a student with a lesson.
+  3. The teacher invites the student and assigns a package.
+  4. The lesson is held; one package lesson is used in the background.
+  5. A partial payment is recorded; the teacher assigns homework.
+  6. The student creates the account on a phone and sees their held lesson with "Present", the attendance sentence and the homework.
+  7. The teacher's dashboard shows the student, the lessons left and what is owed.
+
+  No horizontal scroll at phone width. This journey found that the new portal lesson response sent its enums as numbers; they are now names like every lesson response (the integration test checks the JSON).
+- **Release-level Codex review** over all Release 2 changes (`codex review --base 3c11d1b`, 215 files) found one defect: ending or editing a series failed (500) when homework or a finance entry pointed at one of its upcoming lessons. Now such a lesson is cancelled instead of deleted. Test: `LessonSeriesTests.Ending_a_series_cancels_instead_of_deleting_lessons_that_homework_or_finance_point_at`, which fails with a 500 on the old code.
+- **Isolation sweep:** `IsolationSweepTests` also discovers every `/api/student/w/{workspaceId}/…` route. Each one gives:
+  - a student of another teacher: 404;
+  - the workspace's own teacher, who is not a student there: 404;
+  - an anonymous caller: 401.
+
+  The student still reaches their own portal. Workspace routes (including the Release 2 ones: students, groups, lessons, series, booking, materials, homework, finance, the teaching dashboard) were already covered: they are found from the endpoint table.
+- **Concurrency sweep:** every concurrency-critical Release 2 rule has an integration test that runs the operations in parallel on SQL Server:
+
+  | Rule | Test |
+  |---|---|
+  | Free plan student limit under parallel adds | `StudentTests.The_free_plan_limits_active_students_and_parallel_adds_cannot_exceed_it` |
+  | A request is converted to one student | `StudentTests.Converting_a_request_creates_the_student_once_and_links_later_requests_by_email` |
+  | One invitation links one account | `StudentAccountTests.Two_accounts_accepting_one_invitation_at_once_link_exactly_one` |
+  | Group seats | `GroupTests.Parallel_adds_for_the_last_place_fill_the_group_exactly_once` |
+  | No double-booked teacher | `LessonTests.Parallel_requests_for_overlapping_times_schedule_exactly_one_lesson`, `LessonSeriesTests.Two_series_for_the_same_slot_created_in_parallel_never_double_book`, `BookingTests.Parallel_confirmations_of_overlapping_requests_create_exactly_one_lesson` |
+  | A lesson is held once | `AttendanceTests.Parallel_completions_make_one_transition_and_one_event` |
+  | A held lesson consumes once | `FinanceTests.Concurrent_processing_of_a_held_lesson_consumes_it_once`, `FinanceTests.Two_events_of_one_lesson_handled_at_the_same_time_consume_once` |
+  | An answer never lands on archived homework | `HomeworkTests.Homework_archived_while_an_answer_is_uploaded_refuses_the_answer` |
+  | Every notification is sent once | `NotificationTests.Parallel_dispatchers_send_every_notification_exactly_once` |
+  | Preference saves at the same moment | `NotificationTests.First_preference_saves_at_the_same_moment_all_apply` |
+
 ## Release 1 hardening (R1-P12)
 
 - Integration: `IsolationSweepTests` discovers every `/api/w/{workspaceId}/…` and `/api/admin/…` route from the endpoint table (new endpoints are covered automatically) and checks: another teacher gets 404 `NOT_FOUND` on every workspace route, anonymous callers get 401, teachers get 403 on every admin route. Requests carry a body in the declared format (JSON or multipart), so authorization is what answers.

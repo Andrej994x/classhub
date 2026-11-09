@@ -7,10 +7,10 @@ This is the live status of the autonomous implementation loop ([ROADMAP.md](ROAD
 | Field | Value |
 |---|---|
 | Release | R2 — Teaching operations (R0 and R1 complete) |
-| Current phase | R2-P12 — Dashboards (teacher + student) |
-| Branch | `feature/r2-p12-dashboards` (from `main` @ `939e059`) |
+| Current phase | R2-P13 — Release 2 hardening |
+| Branch | `chore/r2-p13-hardening` (from `main` @ `9d69d02`) |
 | Workflow step | 3 — implementation and local checks |
-| Next action | R2-P12 checks, Codex review and PR; then R2-P13 (Release 2 hardening) |
+| Next action | R2-P13 checks, Codex review and PR; then R3-P1 (toolbox catalog) |
 | Open blockers | None. User actions (optional): direct-push probe (R0-P8); remove the now redundant required `pr-gate` check (see Decisions) |
 
 ## Phase status
@@ -53,10 +53,50 @@ Status values: `not started`, `in progress`, `in review` (PR open), `merged`, `b
 | R2-P9 | Homework | merged | `feature/r2-p9-homework` | [#33](https://github.com/Andrej994x/classhub/pull/33) | `6c45831` | 3 rounds: 2 × P2 fixed (archive racing an answer upload, stale form overwriting a newer answer); round 3 clean | green | Migration applied to local `ClassHubDb` |
 | R2-P10 | Packages & payments | merged | `feature/r2-p10-finance` | [#34](https://github.com/Andrej994x/classhub/pull/34) | `d1ac8a8` | 5 rounds: 1 × P1 + 6 × P2 fixed (lesson lock before attendance, correction bounds and waivers, safe validators, report counts corrections, paged history, closing under the student lock, typed currencies); round 5 clean | green | Migration applied to local `ClassHubDb` |
 | R2-P11 | Notifications | merged | `feature/r2-p11-notifications` | [#35](https://github.com/Andrej994x/classhub/pull/35) | `939e059` | 15 rounds: 1 × P1 + 16 × P2 fixed (keys per change, series announcements and endings, paged reminder planning, reminder replacement rules, READCOMMITTEDLOCK, re-added students, removed students told as they knew it, last-hour rule at send time, told-per-series, preference save race, horizon series, cancellations of lessons known without our email, send time per notice, kept series lessons named); round 15 clean | green after 2 CI fixes (oldest-first multi-batch dispatch; a test backlog) | Migration applied to local `ClassHubDb` |
-| R2-P12 | Dashboards (teacher + student) | in progress | `feature/r2-p12-dashboards` | | | | | Plan: teaching numbers for the teacher (lessons in the next 7 days, active students, debts per currency, lessons left and running low, lessons without a package, income per month) under the lessons/students/finance read permissions; the student portal shows their own next and past lessons with attendance and shared summaries; isolation tests |
-| R2-P13 | Release 2 hardening | not started | | | | | | |
+| R2-P12 | Dashboards (teacher + student) | merged | `feature/r2-p12-dashboards` | [#36](https://github.com/Andrej994x/classhub/pull/36) | `9d69d02` | 2 rounds: 1 × P2 fixed (running-low count before the list cap); round 2 clean | green | No migration |
+| R2-P13 | Release 2 hardening | in progress | `chore/r2-p13-hardening` | | | | | Plan: Release 2 journey in Playwright (booking → student → package → held lesson → payment → homework → the student sees it), isolation sweep over the student portal routes, concurrency matrix, release-level Codex review, docs; fixes what the journey finds |
+| R3-P1 | Toolbox catalog | not started | | | | | | |
+| R3-P2 | Activity Library | not started | | | | | | |
+| R3-P3 | Drawing Board | not started | | | | | | |
+| R3-P4 | Geometry Board — constructions | not started | | | | | | |
+| R3-P5 | Geometry Board — functions & graphs | not started | | | | | | |
+| R3-P6 | Usage analytics | not started | | | | | | |
+| R3-P7 | PWA & mobile improvements | not started | | | | | | |
+| R3-P8 | Release 3 hardening | not started | | | | | | |
+| B-P1…B-P7 | MVP Beta | not started | | | | | | Needs the Beta blockers decided (ROADMAP J.4) |
 
-Release 3 and Beta are listed in [ROADMAP.md](ROADMAP.md) section D. They are added to this table when Release 2 is complete.
+Release 3 and Beta come from [ROADMAP.md](ROADMAP.md) section D.
+
+## Release 2 — complete with R2-P13 (2026-11-09)
+
+Definition of Done (ROADMAP D, R2-P1…P13) demonstrated:
+- **The whole journey**, through the UI in Playwright on desktop and phone (`release2.spec.ts`):
+  1. A visitor's booking.
+  2. Confirmed into a student with a lesson.
+  3. An invitation and a package.
+  4. The lesson held, one package lesson used.
+  5. A partial payment and homework.
+  6. The student sees their held lesson, attendance and homework.
+  7. The teacher's dashboard shows the student, lessons left and what is owed.
+
+  The per-phase suites cover the rest (`student-accounts`, `lessons`, `booking`, `materials`, `homework`, `finance`).
+- **Students see only their own information.** Every student portal route denies another teacher's student and the teacher (404) and anonymous callers (401); found from the endpoint table (`IsolationSweepTests`). Every workspace route still denies other teachers and anonymous callers.
+- **Concurrency:** each concurrency-critical rule has a parallel integration test on SQL Server (matrix in [TESTING.md](TESTING.md)):
+  - student limit, conversion and invitation;
+  - group seats;
+  - no double booking (lessons, series, booking confirmation);
+  - held once, consumed once;
+  - homework archive against upload;
+  - notifications sent once;
+  - preference saves.
+- **Release-level Codex review** over all Release 2 changes (`codex review --base 3c11d1b`, 215 files) found one defect, fixed in R2-P13: series edits failed when homework or finance pointed at an upcoming lesson. The Release 2 journey found a second one, also fixed: portal lesson enums were sent as numbers. Every phase PR carried signed, commit-bound evidence of its final review.
+- **Remaining provisional items** (they block Beta, not Release 2):
+  - D-18 consent wording
+  - D-19 CAPTCHA
+  - D-27 export/deletion
+  - D-28 hosting
+  - D-29 final plan limits
+  - the Resend account
 
 ## Release 1 — complete (2026-11-06, PR #24, `3c11d1b`)
 

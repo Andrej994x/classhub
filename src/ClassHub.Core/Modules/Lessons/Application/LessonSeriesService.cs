@@ -25,6 +25,7 @@ internal sealed class LessonSeriesService(
     LessonParticipants participants,
     ICatalogLookup catalog,
     INotificationScheduler notifications,
+    IEnumerable<ILessonReferences> references,
     TimeProvider clock)
 {
     public const string ThisAndFollowing = "ThisAndFollowing";
@@ -221,7 +222,9 @@ internal sealed class LessonSeriesService(
 
     /// <summary>
     /// Ends a series at the instant <paramref name="fromUtc"/>: its scheduled, unchanged lessons starting then or later and
-    /// its skips from that local day on go; the end date becomes the local day of the last moment before the cut.
+    /// its skips from that local day on go; the end date becomes the local day of the last moment before the cut. A lesson
+    /// that homework or a finance entry points at is not deleted but cancelled (its time is free, the links and the
+    /// history stay).
     /// </summary>
     private async Task RemoveFromAsync(LessonSeries series, DateTime fromUtc, CancellationToken cancellationToken)
     {
@@ -236,8 +239,23 @@ internal sealed class LessonSeriesService(
             [.. lessons.Select(l => (LessonService.Notice(l, l.Version + 1), (IReadOnlyCollection<Guid>)[.. removedParticipants.Where(p => p.LessonId == l.Id).Select(p => p.StudentId)]))],
             cancellationToken);
 
-        db.Set<LessonParticipant>().RemoveRange(removedParticipants);
-        db.Set<Lesson>().RemoveRange(lessons);
+        var referenced = new HashSet<Guid>();
+        foreach (var source in references)
+        {
+            referenced.UnionWith(await source.ReferencedAsync(ids, cancellationToken));
+        }
+
+        var now = clock.GetUtcNow().UtcDateTime;
+        foreach (var kept in lessons.Where(l => referenced.Contains(l.Id)))
+        {
+            kept.Status = LessonStatus.Cancelled;
+            kept.CancelledAtUtc = now;
+            kept.UpdatedAtUtc = now;
+            kept.Version++;
+        }
+
+        db.Set<LessonParticipant>().RemoveRange(removedParticipants.Where(p => !referenced.Contains(p.LessonId)));
+        db.Set<Lesson>().RemoveRange(lessons.Where(l => !referenced.Contains(l.Id)));
         var fromDay = DateOnly.FromDateTime(LessonTime.ToLocal(fromUtc, zone));
         db.Set<LessonSeriesSkip>().RemoveRange(await db.Set<LessonSeriesSkip>().Where(s => s.SeriesId == series.Id && s.Date >= fromDay).ToListAsync(cancellationToken));
         var end = DateOnly.FromDateTime(LessonTime.ToLocal(fromUtc.AddTicks(-1), zone));

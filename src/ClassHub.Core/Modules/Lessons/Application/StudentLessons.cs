@@ -22,20 +22,25 @@ internal sealed class StudentLessons(ClassHubDbContext db, ITenantContext tenant
         var own = db.Set<Lesson>().AsNoTracking()
             .Join(db.Set<LessonParticipant>().AsNoTracking().Where(p => p.StudentId == studentId), l => l.Id, p => p.LessonId, (l, p) => new { Lesson = l, p.Attendance });
 
-        var upcoming = await own.Where(x => x.Lesson.Status == LessonStatus.Scheduled && x.Lesson.EndUtc > now)
+        var upcoming = (await own.Where(x => x.Lesson.Status == LessonStatus.Scheduled && x.Lesson.EndUtc > now)
             .OrderBy(x => x.Lesson.StartUtc).ThenBy(x => x.Lesson.Id).Take(UpcomingMax)
-            .Select(x => new StudentLessonResponse(x.Lesson.Id, x.Lesson.Title, x.Lesson.Topic, x.Lesson.StartUtc, x.Lesson.EndUtc, x.Lesson.TimeZone,
-                x.Lesson.Mode, x.Lesson.MeetingUrl, x.Lesson.Location, x.Lesson.Status, null, null))
-            .ToListAsync(cancellationToken);
+            .Select(x => new { x.Lesson.Id, x.Lesson.Title, x.Lesson.Topic, x.Lesson.StartUtc, x.Lesson.EndUtc, x.Lesson.TimeZone, x.Lesson.Mode, x.Lesson.MeetingUrl, x.Lesson.Location, x.Lesson.Status })
+            .ToListAsync(cancellationToken))
+            .Select(l => new StudentLessonResponse(l.Id, l.Title, l.Topic, l.StartUtc, l.EndUtc, l.TimeZone, l.Mode.ToString(), l.MeetingUrl, l.Location, l.Status.ToString(), null, null))
+            .ToList();
 
         // Held lessons, and ones that are over but not recorded yet (still Scheduled): the most recent first.
-        var past = await own.Where(x => x.Lesson.Status == LessonStatus.Completed || (x.Lesson.Status == LessonStatus.Scheduled && x.Lesson.EndUtc <= now))
+        var past = (await own.Where(x => x.Lesson.Status == LessonStatus.Completed || (x.Lesson.Status == LessonStatus.Scheduled && x.Lesson.EndUtc <= now))
             .OrderByDescending(x => x.Lesson.StartUtc).ThenBy(x => x.Lesson.Id).Take(PastMax)
-            .Select(x => new StudentLessonResponse(x.Lesson.Id, x.Lesson.Title, x.Lesson.Topic, x.Lesson.StartUtc, x.Lesson.EndUtc, x.Lesson.TimeZone,
-                x.Lesson.Mode, null, x.Lesson.Location, x.Lesson.Status,
-                x.Lesson.Status == LessonStatus.Completed ? x.Attendance : null,
-                x.Lesson.Status == LessonStatus.Completed ? x.Lesson.SharedSummary : null))
-            .ToListAsync(cancellationToken);
+            .Select(x => new { x.Lesson.Id, x.Lesson.Title, x.Lesson.Topic, x.Lesson.StartUtc, x.Lesson.EndUtc, x.Lesson.TimeZone, x.Lesson.Mode, x.Lesson.Location, x.Lesson.Status, x.Attendance, x.Lesson.SharedSummary })
+            .ToListAsync(cancellationToken))
+            .Select(l =>
+            {
+                var held = l.Status == LessonStatus.Completed;
+                return new StudentLessonResponse(l.Id, l.Title, l.Topic, l.StartUtc, l.EndUtc, l.TimeZone, l.Mode.ToString(), null, l.Location, l.Status.ToString(),
+                    held ? l.Attendance?.ToString() : null, held ? l.SharedSummary : null);
+            })
+            .ToList();
 
         var held = await own.Where(x => x.Lesson.Status == LessonStatus.Completed)
             .GroupBy(x => x.Attendance).Select(g => new { g.Key, Count = g.Count() })

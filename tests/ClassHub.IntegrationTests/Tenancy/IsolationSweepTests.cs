@@ -9,7 +9,7 @@ using Microsoft.Extensions.DependencyInjection;
 namespace ClassHub.IntegrationTests.Tenancy;
 
 /// <summary>
-/// R1-P12 isolation sweep: every workspace and admin endpoint that exists, discovered from the endpoint table (so new
+/// R1-P12 isolation sweep (student portal added in R2-P13): every workspace, admin and student portal endpoint that exists, discovered from the endpoint table (so new
 /// endpoints are covered automatically), is denied to anonymous callers, to another teacher (404, nothing revealed), and
 /// to teachers on platform routes (403). Complements the per-module isolation tests that check the data stays unchanged.
 /// </summary>
@@ -110,6 +110,59 @@ public sealed partial class IsolationSweepTests(ClassHubApiFixture fixture)
         }
 
         leaks.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task Every_student_portal_endpoint_is_closed_to_other_students_teachers_and_anonymous_callers()
+    {
+        using var teacher = await fixture.CreateTeacherAsync(confirmEmail: true);
+        using var student = await fixture.CreateTeacherAsync(confirmEmail: true);
+        using var otherTeacher = await fixture.CreateTeacherAsync(confirmEmail: true);
+        using var otherStudent = await fixture.CreateTeacherAsync(confirmEmail: true);
+        using var anonymous = await ApiClient.CreateAsync(fixture);
+        await LinkAsync(teacher, student, "Ана");
+        await LinkAsync(otherTeacher, otherStudent, "Борис"); // a student, but of another teacher
+        var routes = Routes("/api/student/w/{workspaceId");
+        routes.Count.ShouldBeGreaterThanOrEqualTo(8, "the sweep must see the R2 student portal endpoints");
+
+        var leaks = new List<string>();
+        foreach (var route in routes)
+        {
+            var path = Fill(route.Pattern, teacher.WorkspaceId);
+            foreach (var (who, client) in new[] { ("other student", otherStudent.Client), ("teacher", teacher.Client) })
+            {
+                using var response = await SendAsync(client, route, path);
+                if (response.StatusCode != HttpStatusCode.NotFound || await response.ErrorCodeAsync() != ErrorCodes.NotFound)
+                {
+                    leaks.Add($"{who} {route.Method} {route.Pattern} → {(int)response.StatusCode}");
+                }
+            }
+
+            using (var response = await SendAsync(anonymous, route, path))
+            {
+                if (response.StatusCode != HttpStatusCode.Unauthorized)
+                {
+                    leaks.Add($"anonymous {route.Method} {route.Pattern} → {(int)response.StatusCode}");
+                }
+            }
+        }
+
+        leaks.ShouldBeEmpty();
+        // The student still reaches their own portal.
+        (await student.Client.GetAsync($"/api/student/w/{teacher.WorkspaceId}/lessons")).StatusCode.ShouldBe(HttpStatusCode.OK);
+    }
+
+    /// <summary>Links <paramref name="learner"/>'s account as a student of <paramref name="teacher"/> (invitation accepted).</summary>
+    private async Task LinkAsync(TeacherSession teacher, TeacherSession learner, string firstName)
+    {
+        using var created = await teacher.Client.PostAsync($"/api/w/{teacher.WorkspaceId}/students", new { firstName, email = learner.Email });
+        created.StatusCode.ShouldBe(HttpStatusCode.Created);
+        var studentId = (await created.ReadJsonAsync()).GetProperty("id").GetGuid();
+        var since = DateTime.UtcNow.AddMilliseconds(-5);
+        (await teacher.Client.PostAsync($"/api/w/{teacher.WorkspaceId}/students/{studentId}/invitation", new { })).StatusCode.ShouldBe(HttpStatusCode.OK);
+        var token = (await fixture.WaitForEmailAsync(learner.Email, "student.invitation", since)).FragmentValue("token");
+        using var accept = await learner.Client.PostAsync("/api/student-invitations/accept", new { token });
+        accept.StatusCode.ShouldBe(HttpStatusCode.OK, await accept.Content.ReadAsStringAsync(Ct));
     }
 
     /// <summary>

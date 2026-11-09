@@ -50,7 +50,7 @@ public sealed class DashboardModule : IModule
 }
 
 /// <summary>A lesson ahead, with its students' names (only this workspace's students).</summary>
-public sealed record DashboardLesson(Guid Id, string Title, DateTime StartUtc, DateTime EndUtc, string TimeZone, LessonKind Kind, IReadOnlyList<string> Students);
+public sealed record DashboardLesson(Guid Id, string Title, DateTime StartUtc, DateTime EndUtc, string TimeZone, string Kind, IReadOnlyList<string> Students);
 
 /// <summary>The scheduled lessons not over yet that start within the next 7 days: how many, and the first five.</summary>
 public sealed record DashboardLessons(int Next7Days, IReadOnlyList<DashboardLesson> Next);
@@ -68,7 +68,7 @@ internal sealed class TeachingDashboardService(ILessonOutlook lessons, IStudentL
         var now = clock.GetUtcNow().UtcDateTime;
         var ahead = await lessons.AheadAsync(now, now.AddDays(7), NextLessons, cancellationToken);
         var names = await students.FindAsync(ahead.First.SelectMany(l => l.StudentIds).ToHashSet(), cancellationToken);
-        var next = ahead.First.Select(l => new DashboardLesson(l.Id, l.Title, l.StartUtc, l.EndUtc, l.TimeZone, l.Kind,
+        var next = ahead.First.Select(l => new DashboardLesson(l.Id, l.Title, l.StartUtc, l.EndUtc, l.TimeZone, l.Kind.ToString(),
             [.. l.StudentIds.Where(names.ContainsKey).Select(id => names[id]).Select(s => string.Join(' ', new[] { s.FirstName, s.LastName }.Where(p => !string.IsNullOrWhiteSpace(p))))
                 .Order(StringComparer.CurrentCulture)]));
         return new TeachingDashboardResponse(

@@ -4,6 +4,7 @@ using ClassHub.Core.Modules.Homework.Application;
 using ClassHub.Core.Modules.Homework.Contracts;
 using ClassHub.Core.Modules.Homework.Domain;
 using ClassHub.Core.Modules.Homework.Persistence;
+using ClassHub.Core.Modules.Lessons.Contracts;
 using ClassHub.Core.Modules.Workspaces;
 using ClassHub.Core.SharedKernel.Security;
 using FluentValidation;
@@ -24,6 +25,7 @@ public sealed class HomeworkModule : IModule
         services.AddScoped<HomeworkQueries>();
         services.AddScoped<HomeworkService>();
         services.AddScoped<IHomeworkNotices, HomeworkNotices>();
+        services.AddScoped<ILessonReferences, HomeworkLessonReferences>();
     }
 
     public void MapEndpoints(IEndpointRouteBuilder endpoints)

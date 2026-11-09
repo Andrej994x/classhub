@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
+using System.Text.Json;
 using ClassHub.Core.Modules.Lessons.Contracts;
 using ClassHub.Core.Modules.Lessons.Jobs;
 using ClassHub.Core.Modules.Students.Contracts;
@@ -286,6 +287,43 @@ public sealed class LessonSeriesTests(ClassHubApiFixture fixture)
         (await CountAsync(created.Series.Id)).ShouldBe(3);
         await fixture.Factory.Services.GetRequiredService<LessonSeriesHorizonJob>().RunAtAsync(DateTime.UtcNow.AddDays(100), Ct);
         (await CountAsync(created.Series.Id)).ShouldBe(3); // the job respects the end
+    }
+
+    [Fact]
+    public async Task Ending_a_series_cancels_instead_of_deleting_lessons_that_homework_or_finance_point_at()
+    {
+        using var teacher = await fixture.CreateTeacherAsync();
+        var ana = await StudentAsync(teacher, "Ана");
+        var created = await CreateAsync(teacher, Weekly(ana.Id, Tomorrow, "17:00", count: 3));
+        var lessons = (await LessonsAsync(teacher, Tomorrow, Tomorrow.AddDays(20))).OrderBy(l => l.StartUtc).ToList();
+        lessons.Count.ShouldBe(3);
+
+        // Homework linked to the second lesson; a finance correction naming the third.
+        using (var homework = await teacher.Client.PostAsync($"/api/w/{teacher.WorkspaceId}/homework", new { title = "За вториот час", lessonId = lessons[1].Id }))
+        {
+            homework.StatusCode.ShouldBe(HttpStatusCode.Created);
+        }
+
+        var package = (await ReadAsync<JsonElement>(await teacher.Client.PostAsync($"/api/w/{teacher.WorkspaceId}/finance/students/{ana.Id}/packages",
+            new { title = "Пакет", lessonCount = 4, priceMinor = 480_000, currency = "MKD" }))).GetProperty("packages")[0].GetProperty("id").GetGuid();
+        (await teacher.Client.PostAsync($"/api/w/{teacher.WorkspaceId}/finance/packages/{package}/lesson-adjustments",
+            new { quantity = 1, reason = "Однапред договорено", lessonId = lessons[2].Id })).StatusCode.ShouldBe(HttpStatusCode.OK);
+
+        // The series ends from tomorrow: the first lesson goes, the other two stay as cancelled (their time is free).
+        var ended = await ReadAsync<SeriesResponse>(await teacher.Client.PostAsync(Series(teacher, $"/{created.Series.Id}/end"), new { fromDate = Tomorrow, version = created.Series.Version }));
+        ended.EndDate.ShouldBe(Tomorrow.AddDays(-1));
+        (await teacher.Client.GetAsync($"/api/w/{teacher.WorkspaceId}/lessons/{lessons[0].Id}")).StatusCode.ShouldBe(HttpStatusCode.NotFound);
+        foreach (var kept in lessons.Skip(1))
+        {
+            var lesson = await teacher.Client.GetJsonAsync<LessonResponse>($"/api/w/{teacher.WorkspaceId}/lessons/{kept.Id}");
+            lesson.Status.ShouldBe("Cancelled");
+            lesson.Participants.Select(p => p.StudentId).ShouldBe([ana.Id]);
+        }
+
+        // Another lesson fits the freed time.
+        using var again = await teacher.Client.PostAsync($"/api/w/{teacher.WorkspaceId}/lessons",
+            new { kind = "Individual", studentId = ana.Id, title = "Нов час", startLocal = lessons[1].StartLocal, durationMinutes = 60, mode = "Online" });
+        again.StatusCode.ShouldBe(HttpStatusCode.Created, await again.Content.ReadAsStringAsync(Ct));
     }
 
     [Fact]
