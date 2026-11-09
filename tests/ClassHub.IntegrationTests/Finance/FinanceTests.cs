@@ -386,6 +386,28 @@ public sealed class FinanceTests(ClassHubApiFixture fixture)
     }
 
     [Fact]
+    public async Task Closing_a_package_waits_for_a_consumption_in_progress()
+    {
+        using var teacher = await fixture.CreateTeacherAsync();
+        var ana = await StudentAsync(teacher, "Ана");
+        var package = (await AssignAsync(teacher, ana.Id, new { title = "Пакет", lessonCount = 4, priceMinor = 480_000, currency = "MKD" })).Packages.Single();
+
+        // A consumption holds the student's finance lock (it read the package as open and is about to consume from it).
+        await using var db = fixture.CreateDbContext();
+        await using var consumption = await db.Database.BeginTransactionAsync(Ct);
+        var resource = $"classhub:finance:{ana.Id:N}";
+        await db.Database.ExecuteSqlAsync($"EXEC sp_getapplock @Resource = {resource}, @LockMode = 'Exclusive', @LockOwner = 'Transaction'", Ct);
+
+        var closing = teacher.Client.PostAsync(Path(teacher, $"/packages/{package.Id}/close"), new { version = package.Version });
+        (await Task.WhenAny(closing, Task.Delay(1_500, Ct))).ShouldNotBe(closing); // the close waits for it
+        await consumption.CommitAsync(Ct);
+
+        using var closed = await closing;
+        closed.StatusCode.ShouldBe(HttpStatusCode.OK);
+        (await closed.Content.ReadFromJsonAsync<StudentFinanceResponse>(Ct))!.Packages.Single().Closed.ShouldBeTrue();
+    }
+
+    [Fact]
     public async Task The_ledger_is_append_only()
     {
         using var teacher = await fixture.CreateTeacherAsync();

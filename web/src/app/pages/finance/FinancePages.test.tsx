@@ -197,6 +197,26 @@ describe('finance on the student page', () => {
     expect(await screen.findByText('Пакет математика')).toBeInTheDocument();
   });
 
+  it('assigns a custom package in another currency typed by the teacher', async () => {
+    const user = userEvent.setup();
+    const { api } = financeApi();
+    await renderRoute(`/app/w/${WORKSPACE_ID}/students/s1`);
+
+    await user.click(await screen.findByRole('button', { name: 'Додели пакет' }));
+    await user.type(screen.getByLabelText('Назив'), 'Online course');
+    await user.clear(screen.getByLabelText('Часови'));
+    await user.type(screen.getByLabelText('Часови'), '2');
+    await user.type(screen.getByLabelText('Цена на целиот пакет'), '100');
+    await user.selectOptions(screen.getByLabelText('Валута'), '*');
+    expect(screen.getByLabelText('Валута')).toHaveValue(''); // empty, ready for another currency
+    await user.type(screen.getByLabelText('Валута'), 'eur');
+    expect(screen.getByLabelText('Валута')).toHaveValue('EUR');
+    await user.click(screen.getByRole('button', { name: 'Додели' }));
+
+    await expect.poll(() => api.to(`${FINANCE}/students/s1/packages`, 'POST').length).toBe(1);
+    expect(api.to(`${FINANCE}/students/s1/packages`, 'POST')[0]!.body).toEqual({ offerId: null, title: 'Online course', lessonCount: 2, priceMinor: 10_000, currency: 'EUR' });
+  });
+
   it('records a partial payment in minor units and checks the amount first', async () => {
     const user = userEvent.setup();
     const { api } = financeApi();

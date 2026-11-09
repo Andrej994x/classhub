@@ -125,21 +125,31 @@ internal sealed class FinanceService(
     /// <summary>A closed package is no longer consumed (what it cost stays charged).</summary>
     public async Task<StudentFinanceResponse> ClosePackageAsync(Guid packageId, PackageVersionRequest request, CancellationToken cancellationToken)
     {
-        var package = await db.Set<StudentPackage>().SingleOrDefaultAsync(p => p.Id == packageId, cancellationToken) ?? throw new NotFoundException();
-        if (package.Version != request.Version)
+        var studentId = await db.Set<StudentPackage>().AsNoTracking().Where(p => p.Id == packageId).Select(p => (Guid?)p.StudentId).SingleOrDefaultAsync(cancellationToken)
+            ?? throw new NotFoundException();
+        await using (var transaction = await db.Database.BeginTransactionAsync(cancellationToken))
         {
-            throw Conflict();
+            // The student's finance lock, like consumption: a lesson being consumed from this package finishes first, and
+            // none is consumed from it after the close.
+            await queries.LockStudentAsync(studentId, cancellationToken);
+            var package = await db.Set<StudentPackage>().SingleAsync(p => p.Id == packageId, cancellationToken);
+            if (package.Version != request.Version)
+            {
+                throw Conflict();
+            }
+
+            if (package.ClosedAtUtc is null)
+            {
+                package.ClosedAtUtc = clock.GetUtcNow().UtcDateTime;
+                package.Version++;
+                audit.Record("finance.package.closed", nameof(StudentPackage), package.Id.ToString(), package.WorkspaceId, after: new { package.StudentId });
+                await SaveAsync(cancellationToken);
+            }
+
+            await transaction.CommitAsync(cancellationToken);
         }
 
-        if (package.ClosedAtUtc is null)
-        {
-            package.ClosedAtUtc = clock.GetUtcNow().UtcDateTime;
-            package.Version++;
-            audit.Record("finance.package.closed", nameof(StudentPackage), package.Id.ToString(), package.WorkspaceId, after: new { package.StudentId });
-            await SaveAsync(cancellationToken);
-        }
-
-        return await GetStudentAsync(package.StudentId, cancellationToken);
+        return await GetStudentAsync(studentId, cancellationToken);
     }
 
     public async Task<StudentFinanceResponse> RecordPaymentAsync(Guid studentId, RecordPaymentRequest request, CancellationToken cancellationToken)

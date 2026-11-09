@@ -201,9 +201,11 @@ function AssignPackageForm({ workspaceId, studentId, finance, onDone }: { worksp
   const assign = useAssignPackage(workspaceId, studentId);
   const { workspaceCurrency, currencies } = useCurrencies(workspaceId, finance);
   const [offerId, setOfferId] = useState('');
-  const [custom, setCustom] = useState({ title: '', lessons: '4', price: '', currency: '' });
+  const [custom, setCustom] = useState({ title: '', lessons: '4', price: '' });
+  // null until the teacher picks one; then kept, also empty while another currency is being typed.
+  const [chosenCurrency, setChosenCurrency] = useState<string | null>(null);
   const [invalid, setInvalid] = useState(false);
-  const currency = custom.currency || workspaceCurrency;
+  const currency = chosenCurrency ?? workspaceCurrency;
   const language = i18n.resolvedLanguage ?? 'mk';
   const active = (offers.data ?? []).filter((o) => o.isActive);
 
@@ -215,7 +217,7 @@ function AssignPackageForm({ workspaceId, studentId, finance, onDone }: { worksp
     }
     const lessons = Number(custom.lessons);
     const price = parseMoney(custom.price, currency);
-    if (!custom.title.trim() || !Number.isInteger(lessons) || lessons < 1 || lessons > 500 || price === null) {
+    if (!custom.title.trim() || !Number.isInteger(lessons) || lessons < 1 || lessons > 500 || price === null || !/^[A-Z]{3}$/.test(currency)) {
       setInvalid(true);
       return;
     }
@@ -248,7 +250,7 @@ function AssignPackageForm({ workspaceId, studentId, finance, onDone }: { worksp
             error={invalid && parseMoney(custom.price, currency) === null ? t('finance.validation.amount') : undefined}
             onChange={(e) => setCustom({ ...custom, price: e.target.value })}
           />
-          <CurrencySelect id="package-currency" currencies={currencies} value={currency} onChange={(c) => setCustom({ ...custom, currency: c })} />
+          <CurrencySelect id="package-currency" currencies={currencies} value={currency} onChange={setChosenCurrency} />
         </div>
       )}
       {assign.error && <Alert variant="error">{errorMessage(assign.error, t)}</Alert>}
@@ -296,19 +298,21 @@ function PaymentForm({ workspaceId, studentId, finance, onDone }: { workspaceId:
   const pay = useRecordPayment(workspaceId, studentId);
   const { workspaceCurrency, currencies, timeZone } = useCurrencies(workspaceId, finance);
   const owed = finance.balances.find((b) => (num(b.outstandingMinor) ?? 0) > 0)?.currency;
-  const [values, setValues] = useState({ amount: '', currency: owed ?? workspaceCurrency, paidOn: today(timeZone), method: 'Cash' as PaymentMethod, note: '', packageId: '' });
+  const [values, setValues] = useState({ amount: '', paidOn: today(timeZone), method: 'Cash' as PaymentMethod, note: '', packageId: '' });
+  const [chosenCurrency, setChosenCurrency] = useState<string | null>(null);
   const [invalid, setInvalid] = useState(false);
-  const packages = finance.packages.filter((p) => p.currency === values.currency);
+  const currency = chosenCurrency ?? owed ?? workspaceCurrency;
+  const packages = finance.packages.filter((p) => p.currency === currency);
 
   const submit = (event: FormEvent) => {
     event.preventDefault();
-    const amount = parseMoney(values.amount, values.currency);
-    if (amount === null || amount <= 0 || !values.paidOn) {
+    const amount = parseMoney(values.amount, currency);
+    if (amount === null || amount <= 0 || !values.paidOn || !/^[A-Z]{3}$/.test(currency)) {
       setInvalid(true);
       return;
     }
     pay.mutate(
-      { amountMinor: amount, currency: values.currency, paidOn: values.paidOn, method: values.method, note: values.note.trim() || null, packageId: values.packageId || null },
+      { amountMinor: amount, currency, paidOn: values.paidOn, method: values.method, note: values.note.trim() || null, packageId: values.packageId || null },
       { onSuccess: onDone },
     );
   };
@@ -320,10 +324,18 @@ function PaymentForm({ workspaceId, studentId, finance, onDone }: { workspaceId:
         label={t('finance.payment.amount')}
         inputMode="decimal"
         value={values.amount}
-        error={invalid && !((parseMoney(values.amount, values.currency) ?? 0) > 0) ? t('finance.validation.amount') : undefined}
+        error={invalid && !((parseMoney(values.amount, currency) ?? 0) > 0) ? t('finance.validation.amount') : undefined}
         onChange={(e) => setValues({ ...values, amount: e.target.value })}
       />
-      <CurrencySelect id="payment-currency" currencies={currencies} value={values.currency} onChange={(currency) => setValues({ ...values, currency, packageId: '' })} />
+      <CurrencySelect
+        id="payment-currency"
+        currencies={currencies}
+        value={currency}
+        onChange={(next) => {
+          setChosenCurrency(next);
+          setValues({ ...values, packageId: '' });
+        }}
+      />
       <FormField label={t('finance.payment.paidOn')} type="date" value={values.paidOn} onChange={(e) => setValues({ ...values, paidOn: e.target.value })} />
       <div className="flex flex-col gap-2">
         <Label htmlFor="payment-method">{t('finance.payment.method')}</Label>
@@ -365,17 +377,19 @@ function AdjustmentForm({ workspaceId, studentId, finance, onDone }: { workspace
   const { t } = useTranslation();
   const adjust = useAdjustBalance(workspaceId, studentId);
   const { workspaceCurrency, currencies } = useCurrencies(workspaceId, finance);
-  const [values, setValues] = useState({ amount: '', currency: finance.balances[0]?.currency ?? workspaceCurrency, direction: 'less' as 'less' | 'more', reason: '' });
+  const [values, setValues] = useState({ amount: '', direction: 'less' as 'less' | 'more', reason: '' });
+  const [chosenCurrency, setChosenCurrency] = useState<string | null>(null);
   const [invalid, setInvalid] = useState(false);
+  const currency = chosenCurrency ?? finance.balances[0]?.currency ?? workspaceCurrency;
 
   const submit = (event: FormEvent) => {
     event.preventDefault();
-    const amount = parseMoney(values.amount, values.currency);
-    if (amount === null || amount === 0 || !values.reason.trim()) {
+    const amount = parseMoney(values.amount, currency);
+    if (amount === null || amount === 0 || !values.reason.trim() || !/^[A-Z]{3}$/.test(currency)) {
       setInvalid(true);
       return;
     }
-    adjust.mutate({ amountMinor: values.direction === 'less' ? -amount : amount, currency: values.currency, reason: values.reason.trim() }, { onSuccess: onDone });
+    adjust.mutate({ amountMinor: values.direction === 'less' ? -amount : amount, currency, reason: values.reason.trim() }, { onSuccess: onDone });
   };
 
   return (
@@ -391,10 +405,10 @@ function AdjustmentForm({ workspaceId, studentId, finance, onDone }: { workspace
         label={t('finance.adjustment.amount')}
         inputMode="decimal"
         value={values.amount}
-        error={invalid && !((parseMoney(values.amount, values.currency) ?? 0) > 0) ? t('finance.validation.amount') : undefined}
+        error={invalid && !((parseMoney(values.amount, currency) ?? 0) > 0) ? t('finance.validation.amount') : undefined}
         onChange={(e) => setValues({ ...values, amount: e.target.value })}
       />
-      <CurrencySelect id="adjustment-currency" currencies={currencies} value={values.currency} onChange={(currency) => setValues({ ...values, currency })} />
+      <CurrencySelect id="adjustment-currency" currencies={currencies} value={currency} onChange={setChosenCurrency} />
       <FormField label={t('finance.reason')} maxLength={REASON_MAX} value={values.reason} error={invalid && !values.reason.trim() ? t('finance.validation.reason') : undefined} onChange={(e) => setValues({ ...values, reason: e.target.value })} />
       {adjust.error && (
         <Alert variant="error" className="sm:col-span-2">
