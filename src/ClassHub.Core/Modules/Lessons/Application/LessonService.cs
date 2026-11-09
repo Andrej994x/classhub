@@ -220,6 +220,15 @@ internal sealed class LessonService(
             throw new BadRequestException("The page must be 1 to 10000 and the page size 1 to 100.");
         }
 
+        // The student or group must be this workspace's (archived ones included): another workspace's is not found.
+        var known = studentId is { } sid
+            ? (await students.FindAsync([sid], cancellationToken)).ContainsKey(sid)
+            : (await groups.FindAsync([groupId!.Value], cancellationToken)).ContainsKey(groupId!.Value);
+        if (!known)
+        {
+            throw new NotFoundException();
+        }
+
         var lessons = db.Set<Lesson>().AsNoTracking();
         lessons = studentId is { } student
             ? lessons.Where(l => db.Set<LessonParticipant>().Any(p => p.LessonId == l.Id && p.StudentId == student))

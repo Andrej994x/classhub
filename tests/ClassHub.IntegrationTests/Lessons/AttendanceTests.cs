@@ -152,7 +152,11 @@ public sealed class AttendanceTests(ClassHubApiFixture fixture)
         (await teacher.Client.GetAsync(Path(teacher, $"/history?studentId={ana}&groupId={groupLesson.GroupId}"))).StatusCode.ShouldBe(HttpStatusCode.BadRequest);
 
         using var intruder = await fixture.CreateTeacherAsync();
-        (await intruder.Client.GetJsonAsync<LessonHistoryResponse>(Path(intruder, $"/history?studentId={ana}"))).Items.ShouldBeEmpty();
+        // Another workspace's student or group under one's own route: not found, not an empty history.
+        await TenantIsolationKit.AssertCrossTenantDeniedAsync(intruder.Client, HttpMethod.Get, Path(intruder, $"/history?studentId={ana}"));
+        await TenantIsolationKit.AssertCrossTenantDeniedAsync(intruder.Client, HttpMethod.Get, Path(intruder, $"/history?groupId={groupLesson.GroupId}"));
+        var own = await StudentAsync(intruder, "Свој");
+        (await intruder.Client.GetJsonAsync<LessonHistoryResponse>(Path(intruder, $"/history?studentId={own}"))).Items.ShouldBeEmpty();
         await TenantIsolationKit.AssertCrossTenantDeniedAsync(intruder.Client, HttpMethod.Put, Path(teacher, $"/{groupLesson.Id}/notes"), new { version = 0, privateNote = "x" });
         await TenantIsolationKit.AssertCrossTenantDeniedAsync(intruder.Client, HttpMethod.Get, Path(teacher, $"/history?studentId={ana}"));
     }
