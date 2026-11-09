@@ -39,7 +39,7 @@ internal sealed class BookingPublicService(
             return new PublicBookingResponse(false, zone, 0, []);
         }
 
-        var bookable = await offers.ListPublicAsync(cancellationToken);
+        var bookable = await BookableOffersAsync(cancellationToken);
         return new PublicBookingResponse(true, zone, settings!.HorizonDays,
             [.. bookable.Select(o => new PublicBookingOffer(o.Id, o.Title, o.DurationMinutes, LessonModeOf(o.Mode).ToString()))]);
     }
@@ -54,7 +54,7 @@ internal sealed class BookingPublicService(
             return new PublicSlotsResponse(zoneId, []);
         }
 
-        var offer = (await offers.ListPublicAsync(cancellationToken)).FirstOrDefault(o => o.Id == offerId) ?? throw new NotFoundException();
+        var offer = (await BookableOffersAsync(cancellationToken)).FirstOrDefault(o => o.Id == offerId) ?? throw new NotFoundException();
         var slots = await SlotsAsync(workspaceId, settings!, TimeZoneInfo.FindSystemTimeZoneById(zoneId), offer.DurationMinutes, from, from.AddDays(MaxDaysPerRequest - 1), cancellationToken);
         return new PublicSlotsResponse(zoneId, [.. slots.GroupBy(s => s.Date).Select(g => new PublicSlotDay(g.Key, [.. g.Select(s => new PublicSlot(s.StartUtc, s.Time.ToString("HH:mm")))]))]);
     }
@@ -68,7 +68,7 @@ internal sealed class BookingPublicService(
             throw Unavailable();
         }
 
-        var offer = (await offers.ListPublicAsync(cancellationToken)).FirstOrDefault(o => o.Id == offerId) ?? throw Unavailable();
+        var offer = (await BookableOffersAsync(cancellationToken)).FirstOrDefault(o => o.Id == offerId) ?? throw Unavailable();
         var zoneId = await workspace.GetTimeZoneAsync(cancellationToken);
         var zone = TimeZoneInfo.FindSystemTimeZoneById(zoneId);
         var start = DateTime.SpecifyKind(startUtc.ToUniversalTime(), DateTimeKind.Utc);
@@ -111,6 +111,10 @@ internal sealed class BookingPublicService(
         var busy = await queries.BusyAsync(owner.UserId, LessonTime.StartOfDayUtc(from, zone).AddDays(-1), LessonTime.StartOfDayUtc(to.AddDays(1), zone).AddDays(1), cancellationToken);
         return BookingSlots.Compute(hours, off, busy, zone, now, durationMinutes, settings.SlotStepMinutes, settings.MinNoticeHours, settings.HorizonDays, from, to);
     }
+
+    /// <summary>Public, active offers whose duration a lesson can have (offers may be longer than a lesson).</summary>
+    private async Task<IReadOnlyList<PublicOffer>> BookableOffersAsync(CancellationToken cancellationToken) =>
+        [.. (await offers.ListPublicAsync(cancellationToken)).Where(o => o.DurationMinutes is >= Lesson.MinDurationMinutes and <= Lesson.MaxDurationMinutes)];
 
     private Task<BookingSettings?> SettingsAsync(CancellationToken cancellationToken) =>
         db.Set<BookingSettings>().AsNoTracking().SingleOrDefaultAsync(cancellationToken);

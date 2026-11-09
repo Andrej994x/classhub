@@ -246,6 +246,19 @@ public sealed class BookingTests(ClassHubApiFixture fixture)
         var hidden = await CreateOfferAsync(site.Teacher, "Приватен час", showOnPublicSite: false);
         (await visitor.PostAsJsonAsync($"/api/public/sites/{site.Slug}/leads", Booking(await TokenAsync(site.Slug), hidden.Id, slot.StartUtc, "x@example.test"), Ct)).StatusCode.ShouldBe(HttpStatusCode.BadRequest);
 
+        // Longer than a lesson can be (8 hours): not bookable, even with long enough working hours.
+        var marathon = await CreateOfferAsync(site.Teacher, "Цел ден", durationMinutes: 600);
+        var settingsNow = await site.Teacher.Client.GetJsonAsync<BookingSettingsResponse>(site.Path("/settings"));
+        using (var allDay = await site.Teacher.Client.PutAsync(site.Path("/settings"), Settings(settingsNow.Version, hours: [.. Enum.GetValues<DayOfWeek>().Select(d => new WorkingHoursItem(d, new TimeOnly(6, 0), new TimeOnly(23, 0)))])))
+        {
+            allDay.StatusCode.ShouldBe(HttpStatusCode.OK);
+        }
+
+        (await visitor.GetFromJsonAsync<PublicBookingResponse>($"/api/public/sites/{site.Slug}/booking", Ct))!.Offers.ShouldNotContain(o => o.Id == marathon.Id);
+        (await visitor.GetAsync($"/api/public/sites/{site.Slug}/booking/slots?offerId={marathon.Id}&from={Tomorrow:yyyy-MM-dd}", Ct)).StatusCode.ShouldBe(HttpStatusCode.NotFound);
+        var early = TimeZoneInfo.ConvertTimeToUtc(Tomorrow.ToDateTime(new TimeOnly(7, 0)), Skopje);
+        (await visitor.PostAsJsonAsync($"/api/public/sites/{site.Slug}/leads", Booking(await TokenAsync(site.Slug), marathon.Id, early, "x@example.test"), Ct)).StatusCode.ShouldBe(HttpStatusCode.BadRequest);
+
         // Booking off: the page says so and requested times are refused.
         var settings = await site.Teacher.Client.GetJsonAsync<BookingSettingsResponse>(site.Path("/settings"));
         await SaveSettingsAsync(site.Teacher, settings.Version, enabled: false);
@@ -374,12 +387,12 @@ public sealed class BookingTests(ClassHubApiFixture fixture)
         slotStartUtc,
     };
 
-    private static async Task<OfferResponse> CreateOfferAsync(TeacherSession teacher, string title, bool showOnPublicSite = true)
+    private static async Task<OfferResponse> CreateOfferAsync(TeacherSession teacher, string title, bool showOnPublicSite = true, int durationMinutes = 60)
     {
         var math = (await teacher.Client.GetJsonAsync<ClassHub.Core.Modules.Catalog.Contracts.CatalogResponse>("/api/catalog")).Subjects.Single(s => s.Code == "math").Id;
         using var response = await teacher.Client.PostAsync($"/api/w/{teacher.WorkspaceId}/offers", new
         {
-            kind = "SingleLesson", title, subjectId = math, durationMinutes = 60, priceMinor = 120_000L, mode = "Online", isActive = true, showOnPublicSite,
+            kind = "SingleLesson", title, subjectId = math, durationMinutes, priceMinor = 120_000L, mode = "Online", isActive = true, showOnPublicSite,
         });
         response.StatusCode.ShouldBe(HttpStatusCode.Created, await response.Content.ReadAsStringAsync(Ct));
         return (await response.Content.ReadFromJsonAsync<OfferResponse>(Ct))!;
