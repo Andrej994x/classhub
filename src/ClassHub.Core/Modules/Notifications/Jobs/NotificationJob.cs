@@ -95,8 +95,8 @@ internal sealed partial class NotificationJob(IServiceScopeFactory scopes, IOpti
 
     /// <summary>
     /// A reminder for every student of every scheduled lesson starting soon: the whole window, page by page, so no lesson
-    /// waits behind others. One per lesson, student and start time while one is pending or sent; a withdrawn one (the
-    /// lesson moved away and back) is followed by a new attempt.
+    /// waits behind others. One per lesson, student and start time; only a withdrawn one (the lesson moved away and back)
+    /// is followed by a new attempt.
     /// </summary>
     private async Task PlanRemindersAsync(DateTime nowUtc, CancellationToken cancellationToken)
     {
@@ -147,7 +147,9 @@ internal sealed partial class NotificationJob(IServiceScopeFactory scopes, IOpti
         foreach (var (lesson, studentId, due) in candidates)
         {
             var forThisTime = reminders.Where(r => r.LessonId == lesson.LessonId && r.StudentId == studentId && r.LessonStartUtc == lesson.StartUtc).ToList();
-            if (forThisTime.Any(r => r.Status is NotificationStatus.Pending or NotificationStatus.Sent))
+            // Only a withdrawn reminder (the lesson moved away and back) is followed by a new one: a reminder that was sent,
+            // suppressed (opted out, no address) or failed stays the outcome for this time.
+            if (forThisTime.Any(r => r.Status != NotificationStatus.Cancelled))
             {
                 continue;
             }

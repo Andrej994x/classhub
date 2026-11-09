@@ -65,6 +65,9 @@ public sealed class Notification : ITenantOwned
 
     public Guid? HomeworkId { get; set; }
 
+    /// <summary>The assignment it announces (a removed and re-added assignment is another notice, never this one).</summary>
+    public Guid? HomeworkAssignmentId { get; set; }
+
     public DateTime DueAtUtc { get; set; }
 
     public NotificationStatus Status { get; set; } = NotificationStatus.Pending;

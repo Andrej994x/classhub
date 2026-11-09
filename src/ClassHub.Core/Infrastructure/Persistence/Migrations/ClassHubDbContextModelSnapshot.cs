@@ -2498,6 +2498,9 @@ namespace ClassHub.Core.Infrastructure.Persistence.Migrations
                         .HasPrecision(3)
                         .HasColumnType("datetime2(3)");
 
+                    b.Property<Guid?>("HomeworkAssignmentId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<Guid?>("HomeworkId")
                         .HasColumnType("uniqueidentifier");
 
@@ -2569,7 +2572,7 @@ namespace ClassHub.Core.Infrastructure.Persistence.Migrations
 
                             t.HasCheckConstraint("CK_Notifications_Status", "[Status] BETWEEN 1 AND 5");
 
-                            t.HasCheckConstraint("CK_Notifications_Subject", "([Kind] = 5 AND [HomeworkId] IS NOT NULL AND [LessonId] IS NULL) OR ([Kind] <> 5 AND [LessonId] IS NOT NULL AND [HomeworkId] IS NULL)");
+                            t.HasCheckConstraint("CK_Notifications_Subject", "([Kind] = 5 AND [HomeworkId] IS NOT NULL AND [HomeworkAssignmentId] IS NOT NULL AND [LessonId] IS NULL) OR ([Kind] <> 5 AND [LessonId] IS NOT NULL AND [HomeworkId] IS NULL AND [HomeworkAssignmentId] IS NULL)");
                         });
                 });
 

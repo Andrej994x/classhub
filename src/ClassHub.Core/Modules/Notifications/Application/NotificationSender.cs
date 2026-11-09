@@ -98,7 +98,8 @@ internal sealed class NotificationSender(
         if (n.Kind == NotificationKind.HomeworkAssigned)
         {
             var notice = await homework.FindAsync(n.HomeworkId!.Value, n.StudentId, cancellationToken);
-            if (notice is null)
+            // Only the assignment this notice announces: once removed, a later one is announced by its own notice.
+            if (notice is null || notice.AssignmentId != n.HomeworkAssignmentId)
             {
                 return Suppressed("homework");
             }

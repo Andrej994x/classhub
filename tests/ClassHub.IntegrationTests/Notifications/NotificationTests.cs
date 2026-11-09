@@ -231,6 +231,11 @@ public sealed class NotificationTests(ClassHubApiFixture fixture)
         (await EmailsAsync(learner.Email, "notify.lesson-reminder", since)).ShouldBe(0);
         (await EmailsAsync(learner.Email, "notify.homework-assigned", since)).ShouldBe(0);
 
+        // Further passes keep that outcome: no new reminder rows for an unchanged lesson time.
+        await RunAsync(DateTime.UtcNow.AddMinutes(1));
+        await RunAsync(DateTime.UtcNow.AddMinutes(2));
+        (await StatusesAsync(lesson.Id)).Count(s => s.Kind == NotificationKind.LessonReminder).ShouldBe(1);
+
         using var anonymous = await ApiClient.CreateAsync(fixture);
         (await anonymous.GetAsync("/api/me/notification-preferences")).StatusCode.ShouldBe(HttpStatusCode.Unauthorized);
     }
@@ -258,6 +263,25 @@ public sealed class NotificationTests(ClassHubApiFixture fixture)
         email.TextBody.ShouldNotContain("/student/w/"); // no account: no portal link
         (await EmailsAsync(oldEmail, "notify.homework-assigned", since)).ShouldBe(0);
         (await OutcomesAsync(homework.Id)).ShouldBe([("no-address", NotificationStatus.Suppressed), ("student", NotificationStatus.Suppressed), (null, NotificationStatus.Sent)], ignoreOrder: true);
+    }
+
+    [Fact]
+    public async Task Homework_removed_and_assigned_again_is_announced_once()
+    {
+        using var teacher = await fixture.CreateTeacherAsync();
+        var ana = await StudentAsync(teacher, "Ана", ApiTestExtensions.UniqueEmail("ana"));
+        var since = DateTime.UtcNow.AddSeconds(-1);
+        var homework = await HomeworkAsync(teacher, "Задача", ana.Id);
+        var first = homework.Assignments.Single();
+        await ReadAsync<HomeworkResponse>(await teacher.Client.DeleteAsync($"/api/w/{teacher.WorkspaceId}/homework/{homework.Id}/assignments/{first.Id}"));
+        await ReadAsync<HomeworkResponse>(await teacher.Client.PostAsync($"/api/w/{teacher.WorkspaceId}/homework/{homework.Id}/assignments", new { studentIds = new[] { ana.Id } }));
+
+        await RunAsync(DateTime.UtcNow);
+
+        await fixture.WaitForEmailAsync(ana.Email!, "notify.homework-assigned", since);
+        await Task.Delay(500, Ct); // the outbox delivers anything left
+        (await EmailsAsync(ana.Email!, "notify.homework-assigned", since)).ShouldBe(1);
+        (await OutcomesAsync(homework.Id)).ShouldBe([("homework", NotificationStatus.Suppressed), (null, NotificationStatus.Sent)], ignoreOrder: true);
     }
 
     [Fact]

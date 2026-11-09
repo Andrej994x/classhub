@@ -73,6 +73,7 @@ internal sealed class NotificationScheduler(ClassHubDbContext db, ITenantContext
                 DedupeKey = NotificationRules.HomeworkKey(assignment.AssignmentId),
                 StudentId = assignment.StudentId,
                 HomeworkId = homeworkId,
+                HomeworkAssignmentId = assignment.AssignmentId,
             }, cancellationToken);
         }
     }
