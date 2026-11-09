@@ -131,8 +131,10 @@ export function useMyHomework(workspaceId: string, assignmentId: string) {
 export function useSubmitHomework(workspaceId: string, assignmentId: string) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async ({ text, file, removeFile }: { text: string; file: File | null; removeFile: boolean }) => {
+    mutationFn: async ({ version, text, file, removeFile }: { version: number; text: string; file: File | null; removeFile: boolean }) => {
       const form = new FormData();
+      // The version the form showed: an answer saved since (another tab) or a review is a conflict, never overwritten.
+      form.append('version', String(version));
       form.append('text', text);
       if (removeFile) form.append('removeFile', 'true');
       if (file) form.append('file', file, file.name);

@@ -1163,7 +1163,8 @@
       "submit": "Hand in",
       "resubmit": "Hand in again",
       "storageFull": "Your teacher's storage is full, so the file could not be saved. Hand in your answer as text or ask your teacher.",
-      "reviewedMeanwhile": "Your teacher has reviewed this homework meanwhile. Reload the page to see the review."
+      "reviewedMeanwhile": "Your teacher has reviewed this homework meanwhile. Reload the page to see the review.",
+      "changedMeanwhile": "Your answer was changed in another window or your teacher reviewed it meanwhile. Reload the page to see the current answer."
     }
   },
   "studentPortal": {

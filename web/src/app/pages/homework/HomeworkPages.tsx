@@ -531,7 +531,7 @@ function StudentHomework({ workspaceId }: { workspaceId: string }) {
     }
     setProblem(null);
     try {
-      await submit.mutateAsync({ text, file, removeFile: removeFile && !file });
+      await submit.mutateAsync({ version: num(homework.version) ?? 0, text, file, removeFile: removeFile && !file });
     } catch {
       // shown below
     }
@@ -539,8 +539,10 @@ function StudentHomework({ workspaceId }: { workspaceId: string }) {
   const submitError =
     submit.error instanceof ApiError && submit.error.code === 'PLAN_LIMIT_REACHED'
       ? t('homework.portal.storageFull')
-      : submit.error instanceof ApiError && (submit.error.code === 'CONCURRENCY_CONFLICT' || submit.error.code === 'INVALID_STATUS_TRANSITION')
+      : submit.error instanceof ApiError && submit.error.code === 'INVALID_STATUS_TRANSITION'
         ? t('homework.portal.reviewedMeanwhile')
+        : submit.error instanceof ApiError && submit.error.code === 'CONCURRENCY_CONFLICT'
+          ? t('homework.portal.changedMeanwhile')
         : submit.error
           ? errorMessage(submit.error, t)
           : null;

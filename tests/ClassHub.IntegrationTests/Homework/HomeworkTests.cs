@@ -55,6 +55,17 @@ public sealed class HomeworkTests(ClassHubApiFixture fixture)
         resubmitted.File.ShouldNotBeNull().FileName.ShouldBe("reshenie.pdf");
         resubmitted.Version.ShouldBeGreaterThan(submitted.Version);
 
+        // A stale form (another tab still showing the first answer) cannot overwrite the newer answer.
+        using (var stale = await PostSubmissionAsync(learner, teacher.WorkspaceId, assignment.Id, "Стара верзија", null, version: submitted.Version))
+        {
+            stale.StatusCode.ShouldBe(HttpStatusCode.Conflict);
+        }
+
+        using (var noVersion = await PostSubmissionAsync(learner, teacher.WorkspaceId, assignment.Id, "Без верзија", null, version: null))
+        {
+            noVersion.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
+        }
+
         // The teacher sees the answer and its file.
         var forTeacher = (await teacher.Client.GetJsonAsync<HomeworkResponse>(Path(teacher, $"/{homework.Id}"))).Assignments.Single();
         forTeacher.AnswerText.ShouldBe("Поправено решение.");
@@ -305,9 +316,14 @@ public sealed class HomeworkTests(ClassHubApiFixture fixture)
         (await teacher.Client.GetJsonAsync<HomeworkListResponse>(Path(teacher, $"?lessonId={lesson.Id}"))).Items.ShouldHaveSingleItem().Id.ShouldBe(linked.Id);
     }
 
-    private static MultipartFormDataContent Form(string? text, (string Name, byte[] Bytes)? file, bool removeFile)
+    private static MultipartFormDataContent Form(string? text, (string Name, byte[] Bytes)? file, bool removeFile, int? version = 0)
     {
         var content = new MultipartFormDataContent();
+        if (version is not null)
+        {
+            content.Add(new StringContent(version.Value.ToString(System.Globalization.CultureInfo.InvariantCulture)), "version");
+        }
+
         if (text is not null)
         {
             content.Add(new StringContent(text), "text");
@@ -328,9 +344,16 @@ public sealed class HomeworkTests(ClassHubApiFixture fixture)
         return content;
     }
 
-    private static async Task<HttpResponseMessage> PostSubmissionAsync(TeacherSession learner, Guid workspaceId, Guid assignmentId, string? text, (string Name, byte[] Bytes)? file, bool removeFile = false)
+    /// <summary>Hands in with the version the student currently sees (or <paramref name="version"/> as given).</summary>
+    private static async Task<HttpResponseMessage> PostSubmissionAsync(TeacherSession learner, Guid workspaceId, Guid assignmentId, string? text, (string Name, byte[] Bytes)? file, bool removeFile = false, int? version = -1)
     {
-        using var content = Form(text, file, removeFile);
+        if (version == -1)
+        {
+            using var current = await learner.Client.GetAsync(Portal(workspaceId, $"/{assignmentId}"));
+            version = current.IsSuccessStatusCode ? (await current.Content.ReadFromJsonAsync<StudentHomeworkResponse>(Ct))!.Version : 0;
+        }
+
+        using var content = Form(text, file, removeFile, version);
         return await learner.Client.SendContentAsync(HttpMethod.Post, Portal(workspaceId, $"/{assignmentId}/submission"), content);
     }
 

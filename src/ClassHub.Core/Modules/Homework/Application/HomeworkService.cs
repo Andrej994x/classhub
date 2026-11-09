@@ -236,11 +236,17 @@ internal sealed class HomeworkService(
 
     /// <summary>
     /// The student's answer: text and/or a file (a new file replaces the previous one; <paramref name="removeFile"/> drops
-    /// it). Allowed until the review; the stored answer must not be empty. A review that lands first wins (409).
+    /// it). Allowed until the review; the stored answer must not be empty. <paramref name="version"/> is the version the
+    /// student's form showed: an answer saved or reviewed since then (another tab, the teacher) is a conflict (409).
     /// </summary>
-    public async Task<StudentHomeworkResponse> SubmitAsync(Guid assignmentId, string? text, bool removeFile, string? uploadedName, byte[]? content, CancellationToken cancellationToken)
+    public async Task<StudentHomeworkResponse> SubmitAsync(Guid assignmentId, int? version, string? text, bool removeFile, string? uploadedName, byte[]? content, CancellationToken cancellationToken)
     {
         var studentId = RequireStudent();
+        if (version is null)
+        {
+            throw Invalid("version", "Reload the page and hand in again.");
+        }
+
         var answer = string.IsNullOrWhiteSpace(text) ? null : text.Trim();
         if (answer?.Length > HomeworkAssignment.AnswerMaxLength)
         {
@@ -261,6 +267,10 @@ internal sealed class HomeworkService(
 
         var row = await OwnAssignments(studentId).SingleOrDefaultAsync(r => r.Assignment.Id == assignmentId, cancellationToken) ?? throw new NotFoundException();
         HomeworkRules.EnsureOpen(row.Assignment); // before writing the file
+        if (row.Assignment.Version != version)
+        {
+            throw Conflict();
+        }
 
         var keepsFile = row.Assignment.FileId is not null && kind is null && !removeFile;
         if (answer is null && kind is null && !keepsFile)
@@ -300,7 +310,7 @@ internal sealed class HomeworkService(
                 throw new NotFoundException();
             }
 
-            if (assignment.Version != row.Assignment.Version)
+            if (assignment.Version != version)
             {
                 throw Conflict();
             }

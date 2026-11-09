@@ -95,12 +95,14 @@ public sealed class HomeworkModule : IModule
             .RequireAuthorization(ClassHubPolicies.StudentSelf)
             .WithName("GetMyHomework");
 
-        // multipart/form-data: "text", optional "file", "removeFile" ("true" drops the current file).
+        // multipart/form-data: "version" (the assignment version the form showed), "text", optional "file", "removeFile"
+        // ("true" drops the current file).
         portal.MapPost("/{assignmentId:guid}/submission", async (Guid assignmentId, HttpContext http, HomeworkService service, CancellationToken ct) =>
             {
                 var (form, fileName, content) = await DocumentUploads.ReadAsync(http, fileRequired: false, ct);
                 var removeFile = string.Equals(form["removeFile"].ToString(), "true", StringComparison.OrdinalIgnoreCase);
-                return TypedResults.Ok(await service.SubmitAsync(assignmentId, form["text"].ToString(), removeFile, fileName, content, ct));
+                int? version = int.TryParse(form["version"].ToString(), System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture, out var parsed) ? parsed : null;
+                return TypedResults.Ok(await service.SubmitAsync(assignmentId, version, form["text"].ToString(), removeFile, fileName, content, ct));
             })
             .RequireAuthorization(ClassHubPolicies.StudentSelf)
             .Accepts<IFormFile>("multipart/form-data")

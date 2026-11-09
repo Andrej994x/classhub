@@ -225,47 +225,47 @@ describe('homework (teacher)', () => {
   });
 });
 
-describe('homework (student portal)', () => {
-  const linked = { workspaceId: WORKSPACE_ID, teacherName: 'Математика со Ана', studentId: 's1', firstName: 'Марко', lastName: null };
-  const mine = (overrides: Record<string, unknown> = {}) => ({
-    id: 'a1',
-    title: 'Равенки',
-    description: 'Задачи 1–5',
-    dueDate: '2026-11-20',
-    status: 'Assigned',
-    assignedAtUtc: '2026-11-09T09:00:00Z',
-    submittedAtUtc: null as string | null,
-    late: false,
-    answerText: null as string | null,
-    file: null as { fileName: string; contentType: string; sizeBytes: number } | null,
-    reviewedAtUtc: null as string | null,
-    teacherComment: null as string | null,
-    version: 0,
-    ...overrides,
+const linked = { workspaceId: WORKSPACE_ID, teacherName: 'Математика со Ана', studentId: 's1', firstName: 'Марко', lastName: null };
+const mine = (overrides: Record<string, unknown> = {}) => ({
+  id: 'a1',
+  title: 'Равенки',
+  description: 'Задачи 1–5',
+  dueDate: '2026-11-20',
+  status: 'Assigned',
+  assignedAtUtc: '2026-11-09T09:00:00Z',
+  submittedAtUtc: null as string | null,
+  late: false,
+  answerText: null as string | null,
+  file: null as { fileName: string; contentType: string; sizeBytes: number } | null,
+  reviewedAtUtc: null as string | null,
+  teacherComment: null as string | null,
+  version: 0,
+  ...overrides,
+});
+
+function portalApi(initial = mine(), submitAnswer?: (call: FakeCall) => Response) {
+  const state = { homework: initial };
+  const api = fakeApi({
+    me: teacher({ email: 'marko@example.test' }),
+    extra: [
+      (call) => {
+        if (call.path === '/api/student/teachers') return json(200, [linked]);
+        if (call.path === `/api/student/w/${WORKSPACE_ID}/profile`) return json(200, { ...linked, subjectIds: [] });
+        if (call.path === PORTAL) return json(200, [state.homework]);
+        if (call.path === `${PORTAL}/a1`) return json(200, state.homework);
+        if (call.path === `${PORTAL}/a1/submission`) {
+          if (submitAnswer) return submitAnswer(call);
+          state.homework = mine({ ...state.homework, status: 'Submitted', submittedAtUtc: '2026-11-10T08:00:00Z', answerText: 'x = 4', version: state.homework.version + 1 });
+          return json(200, state.homework);
+        }
+        return undefined;
+      },
+    ],
   });
+  return { api, state };
+}
 
-  function portalApi(initial = mine(), submitAnswer?: (call: FakeCall) => Response) {
-    const state = { homework: initial };
-    const api = fakeApi({
-      me: teacher({ email: 'marko@example.test' }),
-      extra: [
-        (call) => {
-          if (call.path === '/api/student/teachers') return json(200, [linked]);
-          if (call.path === `/api/student/w/${WORKSPACE_ID}/profile`) return json(200, { ...linked, subjectIds: [] });
-          if (call.path === PORTAL) return json(200, [state.homework]);
-          if (call.path === `${PORTAL}/a1`) return json(200, state.homework);
-          if (call.path === `${PORTAL}/a1/submission`) {
-            if (submitAnswer) return submitAnswer(call);
-            state.homework = mine({ ...state.homework, status: 'Submitted', submittedAtUtc: '2026-11-10T08:00:00Z', answerText: 'x = 4', version: state.homework.version + 1 });
-            return json(200, state.homework);
-          }
-          return undefined;
-        },
-      ],
-    });
-    return { api, state };
-  }
-
+describe('homework (student portal)', () => {
   it('lists the homework on the teacher page and opens it', async () => {
     portalApi();
     await renderRoute(`/student/w/${WORKSPACE_ID}`);
@@ -295,7 +295,19 @@ describe('homework (student portal)', () => {
     expect(sent.contentType).toMatch(/^multipart\/form-data; boundary=/);
     expect(String(sent.body)).toContain('x = 4');
     expect(String(sent.body)).toContain('name="file"');
+    expect(String(sent.body)).toMatch(/name="version"\s+0\s/); // the version the form showed
     expect(screen.getByText('Предадена')).toBeInTheDocument();
+  });
+
+  it('reports an answer changed in another window instead of overwriting it', async () => {
+    const user = userEvent.setup();
+    portalApi(mine(), () => problem(409, 'CONCURRENCY_CONFLICT'));
+    await renderRoute(`/student/w/${WORKSPACE_ID}/homework/a1`);
+
+    await user.type(await screen.findByLabelText('Одговор'), 'Старо');
+    await user.click(screen.getByRole('button', { name: 'Предај' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Одговорот е променет во друг прозорец');
   });
 
   it('explains a full teacher storage in the students words', async () => {
