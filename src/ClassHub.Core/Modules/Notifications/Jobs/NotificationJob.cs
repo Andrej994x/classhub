@@ -30,6 +30,9 @@ public sealed class NotificationOptions
 
     /// <summary>Lessons read per page while planning (every page of the window is read in each pass).</summary>
     public int PlanningPageSize { get; set; } = 500;
+
+    /// <summary>A pass claims batch after batch (oldest due first) until nothing is due, at most this many batches.</summary>
+    public int MaxBatchesPerPass { get; set; } = 20;
 }
 
 /// <summary>
@@ -66,7 +69,25 @@ internal sealed partial class NotificationJob(IServiceScopeFactory scopes, IOpti
     {
         await PlanRemindersAsync(nowUtc, cancellationToken);
         var sent = 0;
-        foreach (var claim in await ClaimAsync(nowUtc, cancellationToken))
+        // Batch after batch, oldest due first, until nothing is due: a backlog never leaves a notice waiting for a later pass.
+        for (var batches = 0; batches < Math.Max(1, options.Value.MaxBatchesPerPass); batches++)
+        {
+            var claims = await ClaimAsync(nowUtc, cancellationToken);
+            sent += await SendAllAsync(claims, nowUtc, cancellationToken);
+            if (claims.Count < Math.Max(1, options.Value.BatchSize))
+            {
+                break;
+            }
+        }
+
+        await FailExhaustedAsync(nowUtc, cancellationToken);
+        return sent;
+    }
+
+    private async Task<int> SendAllAsync(IReadOnlyList<Claim> claims, DateTime nowUtc, CancellationToken cancellationToken)
+    {
+        var sent = 0;
+        foreach (var claim in claims)
         {
             try
             {
@@ -91,7 +112,6 @@ internal sealed partial class NotificationJob(IServiceScopeFactory scopes, IOpti
             }
         }
 
-        await FailExhaustedAsync(nowUtc, cancellationToken);
         return sent;
     }
 
@@ -197,12 +217,16 @@ internal sealed partial class NotificationJob(IServiceScopeFactory scopes, IOpti
         var batch = Math.Max(1, options.Value.BatchSize);
         var lease = nowUtc.AddSeconds(Math.Max(10, options.Value.LeaseSeconds));
         var maxAttempts = Math.Max(1, options.Value.MaxAttempts);
+        // The oldest due first (an ordered batch, then claimed): fair under a backlog.
         return await db.Database.SqlQuery<Claim>($"""
-            UPDATE TOP ({batch}) n
-            SET n.[LockedUntilUtc] = {lease}, n.[Attempts] = n.[Attempts] + 1
+            WITH due AS (
+                SELECT TOP ({batch}) n.*
+                FROM [Notifications] AS n WITH (UPDLOCK, READPAST, ROWLOCK, READCOMMITTEDLOCK)
+                WHERE n.[Status] = 1 AND n.[DueAtUtc] <= {nowUtc} AND (n.[LockedUntilUtc] IS NULL OR n.[LockedUntilUtc] < {nowUtc}) AND n.[Attempts] < {maxAttempts}
+                ORDER BY n.[DueAtUtc], n.[Id])
+            UPDATE due
+            SET [LockedUntilUtc] = {lease}, [Attempts] = [Attempts] + 1
             OUTPUT inserted.[Id], inserted.[WorkspaceId], inserted.[TeacherUserId]
-            FROM [Notifications] AS n WITH (UPDLOCK, READPAST, ROWLOCK, READCOMMITTEDLOCK)
-            WHERE n.[Status] = 1 AND n.[DueAtUtc] <= {nowUtc} AND (n.[LockedUntilUtc] IS NULL OR n.[LockedUntilUtc] < {nowUtc}) AND n.[Attempts] < {maxAttempts}
             """).ToListAsync(cancellationToken);
     }
 

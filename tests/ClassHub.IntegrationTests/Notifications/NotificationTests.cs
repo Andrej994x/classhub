@@ -471,6 +471,24 @@ public sealed class NotificationTests(ClassHubApiFixture fixture)
     }
 
     [Fact]
+    public async Task A_pass_drains_a_backlog_larger_than_one_batch()
+    {
+        using var teacher = await fixture.CreateTeacherAsync();
+        var ana = await StudentAsync(teacher, "Ана", ApiTestExtensions.UniqueEmail("ana"));
+        var boris = await StudentAsync(teacher, "Борис", ApiTestExtensions.UniqueEmail("boris"));
+        var since = DateTime.UtcNow.AddSeconds(-1);
+        var homework = await HomeworkAsync(teacher, "Заостанато", ana.Id, boris.Id);
+
+        // Batches of one: both notices (and any other test's due ones) are still sent in this single pass.
+        using var factory = fixture.Factory.WithWebHostBuilder(builder => builder.UseSetting("Notifications:BatchSize", "1"));
+        await factory.Services.GetRequiredService<NotificationJob>().RunAtAsync(DateTime.UtcNow, Ct);
+
+        (await OutcomesAsync(homework.Id)).ShouldAllBe(o => o.Status == NotificationStatus.Sent);
+        await fixture.WaitForEmailAsync(ana.Email!, "notify.homework-assigned", since);
+        await fixture.WaitForEmailAsync(boris.Email!, "notify.homework-assigned", since);
+    }
+
+    [Fact]
     public async Task Parallel_dispatchers_send_every_notification_exactly_once()
     {
         using var teacher = await fixture.CreateTeacherAsync();
