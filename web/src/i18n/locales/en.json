@@ -46,7 +46,8 @@
     "homework": "Homework",
     "finance": "Finance",
     "toolbox": "Toolbox",
-    "adminToolbox": "Toolbox"
+    "adminToolbox": "Toolbox",
+    "activities": "Activities"
   },
   "layout": {
     "teacherArea": "Teacher workspace",
@@ -1600,5 +1601,30 @@
       "Drawing": "Drawing",
       "Other": "Other"
     }
+  },
+  "activities": {
+    "title": "Activity Library",
+    "lead": "Activities you save from the drawing and geometry boards: open, rename, duplicate or delete them.",
+    "search": "Search activities",
+    "board": "Board",
+    "allBoards": "All boards",
+    "boards": {
+      "drawing-board": "Drawing board",
+      "geometry-board": "Geometry board"
+    },
+    "empty": "No activities yet. Save a drawing or a construction from a board in the toolbox to keep it here.",
+    "noMatch": "No activities match your search.",
+    "open": "Open {{title}}",
+    "boardSoon": "The board is coming soon",
+    "renameButton": "Rename",
+    "rename": "Rename {{title}}",
+    "titleField": "Title",
+    "noSubject": "No subject",
+    "save": "Save",
+    "cancel": "Cancel",
+    "duplicate": "Duplicate",
+    "delete": "Delete",
+    "deleteConfirm": "Yes, delete",
+    "changed": "changed {{when}}"
   }
 }

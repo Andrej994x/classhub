@@ -88,6 +88,12 @@ ASP.NET Core Identity with cookie sessions. See [ARCHITECTURE.md](ARCHITECTURE.m
 - Names, phones and guardian contacts are redacted in logs.
 - No duplicates by email within a workspace (unique index) and no limit overrun under parallel requests (intake lock; tested).
 
+## Activity Library (R3-P2)
+
+- Activities are tenant-owned: another workspace gets 404 (also covered by the isolation sweep), and the list shows only the workspace's own.
+- **Documents:** stored and returned only as JSON objects in a known board format, within a size limit counted in UTF-8 bytes, also enforced by database CHECKs. They are never rendered as HTML: the boards read them (R3-P3/P4).
+- **Plan limits** are enforced under the plan-limit lock, so parallel saves cannot exceed them.
+
 ## Teaching Toolbox (R3-P1)
 
 - Only platform staff change the catalog. Changes are audited; a teacher gets 403 and an anonymous caller 401 (also covered by the isolation sweep).

@@ -43,6 +43,20 @@ Flows (each in **mk and en**, on **desktop and mobile**): register → dev mailb
 
 On a machine with little free memory, many local workers can exhaust Chromium's blob storage: a request then fails in the browser (`net::ERR_BLOB_OUT_OF_MEMORY` in the trace's network log) and the app shows "no connection to the server", in any test. Run with fewer workers (`npx playwright test --workers=3`; CI uses 2) rather than retrying.
 
+## Activity Library tests (R3-P2)
+
+- **Unit:** `ActivityRulesTests` (supported boards and format versions; documents are objects within the limit in UTF-8 bytes; copy titles always fit).
+- **Integration:** `ActivityTests`.
+  - **Save, find (title, subject, board), open, change with the version** (stale: 409; the board never changes), duplicate and delete. The document round-trips unchanged; a deleted activity cannot be opened.
+  - **Documents must be JSON objects** in a supported format, with a title, a known board and a catalog subject, **within the size limit** (lowered to 100 bytes in a derived host).
+  - **The Free limit holds under 13 parallel saves**: exactly 10 are created, 3 get `PLAN_LIMIT_REACHED`. A duplicate is limited too; deleting frees a place.
+  - **Other workspaces see nothing:** 404 under the owner's route and under their own; their list is empty.
+- **Vitest:** `ActivityLibraryPage.test.tsx`.
+  - List, board labels and search.
+  - Rename sends the listed version and the unchanged document.
+  - No open link before the board ships; an open link once the toolbox lists it.
+  - The plan-limit message on duplicate; delete only after confirming, with the version.
+
 ## Toolbox tests (R3-P1)
 
 - **Unit:** `ToolRulesTests`.
