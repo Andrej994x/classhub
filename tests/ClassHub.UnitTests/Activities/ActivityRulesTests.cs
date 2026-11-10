@@ -59,6 +59,62 @@ public sealed class ActivityRulesTests
     public void Constructions_hold_known_objects_on_named_points_and_a_valid_view(string json, bool valid) =>
         (ActivityRules.ContentProblem("geometry-board", 1, JsonDocument.Parse(json).RootElement) is null).ShouldBe(valid);
 
+    [Theory]
+    [InlineData("x^2 - 2x + 1", true)]
+    [InlineData("2sin(x)", true)]
+    [InlineData("3(x+1)", true)]
+    [InlineData("x sin(x)", true)]
+    [InlineData("-x^-2", true)]
+    [InlineData("2,5x + .5", true)]
+    [InlineData("sqrt(abs(x)) + ln(e) + log(pi) + exp(x)", true)]
+    [InlineData("2 × x − 1", true)]
+    [InlineData("", false)]
+    [InlineData("alert(1)", false)]
+    [InlineData("eval(x)", false)]
+    [InlineData("x.constructor", false)]
+    [InlineData("__proto__", false)]
+    [InlineData("x;1", false)]
+    [InlineData("x => x", false)]
+    [InlineData("${x}", false)]
+    [InlineData("<script>", false)]
+    [InlineData("y + 1", false)]
+    [InlineData("sin x", false)]
+    [InlineData("2^^3", false)]
+    [InlineData("(x", false)]
+    [InlineData("1..2", false)]
+    [InlineData("x[0]", false)]
+    [InlineData("1.2.3", false)]
+    [InlineData("1,2,3", false)]
+    [InlineData("2.5.", false)]
+    [InlineData("2 3", false)]
+    [InlineData("x2", false)]
+    [InlineData("(x+1)2", false)]
+    public void Function_terms_follow_the_safe_grammar(string term, bool valid) => GeometryTerms.IsValid(term).ShouldBe(valid);
+
+    [Fact]
+    public void Function_terms_are_limited_in_length_and_nesting()
+    {
+        GeometryTerms.IsValid(string.Concat(Enumerable.Repeat("x+", 101)) + "x").ShouldBeFalse();
+        GeometryTerms.IsValid(new string('(', 60) + "x" + new string(')', 60)).ShouldBeFalse();
+        GeometryTerms.IsValid(new string('-', 120) + "x").ShouldBeFalse();
+        GeometryTerms.IsValid(new string('(', 10) + "x" + new string(')', 10)).ShouldBeTrue();
+        // The saved term counts as written (spaces included), as the board checks it when opening the construction.
+        GeometryTerms.IsValid(new string(' ', 199) + "x").ShouldBeTrue();
+        GeometryTerms.IsValid(new string(' ', 200) + "x").ShouldBeFalse();
+    }
+
+    [Fact]
+    public void Function_graphs_need_format_version_2()
+    {
+        var document = JsonDocument.Parse("""{"format":"classhub.geometry","version":2,"objects":[{"id":"f","type":"function","term":"x^2"}]}""").RootElement;
+        ActivityRules.ContentProblem("geometry-board", 2, document).ShouldBeNull();
+        ActivityRules.ContentProblem("geometry-board", 1, document).ShouldNotBeNull();
+        ActivityRules.ContentProblem("geometry-board", 2, JsonDocument.Parse("""{"format":"classhub.geometry","objects":[{"id":"f","type":"function","term":"alert(1)"}]}""").RootElement).ShouldNotBeNull();
+        ActivityRules.ContentProblem("geometry-board", 2, JsonDocument.Parse("""{"format":"classhub.geometry","objects":[{"id":"f","type":"function","term":7}]}""").RootElement).ShouldNotBeNull();
+        ActivityRules.IsSupported("geometry-board", 2).ShouldBeTrue();
+        ActivityRules.IsSupported("geometry-board", 3).ShouldBeFalse();
+    }
+
     [Fact]
     public void A_copy_title_always_fits()
     {

@@ -1,13 +1,20 @@
 import type { Construction, GeometryObject } from './construction.ts';
+import { evaluate, parseTerm } from './expression.ts';
 
 /** The part of a JSXGraph board the mapping uses (a fake one in tests). */
-export type BoardLike = { create: (type: string, parents: unknown[], attributes?: Record<string, unknown>) => unknown };
+export type BoardLike = {
+  create: (type: string, parents: unknown[], attributes?: Record<string, unknown>) => unknown;
+  /** The visible area [left, top, right, bottom] (function graphs are drawn across it). */
+  getBoundingBox?: () => [number, number, number, number];
+};
 
 /** What a construction object becomes on the board: the JSXGraph element type and its parents. */
 export function boardElementType(object: GeometryObject): string {
   switch (object.type) {
     case 'triangle':
       return 'polygon';
+    case 'function':
+      return 'curve';
     default:
       return object.type; // point, segment, line, circle, angle (A, vertex B, C)
   }
@@ -46,6 +53,23 @@ export function renderConstruction(board: BoardLike, construction: Construction,
       case 'angle':
         element = board.create('angle', object.points.map(ref), { name: '', radius: 1, fillColor: '#fcd34d', fillOpacity: 0.4 });
         break;
+      case 'function': {
+        // A plain curve (t, f(t)) across the visible x-range, f read by the safe evaluator. Never JSXGraph's
+        // functiongraph: it routes the x-coordinate through JSXGraph's own expression language.
+        const parsed = parseTerm(object.term);
+        if (!parsed.ok) continue;
+        const tree = parsed.tree;
+        const edge = (index: 0 | 2) => () => (board.getBoundingBox?.() ?? [-10, 10, 10, -10])[index];
+        element = board.create('curve', [(t: number) => t, (t: number) => evaluate(tree, t), edge(0), edge(2)], {
+          // The graph is its term: it cannot be dragged away from it (only points move).
+          fixed: true,
+          name: `${object.id}(x)`,
+          withLabel: true,
+          strokeColor: '#7c3aed',
+          strokeWidth: 2,
+        });
+        break;
+      }
     }
     elements.set(object.id, element);
   }

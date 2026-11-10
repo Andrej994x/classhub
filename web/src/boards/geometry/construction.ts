@@ -1,9 +1,12 @@
+import { MAX_TERM_LENGTH, parseTerm } from './expression.ts';
+
 /**
  * The geometry board's construction (R3-P4, D-33): ClassHub's own versioned JSON format, independent of the drawing
  * library. Version 1 holds free points and the objects built on them (segments, lines, circles, triangles, angles) and
- * the view (visible area, axes, grid). The API checks the same rules.
+ * the view (visible area, axes, grid); version 2 (R3-P5) adds function graphs, each a term of x read by the safe
+ * parser. Version 1 documents still open. The API checks the same rules.
  */
-export const GEOMETRY_SCHEMA_VERSION = 1;
+export const GEOMETRY_SCHEMA_VERSION = 2;
 export const MAX_OBJECTS = 2000;
 export const COORDINATE_LIMIT = 1_000_000;
 
@@ -11,15 +14,16 @@ export type PointObject = { id: string; type: 'point'; x: number; y: number };
 export type TwoPointObject = { id: string; type: 'segment' | 'line'; points: [string, string] };
 export type CircleObject = { id: string; type: 'circle'; center: string; through: string };
 export type ThreePointObject = { id: string; type: 'triangle' | 'angle'; points: [string, string, string] };
-export type GeometryObject = PointObject | TwoPointObject | CircleObject | ThreePointObject;
+export type FunctionObject = { id: string; type: 'function'; term: string };
+export type GeometryObject = PointObject | TwoPointObject | CircleObject | ThreePointObject | FunctionObject;
 export type GeometryTool = 'move' | 'point' | 'segment' | 'line' | 'circle' | 'triangle' | 'angle';
 
 export type View = { boundingBox: [number, number, number, number]; axis: boolean; grid: boolean };
-export type Construction = { format: 'classhub.geometry'; version: 1; view: View; objects: GeometryObject[] };
+export type Construction = { format: 'classhub.geometry'; version: 2; view: View; objects: GeometryObject[] };
 
 export const DEFAULT_VIEW: View = { boundingBox: [-8, 6, 8, -6], axis: true, grid: true };
 
-export const emptyConstruction = (): Construction => ({ format: 'classhub.geometry', version: 1, view: { ...DEFAULT_VIEW }, objects: [] });
+export const emptyConstruction = (): Construction => ({ format: 'classhub.geometry', version: 2, view: { ...DEFAULT_VIEW }, objects: [] });
 
 /** How many points each tool needs (after choosing them the object is built). */
 export const POINTS_NEEDED: Record<Exclude<GeometryTool, 'move'>, number> = { point: 1, segment: 2, line: 2, circle: 2, triangle: 3, angle: 3 };
@@ -42,7 +46,7 @@ export function nextPointName(construction: Construction): string {
 }
 
 /** A new id for a built object (segments s1, s2 …; lines l1 …; circles c1 …; triangles t1 …; angles a1 …). */
-function nextObjectId(construction: Construction, type: Exclude<GeometryObject['type'], 'point'>): string {
+function nextObjectId(construction: Construction, type: Exclude<GeometryObject['type'], 'point' | 'function'>): string {
   const prefix = { segment: 's', line: 'l', circle: 'c', triangle: 't', angle: 'a' }[type];
   const used = new Set(construction.objects.map((o) => o.id));
   for (let n = 1; ; n++) if (!used.has(`${prefix}${n}`)) return `${prefix}${n}`;
@@ -70,6 +74,28 @@ export function addObject(construction: Construction, tool: Exclude<GeometryTool
   return { ...construction, objects: [...construction.objects, object] };
 }
 
+const FUNCTION_NAMES = ['f', 'g', 'h', 'p', 'q', 'r'];
+
+/** The next free function name: f, g, h, p, q, r, then f1, f2 … */
+export function nextFunctionName(construction: Construction): string {
+  const used = new Set(construction.objects.map((o) => o.id));
+  const free = FUNCTION_NAMES.find((name) => !used.has(name));
+  if (free) return free;
+  for (let n = 1; ; n++) if (!used.has(`f${n}`)) return `f${n}`;
+}
+
+/** Adds a function graph if the term is a valid term of x (and there is room); null otherwise. */
+export function addFunction(construction: Construction, term: string): Construction | null {
+  const text = term.trim();
+  if (!parseTerm(text).ok || !hasRoom(construction, 1)) return null;
+  return { ...construction, objects: [...construction.objects, { id: nextFunctionName(construction), type: 'function', term: text }] };
+}
+
+/** Removes a function graph (nothing is built on functions). */
+export function removeFunction(construction: Construction, id: string): Construction {
+  return { ...construction, objects: construction.objects.filter((o) => !(o.id === id && o.type === 'function')) };
+}
+
 /** Moves a free point (dragging on the board). */
 export function movePoint(construction: Construction, id: string, x: number, y: number): Construction {
   return { ...construction, objects: construction.objects.map((o) => (o.id === id && o.type === 'point' ? { ...o, x: round(x), y: round(y) } : o)) };
@@ -82,7 +108,7 @@ export function movePoints(construction: Construction, moves: readonly { id: str
 
 /** The points an object is built on. */
 export function dependencies(object: GeometryObject): string[] {
-  return object.type === 'point' ? [] : object.type === 'circle' ? [object.center, object.through] : [...object.points];
+  return object.type === 'point' || object.type === 'function' ? [] : object.type === 'circle' ? [object.center, object.through] : [...object.points];
 }
 
 /**
@@ -101,7 +127,7 @@ export function fromDocument(document: unknown): Construction {
     objects.push(object);
     known.add(object.id);
   }
-  return { format: 'classhub.geometry', version: 1, view: { boundingBox: [...box], axis: view.axis !== false, grid: view.grid !== false }, objects };
+  return { format: 'classhub.geometry', version: 2, view: { boundingBox: [...box], axis: view.axis !== false, grid: view.grid !== false }, objects };
 }
 
 /** Distinct point references of exactly this count, or null. */
@@ -127,6 +153,8 @@ function parseObject(raw: unknown): GeometryObject | null {
       const points = refs(o.points, 3);
       return points ? { id: o.id, type: o.type, points: [points[0]!, points[1]!, points[2]!] } : null;
     }
+    case 'function':
+      return typeof o.term === 'string' && o.term.length <= MAX_TERM_LENGTH && parseTerm(o.term).ok ? { id: o.id, type: 'function', term: o.term } : null;
     default:
       return null;
   }

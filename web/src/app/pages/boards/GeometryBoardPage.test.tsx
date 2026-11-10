@@ -62,7 +62,7 @@ describe('geometry board', () => {
     await expect.poll(() => api.to(BASE, 'POST').length).toBe(1);
     const body = api.to(BASE, 'POST')[0]!.body as { toolType: string; schemaVersion: number; document: { format: string; objects: unknown[]; view: unknown } };
     expect(body.toolType).toBe('geometry-board');
-    expect(body.schemaVersion).toBe(1);
+    expect(body.schemaVersion).toBe(2);
     expect(body.document.format).toBe('classhub.geometry');
     expect(body.document.objects).toEqual([
       { id: 'A', type: 'point', x: 1, y: 1 },
@@ -99,5 +99,39 @@ describe('geometry board', () => {
     board.click({ pointId: 'P1' }); // the segment alone fits
     expect(await screen.findByText('board: 2000 objects')).toBeInTheDocument();
     expect(screen.queryByText(/Конструкцијата може да има најмногу/)).not.toBeInTheDocument();
+  });
+
+  it('draws function graphs from valid terms only, removes them and saves them', async () => {
+    const user = userEvent.setup();
+    const api = fakeApi({
+      me: teacher(),
+      extra: [(call: FakeCall) => (call.path === BASE && call.method === 'POST' ? json(201, { id: 'g2', ...(call.body as object), version: 1, sizeBytes: 80, createdAtUtc: '', updatedAtUtc: '' }) : undefined)],
+    });
+    await renderRoute(`/app/w/${WORKSPACE_ID}/toolbox/geometry-board`);
+    const form = await screen.findByRole('form', { name: 'Графици на функции' });
+
+    await user.type(within(form).getByLabelText('f(x) ='), 'alert(1)');
+    await user.click(within(form).getByRole('button', { name: 'Нацртај график' }));
+    expect(await screen.findByText(/Внесете израз со x/)).toBeInTheDocument();
+    expect(screen.getByText('board: 0 objects')).toBeInTheDocument();
+
+    await user.clear(within(form).getByLabelText('f(x) ='));
+    await user.type(within(form).getByLabelText('f(x) ='), 'x^2 - 2x');
+    await user.click(within(form).getByRole('button', { name: 'Нацртај график' }));
+    await user.type(within(form).getByLabelText('g(x) ='), '2sin(x)');
+    await user.click(within(form).getByRole('button', { name: 'Нацртај график' }));
+    const graphs = screen.getByRole('list', { name: 'Графици' });
+    expect(graphs).toHaveTextContent('f(x) = x^2 - 2x');
+    expect(graphs).toHaveTextContent('g(x) = 2sin(x)');
+    await user.click(within(graphs).getByRole('button', { name: 'Отстрани g' }));
+    expect(screen.getByText('board: 1 objects')).toBeInTheDocument();
+
+    await user.type(screen.getByLabelText('Наслов'), 'Парабола');
+    await user.click(screen.getByRole('button', { name: 'Зачувај во библиотеката' }));
+    await expect.poll(() => api.to(BASE, 'POST').length).toBe(1);
+    const body = api.to(BASE, 'POST')[0]!.body as { schemaVersion: number; document: { version: number; objects: unknown[] } };
+    expect(body.schemaVersion).toBe(2);
+    expect(body.document.version).toBe(2);
+    expect(body.document.objects).toEqual([{ id: 'f', type: 'function', term: 'x^2 - 2x' }]);
   });
 });

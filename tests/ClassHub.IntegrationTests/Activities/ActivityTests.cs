@@ -95,7 +95,12 @@ public sealed class ActivityTests(ClassHubApiFixture fixture)
         // The geometry board's construction (R3-P4, D-33): known objects on distinct points named before them.
         await ExpectInvalidAsync(teacher, Body("Без формат", null, JsonDocument.Parse("""{"objects":[]}""").RootElement, tool: "geometry-board"), "document");
         await ExpectInvalidAsync(teacher, Body("Недостасува точка", null, JsonDocument.Parse("""{"format":"classhub.geometry","objects":[{"id":"s1","type":"segment","points":["A","B"]}]}""").RootElement, tool: "geometry-board"), "document");
-        await ExpectInvalidAsync(teacher, Body("Функција", null, JsonDocument.Parse("""{"format":"classhub.geometry","objects":[{"id":"f","type":"function","term":"alert(1)"}]}""").RootElement, tool: "geometry-board"), "document");
+        await ExpectInvalidAsync(teacher, Body("Функција во v1", null, JsonDocument.Parse("""{"format":"classhub.geometry","objects":[{"id":"f","type":"function","term":"x^2"}]}""").RootElement, tool: "geometry-board"), "document");
+        await ExpectInvalidAsync(teacher, Body("Злонамерна функција", null, JsonDocument.Parse("""{"format":"classhub.geometry","version":2,"objects":[{"id":"f","type":"function","term":"alert(1)"}]}""").RootElement, tool: "geometry-board", schemaVersion: 2), "document");
+        // Version 2 (R3-P5): graphs of valid terms are kept as written.
+        var graph = await ReadAsync<ActivityResponse>(await teacher.Client.PostAsync(Path(teacher), Body("Парабола", null,
+            JsonDocument.Parse("""{"format":"classhub.geometry","version":2,"objects":[{"id":"f","type":"function","term":"x^2 - 2x"}]}""").RootElement, tool: "geometry-board", schemaVersion: 2)));
+        (graph.SchemaVersion, graph.Document.GetProperty("objects")[0].GetProperty("term").GetString()).ShouldBe((2, "x^2 - 2x"));
 
         // The size limit (lowered here to 100 bytes): a larger document is refused, a smaller one saved.
         using var small = fixture.Factory.WithWebHostBuilder(builder => builder.UseSetting("Activities:MaxDocumentBytes", "100"));

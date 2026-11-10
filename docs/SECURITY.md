@@ -88,6 +88,13 @@ ASP.NET Core Identity with cookie sessions. See [ARCHITECTURE.md](ARCHITECTURE.m
 - Names, phones and guardian contacts are redacted in logs.
 - No duplicates by email within a workspace (unique index) and no limit overrun under parallel requests (intake lock; tested).
 
+## Function terms (R3-P5)
+
+- **Terms are parsed, never executed as code.** The client's own parser builds a small syntax tree from an allow-list grammar (numbers, x, pi, e, operators, parentheses, eleven math functions); anything else is refused (`alert(1)`, `x.constructor`, `__proto__`, `${x}`, `x => x`, unknown names, unbalanced input).
+- Length, depth and size are bounded, so no input can exhaust the stack.
+- The graph is drawn from JavaScript functions over the tree, never through `eval`, `new Function` or JSXGraph's JessieCode. The CSP (`script-src 'self'`, no `unsafe-eval`) stays as it is; E2E checks that there are no violations.
+- The API applies the same grammar to saved terms (C#, validation only).
+
 ## Geometry Board (R3-P4)
 
 - **Constructions are data, never code.** The format holds only names, numbers and references, checked on the server (types, names, finite bounded coordinates, references to earlier points) and parsed defensively in the client. Functions and expressions come with R3-P5's safe parser; a `function` object is refused until then.
