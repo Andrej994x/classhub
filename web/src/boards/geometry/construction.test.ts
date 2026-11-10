@@ -88,6 +88,12 @@ describe('function graphs (format v2)', () => {
     expect(addFunction(removeFunction(c, 'f'), 'x')!.objects.map((o) => o.id)).toEqual(['g', 'f']);
   });
 
+  it('keeps a saved term up to 200 characters as written, spaces included, like the API', () => {
+    const doc = (term: string) => ({ format: 'classhub.geometry', version: 2, objects: [{ id: 'f', type: 'function', term }] });
+    expect(fromDocument(doc(' '.repeat(199) + 'x')).objects).toHaveLength(1);
+    expect(fromDocument(doc(' '.repeat(200) + 'x')).objects).toHaveLength(0);
+  });
+
   it('opens version 1 documents (points and shapes only) as version 2', () => {
     const v1 = { format: 'classhub.geometry', version: 1, objects: [{ id: 'A', type: 'point', x: 1, y: 1 }] };
     expect(fromDocument(v1)).toMatchObject({ version: 2, objects: [{ id: 'A', type: 'point', x: 1, y: 1 }] });

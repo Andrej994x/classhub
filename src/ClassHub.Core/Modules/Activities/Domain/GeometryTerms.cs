@@ -26,10 +26,14 @@ public static class GeometryTerms
 
     private readonly record struct Token(Kind Kind, string Value);
 
+    /// <summary>
+    /// Whether the term (as saved: at most <see cref="MaxLength"/> characters, spaces included, like the board checks when
+    /// it opens a construction) is a term of x.
+    /// </summary>
     public static bool IsValid(string? term)
     {
         var text = term?.Trim();
-        if (string.IsNullOrEmpty(text) || text.Length > MaxLength || Tokenize(text) is not { } tokens)
+        if (term is null || term.Length > MaxLength || string.IsNullOrEmpty(text) || Tokenize(text) is not { } tokens)
         {
             return false;
         }

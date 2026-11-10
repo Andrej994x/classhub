@@ -54,7 +54,7 @@ On a machine with little free memory, many local workers can exhaust Chromium's 
   - Graphs are drawn as fixed curves of plain functions (never a string for JSXGraph to evaluate, never draggable away from the term).
 - **Vitest:** `GeometryBoardPage.test.tsx`: an invalid term shows the hint and adds nothing; valid graphs are listed, removed and saved in version 2.
 - **Unit:** `ActivityRulesTests`.
-  - The C# grammar accepts and refuses the same cases, with limits.
+  - The C# grammar accepts and refuses the same cases, with limits; the 200-character limit counts the term as saved (spaces included), on both sides.
   - Function graphs are accepted only in format version 2, with valid terms.
 - **Integration:** `ActivityTests`: function objects are refused in version 1 and with malicious terms; a valid version 2 graph is kept as written.
 - **E2E:** `geometry.spec.ts`, **plot → save → reopen**. An invalid term shows the hint; `x^2 - 2` is drawn as a visible SVG path; it is saved in version 2, reopened from the library and saved again unchanged. No CSP or eval errors.

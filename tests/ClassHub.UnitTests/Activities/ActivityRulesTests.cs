@@ -92,6 +92,9 @@ public sealed class ActivityRulesTests
         GeometryTerms.IsValid(new string('(', 60) + "x" + new string(')', 60)).ShouldBeFalse();
         GeometryTerms.IsValid(new string('-', 120) + "x").ShouldBeFalse();
         GeometryTerms.IsValid(new string('(', 10) + "x" + new string(')', 10)).ShouldBeTrue();
+        // The saved term counts as written (spaces included), as the board checks it when opening the construction.
+        GeometryTerms.IsValid(new string(' ', 199) + "x").ShouldBeTrue();
+        GeometryTerms.IsValid(new string(' ', 200) + "x").ShouldBeFalse();
     }
 
     [Fact]
