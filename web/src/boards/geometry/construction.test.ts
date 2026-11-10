@@ -2,6 +2,9 @@ import { describe, expect, it } from 'vitest';
 import { addFunction, addObject, addPoint, emptyConstruction, fromDocument, hasRoom, MAX_OBJECTS, movePoint, movePoints, nextPointName, removeFunction, type Construction } from './construction.ts';
 import { boardElementType, renderConstruction } from './render.ts';
 
+/** A version 2 document with one function graph. */
+const doc = (term: string) => ({ format: 'classhub.geometry', version: 2, objects: [{ id: 'f', type: 'function', term }] });
+
 function triangle(): Construction {
   let c = emptyConstruction();
   [c] = addPoint(c, 0, 0);
@@ -89,7 +92,6 @@ describe('function graphs (format v2)', () => {
   });
 
   it('keeps a saved term up to 200 characters as written, spaces included, like the API', () => {
-    const doc = (term: string) => ({ format: 'classhub.geometry', version: 2, objects: [{ id: 'f', type: 'function', term }] });
     expect(fromDocument(doc(' '.repeat(199) + 'x')).objects).toHaveLength(1);
     expect(fromDocument(doc(' '.repeat(200) + 'x')).objects).toHaveLength(0);
   });
