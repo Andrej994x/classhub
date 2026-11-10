@@ -2,6 +2,7 @@ import { createInstance } from 'i18next';
 import { initReactI18next } from 'react-i18next';
 import en from './locales/en.json';
 import mk from './locales/mk.json';
+import { syncManifest } from '../pwa/pwa.ts';
 
 export const SUPPORTED_LANGUAGES = ['mk', 'en'] as const;
 export type Language = (typeof SUPPORTED_LANGUAGES)[number];
@@ -36,6 +37,7 @@ export const i18n = createInstance();
 
 const setDocumentLanguage = (language: string) => {
   if (typeof document !== 'undefined') document.documentElement.lang = language;
+  syncManifest(language);
 };
 
 // Subscribed before init: with bundled resources, init already emits the first languageChanged.

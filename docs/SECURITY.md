@@ -88,6 +88,13 @@ ASP.NET Core Identity with cookie sessions. See [ARCHITECTURE.md](ARCHITECTURE.m
 - Names, phones and guardian contacts are redacted in logs.
 - No duplicates by email within a workspace (unique index) and no limit overrun under parallel requests (intake lock; tested).
 
+## Service worker and offline page (R3-P7)
+
+- **No API data or pages are cached.** The service worker keeps only the offline page and content-hashed build assets; API requests are not intercepted at all, so nothing personal is stored in the browser's cache and sign-out leaves nothing behind there.
+- **Narrow scope:** registered only for `/app/` and `/student/`. The public pages and `/admin` are never controlled. `Service-Worker-Allowed: /` is sent only for `/dist/sw.js`, and only the app's own code registers it (`script-src 'self'`).
+- **Never stale as current:** offline, pages show the offline page, which says that what was seen before may be out of date and that nothing is saved; data is never served from a cache as if it were current.
+- The worker file is revalidated on every visit (`no-cache`), so a fix reaches users on their next visit.
+
 ## Usage analytics (R3-P6)
 
 - **No personal data:** only per-workspace daily counts of tool openings and activity creations and reuses. No user, student, visitor, IP address or time of day is stored, and nothing about who opened what.

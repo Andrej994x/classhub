@@ -8,6 +8,7 @@ import { cn } from '../../lib/utils.ts';
 import { RequireAuth } from '../../auth/RequireAuth.tsx';
 import { useMyWorkspaces } from '../../auth/session.ts';
 import { AdminGate } from '../pages/admin/AdminGate.tsx';
+import { InstallApp } from '../components/InstallApp.tsx';
 import { LanguageSwitcher } from '../components/LanguageSwitcher.tsx';
 import { AccountMenu, UnconfirmedEmailBanner } from '../components/SessionControls.tsx';
 
@@ -59,6 +60,7 @@ export function AppShell({ areaKey, nav, actions, children }: { areaKey: string;
         <span className="hidden text-sm text-muted-foreground sm:inline">· {t(areaKey)}</span>
         <div className="ml-auto flex items-center gap-2">
           {actions}
+          <InstallApp />
           <LanguageSwitcher />
           <AccountMenu />
         </div>

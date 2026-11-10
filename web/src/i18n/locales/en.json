@@ -1690,5 +1690,10 @@
         "remove": "Remove {{name}}"
       }
     }
+  },
+  "pwa": {
+    "install": "Install the app",
+    "dismiss": "Do not offer to install again",
+    "largeScreen": "The boards work on a phone, but they are easier to use on a tablet or computer."
   }
 }

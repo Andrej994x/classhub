@@ -43,6 +43,20 @@ Flows (each in **mk and en**, on **desktop and mobile**): register → dev mailb
 
 On a machine with little free memory, many local workers can exhaust Chromium's blob storage: a request then fails in the browser (`net::ERR_BLOB_OUT_OF_MEMORY` in the trace's network log) and the app shows "no connection to the server", in any test. Run with fewer workers (`npx playwright test --workers=3`; CI uses 2) rather than retrying.
 
+## PWA tests (R3-P7)
+
+- **Integration:** `SpaHostingTests`. `/dist/sw.js` has `Service-Worker-Allowed: /` and `no-cache`; the manifest is `application/manifest+json`; other files never get the worker header.
+- **Vitest:** `pwa.test.tsx`.
+  - The worker is registered only for `/app/` and `/student/`, only in production, and a refusal does not break the app.
+  - The manifest link follows the UI language.
+  - The install prompt appears only when the browser offers it, installs on request, disappears once installed, is not offered again after it is declined, and works without storage.
+- **Playwright:** `pwa.spec.ts`.
+  - **The worker controls the app, not the public pages.** Exactly the `/app/` and `/student/` scopes; the landing page is not controlled.
+  - **Offline:** reloading an app page shows the bilingual offline page with the "may be out of date" note; an API request fails instead of being answered from a cache; back online, "Try again" returns to the page.
+  - **Only static files are cached:** the offline page and `/dist/assets/*`.
+  - Both manifests and all icons are served; the manifest link switches with the language.
+  - **Phone audit:** the toolbox, the Activity Library and both boards have no horizontal scroll on the phone project; the boards show the larger-screen note on a phone and not on a desktop.
+
 ## Usage analytics tests (R3-P6)
 
 - **Integration:** `UsageTests`.

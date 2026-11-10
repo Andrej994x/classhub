@@ -4,6 +4,7 @@ import { createBrowserRouter, RouterProvider } from 'react-router';
 import { Providers } from './app/Providers.tsx';
 import { routes } from './app/routes.tsx';
 import './index.css';
+import { registerServiceWorker } from './pwa/pwa.ts';
 
 const router = createBrowserRouter(routes);
 
@@ -11,6 +12,8 @@ const container = document.getElementById('root');
 if (!container) {
   throw new Error('Root element #root not found');
 }
+
+registerServiceWorker();
 
 createRoot(container).render(
   <StrictMode>

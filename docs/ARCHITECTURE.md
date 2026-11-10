@@ -89,6 +89,18 @@ Details and tests: [SECURITY.md](SECURITY.md#tenant-isolation-r0-p5).
 - API access: `src/api/client.ts` wraps `openapi-fetch` with the generated types. It sends cookies, keeps the antiforgery request token in memory, fetches it from `GET /api/auth/antiforgery` before the first unsafe request, adopts tokens re-issued in the `X-XSRF-TOKEN` response header, retries once on `ANTIFORGERY_INVALID`, and turns ProblemDetails into `ApiError`. `errorMessage()` shows only translated messages for error codes, never server text. TanStack Query is provided in `src/app/Providers.tsx`.
 - Hosting: `npm run build` writes to `src/ClassHub.Api/wwwroot/dist` (git-ignored, base `/dist/`). `Platform/SpaHosting.cs` serves static files before routing (hashed `/dist/assets` immutable, everything else `no-cache`) and maps `dist/index.html` as the fallback for the SPA prefixes only (`/` is the Razor landing page since R1-P4; the SPA's `/` route hands over with a full page load). `/api`, health checks and unknown paths never get the SPA, and the deny-by-default policy still applies to them.
 
+## Installable app and offline page (R3-P7)
+
+- **Manifests:** `web/public/manifest.webmanifest` (mk) and `manifest.en.webmanifest`, served from `/dist/` as `application/manifest+json`. Start URL `/app/` (inside the worker's scope, so an offline launch gets the offline page), standalone display, the ClassHub blue, 192/512 px icons and a maskable icon. `index.html` links the mk manifest; `pwa.ts` switches the link with the UI language.
+- **Service worker** (`web/public/sw.js`, hand-written). It is registered by `src/pwa/pwa.ts` in the production build only, for the scopes `/app/` and `/student/`. The API serves `/dist/sw.js` with `Service-Worker-Allowed: /` and `no-cache`, so a new version is picked up on the next visit. The public Razor pages (`/`, teacher sites) and `/admin` are never controlled.
+  - Page navigations always go to the network. Offline, the worker answers with `/dist/offline.html` (bilingual), which says that what was on screen may be out of date and that nothing is saved offline. A cached page is never shown as current.
+  - `/dist/assets/*` (content-hashed, immutable) is served from the cache when present, otherwise fetched and kept; the newest 300 are kept.
+  - API requests and everything else are not intercepted: API data is never cached. Only same-origin GET requests are handled.
+  - A new worker version activates at once and deletes older `classhub-*` caches.
+- **Why not vite-plugin-pwa:** the behaviour above is about 70 lines; the plugin would bring Workbox's dependency tree and a generated precache of every chunk (Excalidraw alone is many megabytes) for no gain.
+- **Install prompt:** where the browser offers it (`beforeinstallprompt`), the app header shows "Install the app". It can be dismissed for good (remembered in `localStorage`, best effort).
+- **Phones:** the boards work on a phone but show a note that they are easier on a tablet or computer (below the `sm` breakpoint only).
+
 ## Usage analytics (R3-P6)
 
 - **Module:** `Modules/Usage`. A `UsageCounter` is the number of times a workspace did one thing on one UTC day:
