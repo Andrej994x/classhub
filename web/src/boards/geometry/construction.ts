@@ -72,6 +72,11 @@ export function movePoint(construction: Construction, id: string, x: number, y: 
   return { ...construction, objects: construction.objects.map((o) => (o.id === id && o.type === 'point' ? { ...o, x: round(x), y: round(y) } : o)) };
 }
 
+/** Several points moved at once (a dragged segment, circle or triangle moves its points together). */
+export function movePoints(construction: Construction, moves: readonly { id: string; x: number; y: number }[]): Construction {
+  return moves.reduce((current, move) => movePoint(current, move.id, move.x, move.y), construction);
+}
+
 /** The points an object is built on. */
 export function dependencies(object: GeometryObject): string[] {
   return object.type === 'point' ? [] : object.type === 'circle' ? [object.center, object.through] : [...object.points];

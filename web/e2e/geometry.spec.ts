@@ -3,7 +3,7 @@ import { signedInTeacher, text, uniqueEmail, useLanguage } from './support.ts';
 
 const language = 'mk' as const;
 
-type Activity = { document: { format: string; objects: { id: string; type: string }[] } };
+type Activity = { document: { format: string; objects: { id: string; type: string; x?: number; y?: number }[] } };
 
 /**
  * R3-P4 acceptance: triangle → save → reopen. A teacher opens the geometry board from the toolbox, builds a triangle from
@@ -46,6 +46,26 @@ async function triangleSaveReopen(page: Page) {
   const saved = (await (await page.request.get(`/api/w/${workspaceId}/activities/${id}`)).json()) as Activity;
   expect(saved.document.format).toBe('classhub.geometry');
   expect(saved.document.objects.map((o) => o.type)).toEqual(['point', 'point', 'point', 'triangle']);
+
+  // Move the whole triangle by dragging its inside: all three points move, and that is what is saved.
+  await page.getByRole('toolbar', { name: text(language, 'boards.geometry.tools') }).getByRole('button', { name: text(language, 'boards.geometry.tool.move') }).click();
+  // The saved message above the board moved it: measure it again.
+  const now = (await boardArea.boundingBox())!;
+  const inside = { x: now.x + now.width * 0.43, y: now.y + now.height * 0.57 };
+  await page.mouse.move(inside.x, inside.y);
+  await page.mouse.down();
+  await page.mouse.move(inside.x + now.width * 0.1, inside.y, { steps: 10 });
+  await page.mouse.up();
+  await page.getByRole('button', { name: text(language, 'boards.save') }).click();
+  await expect(page.getByText(text(language, 'boards.saved'))).toBeVisible();
+  const dragged = (await (await page.request.get(`/api/w/${workspaceId}/activities/${id}`)).json()) as Activity;
+  const shifts = dragged.document.objects.filter((o) => o.type === 'point').map((o, i) => [o.x! - saved.document.objects[i]!.x!, o.y! - saved.document.objects[i]!.y!]);
+  expect(shifts).toHaveLength(3);
+  for (const [dx, dy] of shifts) {
+    expect(dx).toBeGreaterThan(0.5);
+    expect(dx).toBeCloseTo(shifts[0]![0]!, 1);
+    expect(dy).toBeCloseTo(shifts[0]![1]!, 1);
+  }
 
   // Reopen from the library and save again: the construction came back.
   await page.goto(`/app/w/${workspaceId}/activities`);

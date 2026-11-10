@@ -9,7 +9,7 @@ import {
   emptyConstruction,
   fromDocument,
   GEOMETRY_SCHEMA_VERSION,
-  movePoint,
+  movePoints,
   POINTS_NEEDED,
   type Construction,
   type GeometryTool,
@@ -209,9 +209,9 @@ function Board({ workspaceId, loaded, onCreated }: { workspaceId: string; loaded
             initialView={construction.view.boundingBox}
             label={t('boards.geometry.board', { count: construction.objects.length })}
             onTarget={onTarget}
-            onPointMoved={(pointId, x, y) => {
-              // A click without a drag is not a change.
-              const moved = movePoint(construction, pointId, x, y);
+            onPointsMoved={(moves) => {
+              // One drag is one step, whatever it moved (a point, or a shape and its points); no movement, no change.
+              const moved = movePoints(construction, moves);
               if (JSON.stringify(moved.objects) !== JSON.stringify(construction.objects)) change(moved);
             }}
             onView={(box) => (view.current = box)}

@@ -5,6 +5,7 @@ import type { Construction, GeometryTool, View } from './construction.ts';
 import { renderConstruction, type BoardLike } from './render.ts';
 
 export type BoardTarget = { pointId: string } | { x: number; y: number };
+export type PointMove = { id: string; x: number; y: number };
 
 type Element = { elType?: string; X?: () => number; Y?: () => number; on?: (event: string, handler: () => void) => void };
 type Board = BoardLike & {
@@ -26,7 +27,7 @@ export default function GeometryCanvas({
   initialView,
   label,
   onTarget,
-  onPointMoved,
+  onPointsMoved,
   onView,
 }: {
   construction: Construction;
@@ -35,15 +36,16 @@ export default function GeometryCanvas({
   initialView: View['boundingBox'];
   label: string;
   onTarget: (target: BoardTarget) => void;
-  onPointMoved: (id: string, x: number, y: number) => void;
+  /** Every point whose position changed in a drag (a point, or a shape that moved its points), at once. */
+  onPointsMoved: (moves: PointMove[]) => void;
   onView: (box: View['boundingBox']) => void;
 }) {
   const container = useRef<HTMLDivElement>(null);
   // The visible area survives rebuilds (panning is not a change of the construction).
   const view = useRef<View['boundingBox']>(initialView);
-  const handlers = useRef({ onTarget, onPointMoved, onView });
+  const handlers = useRef({ onTarget, onPointsMoved, onView });
   useEffect(() => {
-    handlers.current = { onTarget, onPointMoved, onView };
+    handlers.current = { onTarget, onPointsMoved, onView };
   });
 
   useEffect(() => {
@@ -71,12 +73,19 @@ export default function GeometryCanvas({
         handlers.current.onTarget({ x, y });
       }
     });
-    for (const object of construction.objects) {
-      const element = elements.get(object.id) as Element | undefined;
-      if (object.type === 'point' && element?.on) {
-        element.on('up', () => handlers.current.onPointMoved(object.id, element.X!(), element.Y!()));
+    // After any drag, every point whose position changed is reported together: dragging a segment, a circle or a
+    // triangle moves its points too, and all of that must reach the construction.
+    board.on('up', () => {
+      if (tool !== 'move') return;
+      const moves: PointMove[] = [];
+      for (const object of construction.objects) {
+        const element = elements.get(object.id) as Element | undefined;
+        if (object.type !== 'point' || !element?.X || !element.Y) continue;
+        const [x, y] = [element.X(), element.Y()];
+        if (Math.abs(x - object.x) > 0.0005 || Math.abs(y - object.y) > 0.0005) moves.push({ id: object.id, x, y });
       }
-    }
+      if (moves.length > 0) handlers.current.onPointsMoved(moves);
+    });
     board.on('boundingbox', () => {
       view.current = board.getBoundingBox();
       handlers.current.onView(view.current);

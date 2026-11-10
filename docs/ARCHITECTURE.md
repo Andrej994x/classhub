@@ -108,7 +108,7 @@ Details and tests: [SECURITY.md](SECURITY.md#tenant-isolation-r0-p5).
   - Points are named A … Z, A1 …; coordinates are rounded to thousandths.
   - The construction is the source of truth: `render.ts` maps it to JSXGraph elements (triangle → polygon), and the board is redrawn when it changes.
   - Panning and zooming are not changes; the visible area is saved with the construction.
-- **Tools:** move (drag free points), point, segment, line, circle, triangle and angle.
+- **Tools:** move, point, segment, line, circle, triangle and angle. Move drags free points, or a shape (a triangle by its inside) with its points; when a drag ends, every point whose position changed is written to the construction at once, as one undo step.
   - A tool collects its points by clicks: an existing point, or a new one on an empty spot.
   - Undo is a button or Ctrl+Z; one click is one step.
   - Axes and grid can be switched on and off.

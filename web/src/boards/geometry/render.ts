@@ -40,7 +40,8 @@ export function renderConstruction(board: BoardLike, construction: Construction,
         element = board.create('circle', [ref(object.center), ref(object.through)], { strokeColor: '#0f766e', strokeWidth: 2 });
         break;
       case 'triangle':
-        element = board.create('polygon', object.points.map(ref), { fillColor: '#93c5fd', fillOpacity: 0.25, borders: { strokeColor: '#334155', strokeWidth: 2 } });
+        // The inside can be grabbed too: dragging a triangle moves its three points.
+        element = board.create('polygon', object.points.map(ref), { fillColor: '#93c5fd', fillOpacity: 0.25, hasInnerPoints: true, borders: { strokeColor: '#334155', strokeWidth: 2 } });
         break;
       case 'angle':
         element = board.create('angle', object.points.map(ref), { name: '', radius: 1, fillColor: '#fcd34d', fillOpacity: 0.4 });

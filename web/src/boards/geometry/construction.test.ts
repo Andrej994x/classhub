@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { addObject, addPoint, emptyConstruction, fromDocument, movePoint, nextPointName, type Construction } from './construction.ts';
+import { addObject, addPoint, emptyConstruction, fromDocument, movePoint, movePoints, nextPointName, type Construction } from './construction.ts';
 import { boardElementType, renderConstruction } from './render.ts';
 
 function triangle(): Construction {
@@ -41,6 +41,8 @@ describe('geometry construction (format v1, D-33)', () => {
     for (let i = 0; i < 27; i++) [c] = addPoint(c, i, 0);
     expect(c.objects.at(-1)!.id).toBe('A1');
     expect(movePoint(c, 'B', 2.5, -1).objects[1]).toEqual({ id: 'B', type: 'point', x: 2.5, y: -1 });
+    const moved = movePoints(c, [{ id: 'A', x: 1, y: 1 }, { id: 'C', x: 3.33333, y: 1 }]);
+    expect(moved.objects.slice(0, 3).map((o) => (o.type === 'point' ? [o.x, o.y] : null))).toEqual([[1, 1], [1, 0], [3.333, 1]]);
   });
 
   it('round-trips through JSON and opens damaged documents defensively', () => {

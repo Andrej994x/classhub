@@ -2,15 +2,16 @@ import { act, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { useEffect } from 'react';
 import { describe, expect, it, vi } from 'vitest';
-import type { BoardTarget } from '../../../boards/geometry/GeometryCanvas.tsx';
+import type { BoardTarget, PointMove } from '../../../boards/geometry/GeometryCanvas.tsx';
 import { fakeApi, json, teacher, WORKSPACE_ID, type FakeCall } from '../../../test/fakeApi.ts';
 import { renderRoute } from '../../../test/render.tsx';
 
 // JSXGraph does not run in jsdom: a stand-in board that reports clicks like the real one.
-const board = { click: (_target: BoardTarget) => {} };
-function MockCanvas({ construction, onTarget }: { construction: { objects: unknown[] }; onTarget: (target: BoardTarget) => void }) {
+const board = { click: (_target: BoardTarget) => {}, drag: (_moves: PointMove[]) => {} };
+function MockCanvas({ construction, onTarget, onPointsMoved }: { construction: { objects: unknown[] }; onTarget: (target: BoardTarget) => void; onPointsMoved: (moves: PointMove[]) => void }) {
   useEffect(() => {
     board.click = (target) => act(() => onTarget(target));
+    board.drag = (moves) => act(() => onPointsMoved(moves));
   });
   return <p>{`board: ${construction.objects.length} objects`}</p>;
 }
@@ -49,6 +50,13 @@ describe('geometry board', () => {
     board.click({ x: 0, y: 3 });
     board.click({ pointId: 'A' });
     expect(await screen.findByText('board: 4 objects')).toBeInTheDocument();
+
+    // Dragging the triangle moves its three points: all of them reach the construction, as one undo step.
+    await user.click(within(tools).getByRole('button', { name: 'Помести' }));
+    board.drag([{ id: 'A', x: 1, y: 1 }, { id: 'B', x: 5, y: 1 }, { id: 'C', x: 1, y: 4 }]);
+    board.drag([{ id: 'A', x: 2, y: 2 }, { id: 'B', x: 6, y: 2 }, { id: 'C', x: 2, y: 5 }]);
+    await user.click(within(tools).getByRole('button', { name: 'Врати' }));
+
     await user.type(screen.getByLabelText('Наслов'), 'Правоаголен триаголник');
     await user.click(screen.getByRole('button', { name: 'Зачувај во библиотеката' }));
     await expect.poll(() => api.to(BASE, 'POST').length).toBe(1);
@@ -57,9 +65,9 @@ describe('geometry board', () => {
     expect(body.schemaVersion).toBe(1);
     expect(body.document.format).toBe('classhub.geometry');
     expect(body.document.objects).toEqual([
-      { id: 'A', type: 'point', x: 0, y: 0 },
-      { id: 'B', type: 'point', x: 4, y: 0 },
-      { id: 'C', type: 'point', x: 0, y: 3 },
+      { id: 'A', type: 'point', x: 1, y: 1 },
+      { id: 'B', type: 'point', x: 5, y: 1 },
+      { id: 'C', type: 'point', x: 1, y: 4 },
       { id: 't1', type: 'triangle', points: ['B', 'C', 'A'] },
     ]);
     expect(body.document.view).toEqual({ boundingBox: [-8, 6, 8, -6], axis: true, grid: true });

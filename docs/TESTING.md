@@ -50,8 +50,8 @@ On a machine with little free memory, many local workers can exhaust Chromium's 
 - **Vitest:**
   - `construction.test.ts`: naming (A … Z, A1); objects built only from distinct existing points; moving points; JSON round-trip; damaged documents opened defensively.
   - **The construction ↔ board mapping** (`render.ts`, with a fake board): JSXGraph types and parents, points first, the angle's vertex in the middle.
-  - `GeometryBoardPage.test.tsx` (JSXGraph replaced by a stand-in that reports clicks): a triangle from three clicks; undo and Ctrl+Z, one step per click; the saved construction in ClassHub's format.
-- **E2E:** `geometry.spec.ts`, **triangle → save → reopen** on a desktop and a tablet. Three clicks build the triangle; it is saved and reopened from the library, and saved again with its points and triangle. No CSP violations; nothing completes to another host.
+  - `GeometryBoardPage.test.tsx` (JSXGraph replaced by a stand-in that reports clicks and drags): a triangle from three clicks; undo and Ctrl+Z, one step per click; a drag that moves several points is one step and all of them are saved; the saved construction in ClassHub's format.
+- **E2E:** `geometry.spec.ts`, **triangle → save → reopen** on a desktop and a tablet. Three clicks build the triangle; it is saved; dragging the triangle by its inside moves all three points by the same offset, and that is what is saved; it is reopened from the library and saved again with its points and triangle. No CSP violations; nothing completes to another host.
 
 ## Drawing Board tests (R3-P3)
 
