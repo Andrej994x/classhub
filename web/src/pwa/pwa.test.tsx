@@ -1,11 +1,11 @@
 import { act, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { InstallApp } from '../app/components/InstallApp.tsx';
 import { i18n } from '../i18n/index.ts';
 import { fakeApi, teacher } from '../test/fakeApi.ts';
 import { renderRoute } from '../test/render.tsx';
-import { manifestFor, PWA_SCOPES, registerServiceWorker, withAreaSlash } from './pwa.ts';
+import { captureInstallPrompt, manifestFor, PWA_SCOPES, registerServiceWorker, withAreaSlash } from './pwa.ts';
 
 type Register = ServiceWorkerContainer['register'];
 
@@ -96,13 +96,30 @@ function installPrompt(outcome: 'accepted' | 'dismissed' = 'accepted') {
 }
 
 describe('install prompt', () => {
+  // As main.tsx does at startup.
+  beforeAll(() => captureInstallPrompt());
+
   beforeEach(async () => {
     localStorage.clear();
     await i18n.changeLanguage('en');
   });
   afterEach(async () => {
+    window.dispatchEvent(new Event('appinstalled')); // forget any offer left over
     localStorage.clear();
     await i18n.changeLanguage('mk');
+  });
+
+  it('keeps an offer made before the app header exists (on the sign-in page)', async () => {
+    const user = userEvent.setup();
+    const event = installPrompt();
+    window.dispatchEvent(event);
+    expect(event.defaultPrevented).toBe(true);
+
+    // Signed in: the header with the install button mounts later.
+    render(<InstallApp />);
+    await user.click(screen.getByRole('button', { name: 'Install the app' }));
+    expect(event.prompt).toHaveBeenCalledOnce();
+    expect(screen.queryByRole('button', { name: 'Install the app' })).toBeNull();
   });
 
   it('is hidden until the browser offers installing, then installs on request', async () => {

@@ -4,7 +4,7 @@ import { createBrowserRouter, RouterProvider } from 'react-router';
 import { Providers } from './app/Providers.tsx';
 import { routes } from './app/routes.tsx';
 import './index.css';
-import { registerServiceWorker } from './pwa/pwa.ts';
+import { captureInstallPrompt, registerServiceWorker } from './pwa/pwa.ts';
 
 const router = createBrowserRouter(routes);
 
@@ -14,6 +14,7 @@ if (!container) {
 }
 
 registerServiceWorker();
+captureInstallPrompt();
 
 createRoot(container).render(
   <StrictMode>

@@ -98,7 +98,7 @@ Details and tests: [SECURITY.md](SECURITY.md#tenant-isolation-r0-p5).
   - API requests and everything else are not intercepted: API data is never cached. Only same-origin GET requests are handled.
   - A new worker version activates at once and deletes older `classhub-*` caches.
 - **Why not vite-plugin-pwa:** the behaviour above is about 70 lines; the plugin would bring Workbox's dependency tree and a generated precache of every chunk (Excalidraw alone is many megabytes) for no gain.
-- **Install prompt:** where the browser offers it (`beforeinstallprompt`), the app header shows "Install the app". It can be dismissed for good (remembered in `localStorage`, best effort).
+- **Install prompt:** where the browser offers it (`beforeinstallprompt`), the app header shows "Install the app". The offer is captured at startup (`captureInstallPrompt` in `main.tsx`) and kept for the visit, because the browser makes it once, often on the sign-in page before the header exists. It can be dismissed for good (remembered in `localStorage`, best effort).
 - **Phones:** the boards work on a phone but show a note that they are easier on a tablet or computer (below the `sm` breakpoint only).
 
 ## Usage analytics (R3-P6)

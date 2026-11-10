@@ -54,7 +54,7 @@ On a machine with little free memory, many local workers can exhaust Chromium's 
   - `/app` and `/student` are replaced by `/app/` and `/student/` (query and hash kept); `/apple-…`, `/students` and `/admin` are untouched.
   - The worker is registered only for `/app/` and `/student/`, only in production, and a refusal does not break the app.
   - The manifest link follows the UI language.
-  - The install prompt appears only when the browser offers it, installs on request, disappears once installed, is not offered again after it is declined, and works without storage.
+  - The install prompt appears only when the browser offers it (also when the offer came before the header mounted, as on the sign-in page), installs on request, disappears once installed, is not offered again after it is declined, and works without storage.
 - **Playwright:** `pwa.spec.ts`.
   - **The worker controls the app, not the public pages.** Exactly the `/app/` and `/student/` scopes; the landing page is not controlled.
   - **Offline:** reloading an app page shows the bilingual offline page with the "may be out of date" note; an API request fails instead of being answered from a cache; back online, "Try again" returns to the page.

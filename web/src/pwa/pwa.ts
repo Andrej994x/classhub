@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useSyncExternalStore } from 'react';
 import { useLocation, useNavigate } from 'react-router';
 
 /**
@@ -59,31 +59,48 @@ function dismissedBefore(): boolean {
   }
 }
 
+/**
+ * The offer is kept for the whole visit: the browser fires `beforeinstallprompt` once, possibly on the sign-in page
+ * before the app header (and its install button) exists, and never repeats it. So it is captured at startup
+ * (`captureInstallPrompt`, from main.tsx) and the header reads it from here.
+ */
+let offer: InstallPromptEvent | null = null;
+const listeners = new Set<() => void>();
+let capturing = false;
+
+function setOffer(next: InstallPromptEvent | null) {
+  offer = next;
+  for (const listener of listeners) listener();
+}
+
+export function captureInstallPrompt(target: Pick<Window, 'addEventListener'> = window) {
+  if (capturing) return;
+  capturing = true;
+  target.addEventListener('beforeinstallprompt', (e) => {
+    // After "do not offer again" the browser keeps its own install UI; ClassHub shows nothing.
+    if (dismissedBefore()) return;
+    e.preventDefault();
+    setOffer(e as InstallPromptEvent);
+  });
+  target.addEventListener('appinstalled', () => setOffer(null));
+}
+
+function subscribe(listener: () => void) {
+  listeners.add(listener);
+  return () => listeners.delete(listener);
+}
+
 /** Whether the app can be installed now, and the actions to install it or not to ask again. */
 export function useInstallPrompt() {
-  const [event, setEvent] = useState<InstallPromptEvent | null>(null);
-  useEffect(() => {
-    if (dismissedBefore()) return undefined;
-    const onPrompt = (e: Event) => {
-      e.preventDefault();
-      setEvent(e as InstallPromptEvent);
-    };
-    const onInstalled = () => setEvent(null);
-    window.addEventListener('beforeinstallprompt', onPrompt);
-    window.addEventListener('appinstalled', onInstalled);
-    return () => {
-      window.removeEventListener('beforeinstallprompt', onPrompt);
-      window.removeEventListener('appinstalled', onInstalled);
-    };
-  }, []);
+  const event = useSyncExternalStore(subscribe, () => offer, () => null);
 
   return {
     available: event !== null,
     install: async () => {
       if (!event) return;
+      setOffer(null); // a prompt can be shown only once
       await event.prompt();
       await event.userChoice.catch(() => undefined);
-      setEvent(null);
     },
     dismiss: () => {
       try {
@@ -91,7 +108,7 @@ export function useInstallPrompt() {
       } catch {
         // Not remembered (private mode): it is asked again next time.
       }
-      setEvent(null);
+      setOffer(null);
     },
   };
 }
