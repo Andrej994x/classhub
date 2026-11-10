@@ -62,20 +62,25 @@ function Board({ workspaceId, loaded, onCreated }: { workspaceId: string; loaded
   const [subjectId, setSubjectId] = useState(loaded?.subjectId ?? '');
   const [id, setId] = useState<string | null>(loaded?.id ?? null);
   const [version, setVersion] = useState<number | null>(loaded ? Number(loaded.version) : null);
-  const [saved, setSaved] = useState(false);
+  // What was last saved (scene, title, subject): the confirmation shows only while the board still matches it, so an
+  // edit after saving (or during the save) never looks saved.
+  const [scene, setScene] = useState('');
+  const [savedAs, setSavedAs] = useState<string | null>(null);
   const [blocked, setBlocked] = useState(false);
   const en = i18n.resolvedLanguage === 'en';
 
+  const current = JSON.stringify([scene, title.trim(), subjectId]);
   const submit = (event: FormEvent) => {
     event.preventDefault();
     if (!api.current) return;
+    const sending = current;
     const document = toDocument(api.current.getSceneElements() as never, api.current.getAppState() as never);
     save.mutate(
       { id, body: { title: title.trim(), subjectId: subjectId || null, toolType: 'drawing-board', schemaVersion: DRAWING_SCHEMA_VERSION, document, version } },
       {
         onSuccess: (result) => {
           setVersion(Number(result.version));
-          setSaved(true);
+          setSavedAs(sending);
           if (!id) {
             // A new activity: from now on this board is that activity (later saves change it; the link reopens it).
             setId(result.id);
@@ -97,11 +102,11 @@ function Board({ workspaceId, loaded, onCreated }: { workspaceId: string; loaded
       <form onSubmit={submit} aria-label={t('boards.saveForm')} className="grid gap-3 sm:grid-cols-[2fr_1fr_auto] sm:items-end">
         <label className="flex flex-col gap-1 text-sm font-medium">
           {t('activities.titleField')}
-          <input className={field} value={title} required maxLength={150} onChange={(e) => { setTitle(e.target.value); setSaved(false); }} />
+          <input className={field} value={title} required maxLength={150} onChange={(e) => setTitle(e.target.value)} />
         </label>
         <label className="flex flex-col gap-1 text-sm font-medium">
           {t('toolbox.subject')}
-          <select className={field} value={subjectId} onChange={(e) => { setSubjectId(e.target.value); setSaved(false); }}>
+          <select className={field} value={subjectId} onChange={(e) => setSubjectId(e.target.value)}>
             <option value="">{t('activities.noSubject')}</option>
             {catalog.data?.subjects.map((s) => (
               <option key={s.id} value={s.id}>
@@ -116,11 +121,11 @@ function Board({ workspaceId, loaded, onCreated }: { workspaceId: string; loaded
       </form>
       {save.isError && <Alert variant="error">{errorMessage(save.error, t)}</Alert>}
       {blocked && <Alert variant="warning">{t('boards.blocked')}</Alert>}
-      {saved && !save.isPending && <Alert variant="success">{t('boards.saved')}</Alert>}
+      {savedAs === current && !save.isPending && <Alert variant="success">{t('boards.saved')}</Alert>}
       <p className="text-xs text-muted-foreground">{t('boards.drawingNote')}</p>
       <div className="h-[70vh] min-h-[420px] overflow-hidden rounded-lg border border-border">
         <Suspense fallback={<output className="block p-4">{t('common.loading')}</output>}>
-          <DrawingCanvas initial={initial} onReady={(ready) => (api.current = ready)} onBlocked={() => setBlocked(true)} />
+          <DrawingCanvas initial={initial} onReady={(ready) => (api.current = ready)} onBlocked={() => setBlocked(true)} onSceneChange={setScene} />
         </Suspense>
       </div>
     </section>

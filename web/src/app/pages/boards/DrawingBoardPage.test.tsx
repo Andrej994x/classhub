@@ -1,4 +1,4 @@
-import { screen, within } from '@testing-library/react';
+import { act, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { useEffect } from 'react';
 import { describe, expect, it, vi } from 'vitest';
@@ -6,13 +6,14 @@ import { fakeApi, json, teacher, WORKSPACE_ID, type FakeCall } from '../../../te
 import { renderRoute } from '../../../test/render.tsx';
 
 // Excalidraw itself does not run in jsdom: a stand-in board with the same contract (initial scene in, API out).
-const scene = { elements: [] as unknown[] };
-function MockCanvas({ initial, onReady }: { initial: { elements: unknown[] }; onReady: (api: unknown) => void }) {
+const scene = { elements: [] as unknown[], change: (_fingerprint: string) => {} };
+function MockCanvas({ initial, onReady, onSceneChange }: { initial: { elements: unknown[] }; onReady: (api: unknown) => void; onSceneChange: (fingerprint: string) => void }) {
   // The scene starts from the initial data once, like Excalidraw.
   useEffect(() => {
     scene.elements = initial.elements;
   }, [initial]);
   useEffect(() => {
+    scene.change = (fingerprint) => act(() => onSceneChange(fingerprint));
     onReady({ getSceneElements: () => scene.elements, getAppState: () => ({ viewBackgroundColor: '#ffffff', gridModeEnabled: false }) });
   });
   return <p>{`board: ${initial.elements.length} elements`}</p>;
@@ -131,5 +132,45 @@ describe('drawing board', () => {
     await user.click(screen.getByRole('button', { name: 'Зачувај во библиотеката' }));
     await expect.poll(() => api.to(`${BASE}/a1`, 'PUT').length).toBe(1);
     expect(api.to(`${BASE}/a1`, 'PUT')[0]!.body).toMatchObject({ title: 'Агли — повторување', version: 5 });
+  });
+
+  it('shows the saved confirmation only while the board still matches what was saved', async () => {
+    const user = userEvent.setup();
+    let release: (() => void) | null = null;
+    fakeApi({
+      me: teacher(),
+      extra: [
+        (call: FakeCall) => {
+          if (call.path === `${BASE}/a1` && call.method === 'GET') return json(200, { id: 'a1', title: 'Агли', subjectId: null, toolType: 'drawing-board', schemaVersion: 1, document: { elements: [rectangle] }, version: 1, sizeBytes: 50, createdAtUtc: '', updatedAtUtc: '' });
+          if (call.path === `${BASE}/a1` && call.method === 'PUT') {
+            // Answered when the test releases it (a save on its way).
+            return new Promise<Response>((resolve) => {
+              release = () => resolve(json(200, { id: 'a1', ...(call.body as object), version: 2, sizeBytes: 50, createdAtUtc: '', updatedAtUtc: '' }));
+            });
+          }
+          return undefined;
+        },
+      ],
+    });
+    await renderRoute(`/app/w/${WORKSPACE_ID}/toolbox/drawing-board?activity=a1`);
+    await screen.findByText('board: 1 elements');
+    scene.change('1|#ffffff|false');
+
+    // Saved, then a shape is moved: the confirmation goes away.
+    await user.click(screen.getByRole('button', { name: 'Зачувај во библиотеката' }));
+    await expect.poll(() => release !== null).toBe(true);
+    release!();
+    release = null;
+    expect(await screen.findByText('Зачувано во Библиотеката на активности.')).toBeInTheDocument();
+    scene.change('2|#ffffff|false');
+    expect(screen.queryByText('Зачувано во Библиотеката на активности.')).not.toBeInTheDocument();
+
+    // An edit while the save is on its way: not shown as saved when it completes.
+    await user.click(screen.getByRole('button', { name: 'Зачувај во библиотеката' }));
+    await expect.poll(() => release !== null).toBe(true);
+    scene.change('3|#ffffff|false');
+    release!();
+    await expect.poll(() => screen.getByRole('button', { name: 'Зачувај во библиотеката' }).hasAttribute('disabled')).toBe(false);
+    expect(screen.queryByText('Зачувано во Библиотеката на активности.')).not.toBeInTheDocument();
   });
 });
