@@ -234,8 +234,14 @@ internal sealed class ActivityService(
             throw Invalid("schemaVersion", "This board does not read this version of the document.");
         }
 
-        return ActivityRules.Document(request.Document, options.Value.MaxDocumentBytes)
+        var document = ActivityRules.Document(request.Document, options.Value.MaxDocumentBytes)
             ?? throw Invalid("document", $"The document must be a JSON object of at most {options.Value.MaxDocumentBytes / 1024} KB.");
+        if (ActivityRules.ContentProblem(request.ToolType!, request.SchemaVersion!.Value, request.Document!.Value) is { } problem)
+        {
+            throw Invalid("document", problem);
+        }
+
+        return document;
     }
 
     /// <summary>A new subject must be an active catalog subject; the one the activity already has may stay.</summary>

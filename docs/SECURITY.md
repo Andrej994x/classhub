@@ -88,6 +88,17 @@ ASP.NET Core Identity with cookie sessions. See [ARCHITECTURE.md](ARCHITECTURE.m
 - Names, phones and guardian contacts are redacted in logs.
 - No duplicates by email within a workspace (unique index) and no limit overrun under parallel requests (intake lock; tested).
 
+## Drawing Board (R3-P3)
+
+- **Images and embeds (D-42):** no images, no embedded web pages, no files. Opening scene files is hidden; exporting the teacher's own drawing is allowed (it holds only allowed elements). Pastes that carry them are refused, any that arrive another way (library items, converted diagrams, a scene file opened with the shortcut) are removed from the scene at once, the client removes them before saving, and the API refuses documents that contain them (element allow-list, `files` must be empty).
+- **Nothing is fetched from other hosts.** Excalidraw's fonts are self-hosted. Its built-in CDN fallback is blocked by the CSP: the E2E test checks that no foreign request completes and that every foreign attempt was blocked as `csp`.
+- **Dependency:** `@excalidraw/excalidraw` brings Mermaid. npm `overrides` pin patched transitive packages:
+  - `nanoid` 3.3.20 / 5.1.16;
+  - `lodash-es` 4.18.1;
+  - `@mermaid-js/parser` 1.2.1 in place of 0.6.3, which `@excalidraw/mermaid-to-excalidraw` declares but never imports.
+
+  `npm audit --omit=dev --audit-level=high` passes. The remaining low findings (KaTeX in Mermaid) do not reach the gate.
+
 ## Activity Library (R3-P2)
 
 - Activities are tenant-owned: another workspace gets 404 (also covered by the isolation sweep), and the list shows only the workspace's own.

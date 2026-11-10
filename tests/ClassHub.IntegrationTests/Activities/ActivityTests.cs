@@ -83,6 +83,13 @@ public sealed class ActivityTests(ClassHubApiFixture fixture)
         await ExpectInvalidAsync(teacher, Body("", null, Scene), "title");
         await ExpectInvalidAsync(teacher, Body("Непознат предмет", Guid.NewGuid(), Scene), "subjectId");
 
+        // The drawing board's content (R3-P3, D-42): elements of the allowed types, no images, embeds or files.
+        await ExpectInvalidAsync(teacher, Body("Без елементи", null, JsonDocument.Parse("""{"appState":{}}""").RootElement), "document");
+        await ExpectInvalidAsync(teacher, Body("Слика", null, JsonDocument.Parse("""{"elements":[{"type":"image","fileId":"f1"}]}""").RootElement), "document");
+        await ExpectInvalidAsync(teacher, Body("Вградено", null, JsonDocument.Parse("""{"elements":[{"type":"embeddable","link":"https://example.com"}]}""").RootElement), "document");
+        await ExpectInvalidAsync(teacher, Body("Датотеки", null, JsonDocument.Parse("""{"elements":[],"files":{"f1":{"dataURL":"data:image/png;base64,AAAA"}}}""").RootElement), "document");
+        await ExpectInvalidAsync(teacher, Body("Без тип", null, JsonDocument.Parse("""{"elements":[{"x":1}]}""").RootElement), "document");
+
         // The size limit (lowered here to 100 bytes): a larger document is refused, a smaller one saved.
         using var small = fixture.Factory.WithWebHostBuilder(builder => builder.UseSetting("Activities:MaxDocumentBytes", "100"));
         using var limited = await ApiClient.CreateAsync(small);
@@ -98,7 +105,7 @@ public sealed class ActivityTests(ClassHubApiFixture fixture)
             (await refused.ReadJsonAsync()).GetProperty("errors").TryGetProperty("document", out _).ShouldBeTrue();
         }
 
-        (await limited.PostAsync(Path(teacher), Body("Мало", null, JsonDocument.Parse("""{"text":"ok"}""").RootElement))).StatusCode.ShouldBe(HttpStatusCode.Created);
+        (await limited.PostAsync(Path(teacher), Body("Мало", null, JsonDocument.Parse("""{"elements":[]}""").RootElement))).StatusCode.ShouldBe(HttpStatusCode.Created);
     }
 
     [Fact]

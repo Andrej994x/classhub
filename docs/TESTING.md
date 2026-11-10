@@ -43,6 +43,17 @@ Flows (each in **mk and en**, on **desktop and mobile**): register → dev mailb
 
 On a machine with little free memory, many local workers can exhaust Chromium's blob storage: a request then fails in the browser (`net::ERR_BLOB_OUT_OF_MEMORY` in the trace's network log) and the app shows "no connection to the server", in any test. Run with fewer workers (`npx playwright test --workers=3`; CI uses 2) rather than retrying.
 
+## Drawing Board tests (R3-P3)
+
+- **Unit:** `ActivityRulesTests`: drawing content (allowed element types only; no images, iframes, embeds or files; `elements` required; `appState` an object).
+- **Integration:** `ActivityTests` refuses drawings without elements or with images, embeds, files or untyped elements. `ToolboxTests` sees the drawing board in the toolbox, and the geometry board still hidden.
+- **Vitest:**
+  - `scene.test.ts`: the scene round-trips unchanged; images, embeds and deleted elements are never saved; damaged content opens as an empty or partial drawing; disallowed elements are removed from the scene; pastes with images, embeds or files are refused.
+  - `DrawingBoardPage.test.tsx` (Excalidraw replaced by a stand-in with the same contract): the first save creates the activity without images and the page becomes it, with no reload; later saves change it; a reopened activity saves with the loaded version. After a refresh or Back (navigation state left over) the saved activity is loaded, never an empty board; a reopened board starts from the latest version, never a cached older one (both fail on the code before); the saved confirmation shows only while the board matches what was saved (an edit after or during the save clears it).
+- **E2E:** `drawing.spec.ts`, **draw → save → reopen** on a desktop and on a tablet (iPad).
+  - Draw a rectangle; a paste from another board carrying an image is refused with a message (fails without the guard); save it, open it again from the library and save again: only the rectangle is in the document.
+  - The board's font loads from ClassHub; no request to another host completes, and every foreign attempt was blocked by the CSP.
+
 ## Activity Library tests (R3-P2)
 
 - **Unit:** `ActivityRulesTests` (supported boards and format versions; documents are objects within the limit in UTF-8 bytes; copy titles always fit).
