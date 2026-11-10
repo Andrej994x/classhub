@@ -5,8 +5,10 @@ import type { ExcalidrawImperativeAPI } from '@excalidraw/excalidraw/types';
 import { pasteAllowed, withoutDisallowed, type DrawingDocument } from './scene.ts';
 
 /**
- * The Excalidraw canvas (lazy-loaded with its page). Images, embedded web pages, loading files and exporting are off
- * (D-42): the board saves into the Activity Library only.
+ * The Excalidraw canvas (lazy-loaded with its page). No images or embedded web pages (D-42): the image tool is off,
+ * embeds are refused, pastes carrying them are refused and anything else that brings them in is removed at once.
+ * Opening scene files is hidden (a file opened with the shortcut is cleaned the same way). Exporting the teacher's own
+ * drawing (an image or a file) stays available: it contains only the allowed elements.
  */
 export default function DrawingCanvas({
   initial,
@@ -54,7 +56,7 @@ export default function DrawingCanvas({
       validateEmbeddable={() => false}
       UIOptions={{
         tools: { image: false },
-        canvasActions: { loadScene: false, saveToActiveFile: false, export: false, saveAsImage: false },
+        canvasActions: { loadScene: false, saveToActiveFile: false },
       }}
     />
   );

@@ -90,7 +90,7 @@ ASP.NET Core Identity with cookie sessions. See [ARCHITECTURE.md](ARCHITECTURE.m
 
 ## Drawing Board (R3-P3)
 
-- **Images and embeds (D-42):** no images, no embedded web pages, no files, no loading scenes from files, no export. Pastes that carry them are refused, any that arrive another way are removed from the scene at once, the client removes them before saving, and the API refuses documents that contain them (element allow-list, `files` must be empty).
+- **Images and embeds (D-42):** no images, no embedded web pages, no files. Opening scene files is hidden; exporting the teacher's own drawing is allowed (it holds only allowed elements). Pastes that carry them are refused, any that arrive another way (library items, converted diagrams, a scene file opened with the shortcut) are removed from the scene at once, the client removes them before saving, and the API refuses documents that contain them (element allow-list, `files` must be empty).
 - **Nothing is fetched from other hosts.** Excalidraw's fonts are self-hosted. Its built-in CDN fallback is blocked by the CSP: the E2E test checks that no foreign request completes and that every foreign attempt was blocked as `csp`.
 - **Dependency:** `@excalidraw/excalidraw` brings Mermaid. npm `overrides` pin patched transitive packages:
   - `nanoid` 3.3.20 / 5.1.16;

@@ -98,7 +98,7 @@ Details and tests: [SECURITY.md](SECURITY.md#tenant-isolation-r0-p5).
 - **Self-hosted fonts:** a Vite plugin serves `node_modules/@excalidraw/excalidraw/dist/prod/fonts` in development and copies it to `wwwroot/dist/excalidraw-assets/fonts` in the build. `EXCALIDRAW_ASSET_PATH` is set before the board's module loads, because Excalidraw registers its fonts at module load. Excalidraw still appends its CDN as a last fallback for each font; the CSP (`font-src 'self'`) blocks those attempts in the browser, so nothing is fetched from another host.
 - **No images or embeds (D-42):**
   - the image tool is off, and every web embed is refused (`validateEmbeddable`);
-  - loading scenes from files and exporting are off;
+  - opening scene files is hidden (a file opened with the shortcut is cleaned like a paste); exporting the teacher's own drawing (image or file) is available, since it contains only allowed elements;
   - pastes carrying images, embeds or files are refused (`onPaste`), and any such element that arrives another way (library items, converted diagrams) is removed from the scene at once, with a message (`withoutDisallowed` in `onChange`);
   - saving keeps only live elements of the allowed types (`scene.ts`).
 - **Document format v1:** `{ elements: [...], appState: { viewBackgroundColor, gridModeEnabled } }`.
