@@ -1632,6 +1632,29 @@
     "save": "Save to the library",
     "saved": "Saved to the Activity Library.",
     "drawingNote": "The board's own menus are in English. Images and embedded web pages are not available. Save to keep the drawing in your Activity Library; the board's menu can also export a copy.",
-    "blocked": "Images and embedded web pages cannot be added to this board; they were left out."
+    "blocked": "Images and embedded web pages cannot be added to this board; they were left out.",
+    "geometry": {
+      "tools": "Construction tools",
+      "tool": {
+        "move": "Move",
+        "point": "Point",
+        "segment": "Segment",
+        "line": "Line",
+        "circle": "Circle",
+        "triangle": "Triangle",
+        "angle": "Angle"
+      },
+      "undo": "Undo",
+      "axis": "Axes",
+      "grid": "Grid",
+      "hint": {
+        "move": "Drag points to move them; drag the background to move the view, scroll to zoom.",
+        "pick_one": "Click a point or an empty spot ({{picked}} of {{count}}).",
+        "pick_other": "Click points or empty spots ({{picked}} of {{count}}). For an angle: first point, the vertex, then the other point."
+      },
+      "board_one": "Geometry board with {{count}} object",
+      "board_other": "Geometry board with {{count}} objects",
+      "full": "A construction holds at most {{max}} objects. Undo some steps or save it and start a new activity."
+    }
   }
 }

@@ -31,7 +31,7 @@ public sealed class ToolboxTests(ClassHubApiFixture fixture)
         all.Categories.ShouldBe(["Geometry", "Graphing", "Simulations", "Chemistry", "Drawing", "Other"]);
         all.Tools.Select(t => t.Code).ShouldContain("geogebra");
         all.Tools.Single(t => t.Code == "drawing-board").BuiltInKey.ShouldBe("drawing-board"); // shipped in R3-P3
-        all.Tools.Select(t => t.Code).ShouldNotContain("geometry-board"); // a board stays hidden until it ships
+        all.Tools.Single(t => t.Code == "geometry-board").BuiltInKey.ShouldBe("geometry-board"); // shipped in R3-P4
         all.Tools.TakeWhile(t => t.IsFeatured).Count().ShouldBeGreaterThanOrEqualTo(3); // featured first
 
         var geogebra = (await SearchAsync(teacher, "?q=geogebra")).Tools.ShouldHaveSingleItem();
@@ -131,18 +131,6 @@ public sealed class ToolboxTests(ClassHubApiFixture fixture)
         // Kinds and categories by name only: "2" is not a kind (it would skip the board checks).
         await ExpectInvalidAsync(new { code = NewCode(), nameMk = word, nameEn = word, descriptionMk = "о", descriptionEn = "d", kind = "2", category = "Drawing" }, "kind");
         await ExpectInvalidAsync(new { code = NewCode(), nameMk = word, nameEn = word, descriptionMk = "о", descriptionEn = "d", kind = "External", category = "5", url = "https://www.geogebra.org/" }, "category");
-
-        // A board that has not shipped cannot be activated (its page does not exist yet).
-        var board = (await admin.Client.GetJsonAsync<List<AdminToolResponse>>("/api/admin/toolbox")).Single(t => t.Tool.Code == "geometry-board");
-        using (var activate = await admin.Client.PutAsync($"/api/admin/toolbox/{board.Tool.Id}", new
-        {
-            nameMk = board.Tool.NameMk, nameEn = board.Tool.NameEn, descriptionMk = board.Tool.DescriptionMk, descriptionEn = board.Tool.DescriptionEn,
-            kind = "BuiltIn", category = board.Tool.Category, builtInKey = "geometry-board", subjectIds = board.Tool.SubjectIds, isActive = true, version = board.Version,
-        }))
-        {
-            activate.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
-            (await activate.ReadJsonAsync()).GetProperty("errors").TryGetProperty("isActive", out _).ShouldBeTrue();
-        }
 
         // Each board has one catalog entry (the seeded one).
         (await admin.Client.PostAsync("/api/admin/toolbox", new { code = NewCode(), nameMk = word, nameEn = word, descriptionMk = "о", descriptionEn = "d", kind = "BuiltIn", category = "Drawing", builtInKey = "drawing-board", isActive = false }))

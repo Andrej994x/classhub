@@ -59,6 +59,10 @@ function excalidrawAssets(): Plugin {
 export default defineConfig(({ command }) => ({
   base: command === 'build' ? '/dist/' : '/',
   plugins: [react(), tailwindcss(), excalidrawAssets()],
+  resolve: {
+    // JSXGraph's stylesheet is not in its package exports (R3-P4).
+    alias: { 'jsxgraph/distrib/jsxgraph.css': file('./node_modules/jsxgraph/distrib/jsxgraph.css') },
+  },
   build: {
     outDir,
     emptyOutDir: true,

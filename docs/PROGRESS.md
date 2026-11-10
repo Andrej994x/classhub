@@ -7,10 +7,10 @@ This is the live status of the autonomous implementation loop ([ROADMAP.md](ROAD
 | Field | Value |
 |---|---|
 | Release | R3 — Teaching Toolbox (R0, R1 and R2 complete) |
-| Current phase | R3-P3 — Drawing Board |
-| Branch | `feature/r3-p3-drawing-board` (from `main` @ `c37747c`) |
+| Current phase | R3-P4 — Geometry Board: constructions |
+| Branch | `feature/r3-p4-geometry-constructions` (from `main` @ `9dfd7d7`) |
 | Workflow step | 3 — implementation and local checks |
-| Next action | R3-P3 checks, Codex review and PR; then R3-P4 (Geometry Board — constructions) |
+| Next action | R3-P4 checks, Codex review and PR; then R3-P5 (Geometry Board — functions & graphs) |
 | Open blockers | None. User actions (optional): direct-push probe (R0-P8); remove the now redundant required `pr-gate` check (see Decisions) |
 
 ## Phase status
@@ -57,8 +57,8 @@ Status values: `not started`, `in progress`, `in review` (PR open), `merged`, `b
 | R2-P13 | Release 2 hardening | merged | `chore/r2-p13-hardening` | [#37](https://github.com/Andrej994x/classhub/pull/37) | `3881062` | Release-level review of all R2 changes: 1 × P2 fixed (series edits with referenced lessons); phase round 1 clean | green | Release 2 complete |
 | R3-P1 | Toolbox catalog | merged | `feature/r3-p1-toolbox-catalog` | [#38](https://github.com/Andrej994x/classhub/pull/38) | `2f359ef` | 4 rounds: 6 × P2 fixed (tools for any subject under subject filters, names-only enums, unshipped boards, bilingual license notes, admin edit version, full audit snapshots); round 4 clean | green | Migration applied to local `ClassHubDb` |
 | R3-P2 | Activity Library | merged | `feature/r3-p2-activity-library` | [#39](https://github.com/Andrej994x/classhub/pull/39) | `c37747c` | 2 rounds: 1 × P2 fixed (deleting the last activity of a page); round 2 clean | green | Migration applied to local `ClassHubDb` |
-| R3-P3 | Drawing Board | in progress | `feature/r3-p3-drawing-board` | | | | | Plan: Excalidraw board (lazy route, self-hosted fonts, no images/embeds/export), save and reopen through the Activity Library, server-side drawing content checks, the board shipped in the toolbox; E2E draw → save → reopen on desktop and tablet |
-| R3-P4 | Geometry Board — constructions | not started | | | | | | |
+| R3-P3 | Drawing Board | merged | `feature/r3-p3-drawing-board` | [#40](https://github.com/Andrej994x/classhub/pull/40) | `9dfd7d7` | 5 rounds: 5 × P2 fixed (reopen after refresh/Back, reopen from the latest version, pasted images, stale saved confirmation, export made explicit); round 5 clean | green | Migration applied to local `ClassHubDb` |
+| R3-P4 | Geometry Board — constructions | in progress | `feature/r3-p4-geometry-constructions` | | | | | Plan: JSXGraph board (lazy), own versioned construction format (D-33) with points, segments, lines, circles, triangles, angles, coordinate system, undo; save and reopen through the Activity Library; server-side construction checks; E2E triangle → save → reopen |
 | R3-P5 | Geometry Board — functions & graphs | not started | | | | | | |
 | R3-P6 | Usage analytics | not started | | | | | | |
 | R3-P7 | PWA & mobile improvements | not started | | | | | | |

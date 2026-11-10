@@ -49,7 +49,7 @@ internal sealed class ToolSubjectConfiguration : IEntityTypeConfiguration<ToolSu
 
 /// <summary>
 /// The first catalog (R3-P1): well-known free tools opened by their official links, and the two boards built into
-/// ClassHub (the drawing board since R3-P3; the geometry board inactive until R3-P4 ships it).
+/// ClassHub (the drawing board since R3-P3, the geometry board since R3-P4).
 /// </summary>
 internal static class ToolboxSeed
 {
@@ -83,7 +83,7 @@ internal static class ToolboxSeed
             "Слободно цртање, текст, форми, стрелки и дијаграми; зачувување и повторно отворање.",
             "Free drawing, text, shapes, arrows and diagrams; save and reopen.",
             "Вградена во ClassHub.", "Built into ClassHub.", []),
-        ("geometry-board", ToolKind.BuiltIn, ToolCategory.Geometry, null, "geometry-board", false, false,
+        ("geometry-board", ToolKind.BuiltIn, ToolCategory.Geometry, null, "geometry-board", true, true,
             "Геометриска табла", "Geometry board",
             "Точки, прави, агли, триаголници, кругови, координатен систем и графици; зачувување и повторно отворање.",
             "Points, lines, angles, triangles, circles, a coordinate system and graphs; save and reopen.",

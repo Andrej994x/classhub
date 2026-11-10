@@ -88,6 +88,11 @@ ASP.NET Core Identity with cookie sessions. See [ARCHITECTURE.md](ARCHITECTURE.m
 - Names, phones and guardian contacts are redacted in logs.
 - No duplicates by email within a workspace (unique index) and no limit overrun under parallel requests (intake lock; tested).
 
+## Geometry Board (R3-P4)
+
+- **Constructions are data, never code.** The format holds only names, numbers and references, checked on the server (types, names, finite bounded coordinates, references to earlier points) and parsed defensively in the client. Functions and expressions come with R3-P5's safe parser; a `function` object is refused until then.
+- **JSXGraph runs under the existing CSP** (no eval for these objects), and nothing is fetched from other hosts (E2E checks both).
+
 ## Drawing Board (R3-P3)
 
 - **Images and embeds (D-42):** no images, no embedded web pages, no files. Opening scene files is hidden; exporting the teacher's own drawing is allowed (it holds only allowed elements). Pastes that carry them are refused, any that arrive another way (library items, converted diagrams, a scene file opened with the shortcut) are removed from the scene at once, the client removes them before saving, and the API refuses documents that contain them (element allow-list, `files` must be empty).

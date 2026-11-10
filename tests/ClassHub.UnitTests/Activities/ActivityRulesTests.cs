@@ -41,9 +41,23 @@ public sealed class ActivityRulesTests
     public void Drawings_contain_only_allowed_elements_and_no_files(string json, bool valid) =>
         (ActivityRules.ContentProblem("drawing-board", 1, JsonDocument.Parse(json).RootElement) is null).ShouldBe(valid);
 
-    [Fact]
-    public void The_geometry_board_content_is_checked_with_that_board() =>
-        ActivityRules.ContentProblem("geometry-board", 1, JsonDocument.Parse("""{"anything":true}""").RootElement).ShouldBeNull();
+    [Theory]
+    [InlineData("""{"format":"classhub.geometry","version":1,"view":{"boundingBox":[-8,6,8,-6],"axis":true,"grid":false},"objects":[{"id":"A","type":"point","x":0,"y":0},{"id":"B","type":"point","x":3,"y":0},{"id":"C","type":"point","x":0,"y":4},{"id":"t1","type":"triangle","points":["A","B","C"]},{"id":"a1","type":"angle","points":["B","A","C"]},{"id":"c1","type":"circle","center":"A","through":"B"},{"id":"s1","type":"segment","points":["A","B"]},{"id":"l1","type":"line","points":["B","C"]}]}""", true)]
+    [InlineData("""{"format":"classhub.geometry","objects":[]}""", true)]
+    [InlineData("""{"objects":[]}""", false)]
+    [InlineData("""{"format":"classhub.geometry"}""", false)]
+    [InlineData("""{"format":"classhub.geometry","objects":[{"id":"A","type":"point","x":"1","y":0}]}""", false)]
+    [InlineData("""{"format":"classhub.geometry","objects":[{"id":"A","type":"point","x":1e7,"y":0}]}""", false)]
+    [InlineData("""{"format":"classhub.geometry","objects":[{"id":"A","type":"point","x":1,"y":0},{"id":"A","type":"point","x":2,"y":0}]}""", false)]
+    [InlineData("""{"format":"classhub.geometry","objects":[{"id":"A","type":"point","x":1,"y":0},{"id":"s1","type":"segment","points":["A","A"]}]}""", false)]
+    [InlineData("""{"format":"classhub.geometry","objects":[{"id":"s1","type":"segment","points":["A","B"]},{"id":"A","type":"point","x":1,"y":0},{"id":"B","type":"point","x":2,"y":0}]}""", false)]
+    [InlineData("""{"format":"classhub.geometry","objects":[{"id":"A","type":"point","x":1,"y":0},{"id":"B","type":"point","x":2,"y":0},{"id":"c1","type":"circle","center":"A","through":"A"}]}""", false)]
+    [InlineData("""{"format":"classhub.geometry","objects":[{"id":"A","type":"point","x":1,"y":0},{"id":"f1","type":"function","term":"x^2"}]}""", false)]
+    [InlineData("""{"format":"classhub.geometry","objects":[{"id":"<script>","type":"point","x":1,"y":0}]}""", false)]
+    [InlineData("""{"format":"classhub.geometry","objects":[],"view":{"boundingBox":[1,2,3]}}""", false)]
+    [InlineData("""{"format":"classhub.geometry","objects":[],"view":{"axis":"yes"}}""", false)]
+    public void Constructions_hold_known_objects_on_named_points_and_a_valid_view(string json, bool valid) =>
+        (ActivityRules.ContentProblem("geometry-board", 1, JsonDocument.Parse(json).RootElement) is null).ShouldBe(valid);
 
     [Fact]
     public void A_copy_title_always_fits()

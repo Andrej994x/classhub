@@ -43,6 +43,16 @@ Flows (each in **mk and en**, on **desktop and mobile**): register → dev mailb
 
 On a machine with little free memory, many local workers can exhaust Chromium's blob storage: a request then fails in the browser (`net::ERR_BLOB_OUT_OF_MEMORY` in the trace's network log) and the app shows "no connection to the server", in any test. Run with fewer workers (`npx playwright test --workers=3`; CI uses 2) rather than retrying.
 
+## Geometry Board tests (R3-P4)
+
+- **Unit:** `ActivityRulesTests`: constructions with known objects on distinct, earlier points and a valid view. Missing format, wrong coordinates, duplicate names, self-references, forward references, unknown types (a `function`), unsafe names and a malformed view are refused. `ToolRulesTests`: only shipped boards can be active.
+- **Integration:** `ActivityTests` refuses constructions without a format, with missing points or with function objects. `ToolboxTests` lists both boards.
+- **Vitest:**
+  - `construction.test.ts`: naming (A … Z, A1); objects built only from distinct existing points; moving points; JSON round-trip; damaged documents opened defensively.
+  - **The construction ↔ board mapping** (`render.ts`, with a fake board): JSXGraph types and parents, points first, the angle's vertex in the middle.
+  - `GeometryBoardPage.test.tsx` (JSXGraph replaced by a stand-in that reports clicks and drags): a triangle from three clicks; undo and Ctrl+Z, one step per click; a drag that moves several points is one step and all of them are saved; at the 2 000-object limit a click that would exceed it changes nothing and shows the message (fails without the check); the saved construction in ClassHub's format.
+- **E2E:** `geometry.spec.ts`, **triangle → save → reopen** on a desktop and a tablet. Three clicks build the triangle; it is saved; dragging the triangle by its inside moves all three points by the same offset, and that is what is saved; it is reopened from the library and saved again with its points and triangle. No CSP violations; nothing completes to another host.
+
 ## Drawing Board tests (R3-P3)
 
 - **Unit:** `ActivityRulesTests`: drawing content (allowed element types only; no images, iframes, embeds or files; `elements` required; `appState` an object).
