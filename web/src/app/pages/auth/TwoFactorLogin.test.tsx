@@ -54,7 +54,7 @@ describe('two-step sign-in', () => {
     await user.click(screen.getByRole('button', { name: 'Продолжи' }));
 
     expect(await screen.findByRole('heading', { level: 1, name: 'Мои часови' })).toBeInTheDocument();
-    expect(router.state.location.pathname).toBe('/student');
+    expect(router.state.location.pathname).toBe('/student/');
     // "Remember me" from the password step is sent with the second step.
     expect(api.to('/api/auth/login/two-factor').at(-1)).toMatchObject({ body: { code: '123456', recoveryCode: null, rememberMe: true }, xsrf: 'xsrf' });
   });

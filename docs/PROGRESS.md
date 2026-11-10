@@ -7,10 +7,10 @@ This is the live status of the autonomous implementation loop ([ROADMAP.md](ROAD
 | Field | Value |
 |---|---|
 | Release | R3 — Teaching Toolbox (R0, R1 and R2 complete) |
-| Current phase | R3-P6 — Usage analytics |
-| Branch | `feature/r3-p6-usage-analytics` (from `main` @ `ab34bfa`) |
+| Current phase | R3-P7 — PWA & mobile improvements |
+| Branch | `feature/r3-p7-pwa` (from `main` @ `6d83bbb`) |
 | Workflow step | 3 — implementation and local checks |
-| Next action | R3-P6 checks, Codex review and PR; then R3-P7 (PWA & mobile) |
+| Next action | R3-P7 checks, Codex review and PR; then R3-P8 (Release 3 hardening) |
 | Open blockers | None. User actions (optional): direct-push probe (R0-P8); remove the now redundant required `pr-gate` check (see Decisions) |
 
 ## Phase status
@@ -60,8 +60,8 @@ Status values: `not started`, `in progress`, `in review` (PR open), `merged`, `b
 | R3-P3 | Drawing Board | merged | `feature/r3-p3-drawing-board` | [#40](https://github.com/Andrej994x/classhub/pull/40) | `9dfd7d7` | 5 rounds: 5 × P2 fixed (reopen after refresh/Back, reopen from the latest version, pasted images, stale saved confirmation, export made explicit); round 5 clean | green | Migration applied to local `ClassHubDb` |
 | R3-P4 | Geometry Board — constructions | merged | `feature/r3-p4-geometry-constructions` | [#41](https://github.com/Andrej994x/classhub/pull/41) | `3051d65` | 3 rounds: 2 × P2 fixed (dragged shapes saved with their points, object limit kept); round 3 clean | green | Migration applied to local `ClassHubDb` |
 | R3-P5 | Geometry Board — functions & graphs | merged | `feature/r3-p5-geometry-functions` | [#42](https://github.com/Andrej994x/classhub/pull/42) | `ab34bfa` | 5 rounds: 4 × P2 fixed (undefined values propagate, fixed curves, one term-length rule, malformed numbers refused); round 5 clean | green | No migration |
-| R3-P6 | Usage analytics | in progress | `feature/r3-p6-usage-analytics` | | | | | Plan: per-workspace daily counters (tools opened, activities created and reused) with atomic increments and no personal data; workspace view in the toolbox; staff view with platform totals only |
-| R3-P7 | PWA & mobile improvements | not started | | | | | | |
+| R3-P6 | Usage analytics | merged | `feature/r3-p6-usage-analytics` | [#43](https://github.com/Andrej994x/classhub/pull/43) | `6d83bbb` | 1 round, clean | green | Migration applied to local `ClassHubDb` |
+| R3-P7 | PWA & mobile improvements | in progress | `feature/r3-p7-pwa` | | | | | Plan: installable app (mk/en manifests, icons, install prompt); a hand-written service worker for `/app/` and `/student/` only that caches hashed static files and an offline page, never API data; "best on tablet or computer" note on the boards; phone audit of the newer pages |
 | R3-P8 | Release 3 hardening | not started | | | | | | |
 | B-P1…B-P7 | MVP Beta | not started | | | | | | Needs the Beta blockers decided (ROADMAP J.4) |
 
@@ -263,3 +263,4 @@ Definition of Done (ROADMAP E) demonstrated:
 | 2026-11-04 | Evidence is Ed25519-signed with a key held only on the review machine; `pr-gate` runs on `pull_request_target` and publishes the required status `classhub/codex-evidence` | Owner decision on the R0-P8 P1 findings (signed local attestation instead of a paid CI integration or mandatory approvals) |
 | 2026-11-04 | App's CI auto-fix monitor not enabled (auto-mode permission check denied it) | PR status is read when needed; auto-merge runs on GitHub |
 | 2026-11-04 | `System.Security.Cryptography.Pkcs` pinned to 10.0.14 (transitive) | Vulnerable 9.0.11 via Microsoft.Data.SqlClient 6.1.7 |
+| 2026-11-10 | R3-P7: a hand-written service worker (`web/public/sw.js`) instead of vite-plugin-pwa (D-34). Same scope (`/app/`, `/student/`), static-asset caching only, offline fallback | About 70 lines of plain code instead of the Workbox dependency tree; no generated precache of the multi-megabyte board chunks; behaviour fully covered by Playwright |

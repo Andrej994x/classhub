@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.StaticFiles;
 using Microsoft.Net.Http.Headers;
 
 namespace ClassHub.Api.Platform;
@@ -18,16 +19,31 @@ internal static class SpaHosting
 
     public const string IndexFile = "dist/index.html";
 
-    /// <summary>Static files (before routing/authorization): hashed assets are immutable, index.html never cached.</summary>
+    /// <summary>The service worker (R3-P7); it lives under /dist/ but controls the SPA areas /app/ and /student/.</summary>
+    public const string ServiceWorkerFile = "/dist/sw.js";
+
+    /// <summary>
+    /// Static files (before routing/authorization): hashed assets are immutable, everything else (index.html, the
+    /// service worker, manifests, the offline page) is revalidated on every use.
+    /// </summary>
     public static WebApplication UseClassHubStaticFiles(this WebApplication app)
     {
+        var contentTypes = new FileExtensionContentTypeProvider();
+        contentTypes.Mappings[".webmanifest"] = "application/manifest+json";
         app.UseStaticFiles(new StaticFileOptions
         {
+            ContentTypeProvider = contentTypes,
             OnPrepareResponse = context =>
             {
                 var path = context.Context.Request.Path;
-                context.Context.Response.Headers[HeaderNames.CacheControl] =
+                var headers = context.Context.Response.Headers;
+                headers[HeaderNames.CacheControl] =
                     path.StartsWithSegments("/dist/assets") ? "public, max-age=31536000, immutable" : "no-cache";
+                if (path.Equals(ServiceWorkerFile, StringComparison.Ordinal))
+                {
+                    // Lets the worker under /dist/ be registered for the SPA scopes; pwa.ts registers only /app/ and /student/.
+                    headers["Service-Worker-Allowed"] = "/";
+                }
             },
         });
         return app;

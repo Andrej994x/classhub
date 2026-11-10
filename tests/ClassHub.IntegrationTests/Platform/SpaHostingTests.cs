@@ -23,6 +23,9 @@ public sealed class SpaHostingTests : IClassFixture<SpaHostingTests.Host>
             Directory.CreateDirectory(Path.Combine(WebRoot, "dist", "assets"));
             File.WriteAllText(Path.Combine(WebRoot, "dist", "index.html"), $"<!doctype html><html><body>{IndexMarker}<div id=\"root\"></div></body></html>");
             File.WriteAllText(Path.Combine(WebRoot, "dist", "assets", "index-abc123.js"), "console.log('spa')");
+            File.WriteAllText(Path.Combine(WebRoot, "dist", "sw.js"), "self.addEventListener('fetch', () => {});");
+            File.WriteAllText(Path.Combine(WebRoot, "dist", "manifest.webmanifest"), "{ \"name\": \"ClassHub\" }");
+            File.WriteAllText(Path.Combine(WebRoot, "dist", "offline.html"), "<!doctype html><title>offline</title>");
             Directory.CreateDirectory(Path.Combine(WebRoot, "dist", ".vite"));
             File.WriteAllText(Path.Combine(WebRoot, "dist", ".vite", "manifest.json"),
                 """{ "src/public/public.css": { "file": "assets/public-abc123.css", "isEntry": true } }""");
@@ -79,6 +82,34 @@ public sealed class SpaHostingTests : IClassFixture<SpaHostingTests.Host>
 
         response.StatusCode.ShouldBe(HttpStatusCode.OK);
         response.Headers.CacheControl!.ToString().ShouldContain("immutable");
+    }
+
+    [Fact]
+    public async Task The_service_worker_may_control_the_spa_areas_and_is_never_cached()
+    {
+        using var client = _host.Factory.CreateClient();
+
+        using var response = await client.GetAsync(new Uri("/dist/sw.js", UriKind.Relative), Ct);
+
+        response.StatusCode.ShouldBe(HttpStatusCode.OK);
+        response.Content.Headers.ContentType!.MediaType.ShouldBe("text/javascript");
+        response.Headers.GetValues("Service-Worker-Allowed").ShouldBe(["/"]);
+        response.Headers.CacheControl!.NoCache.ShouldBeTrue();
+    }
+
+    [Theory]
+    [InlineData("/dist/manifest.webmanifest", "application/manifest+json")]
+    [InlineData("/dist/offline.html", "text/html")]
+    public async Task Pwa_files_are_served_revalidated_and_without_the_worker_header(string path, string mediaType)
+    {
+        using var client = _host.Factory.CreateClient();
+
+        using var response = await client.GetAsync(new Uri(path, UriKind.Relative), Ct);
+
+        response.StatusCode.ShouldBe(HttpStatusCode.OK);
+        response.Content.Headers.ContentType!.MediaType.ShouldBe(mediaType);
+        response.Headers.CacheControl!.NoCache.ShouldBeTrue();
+        response.Headers.Contains("Service-Worker-Allowed").ShouldBeFalse();
     }
 
     [Theory]

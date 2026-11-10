@@ -7,6 +7,7 @@ import { ApiError, errorMessage } from '../../../api/errors.ts';
 import { selfHostExcalidrawAssets } from '../../../boards/drawing/assets.ts';
 import { DRAWING_SCHEMA_VERSION, fromDocument, toDocument, type DrawingDocument } from '../../../boards/drawing/scene.ts';
 import { Alert } from '../../../components/ui/alert.tsx';
+import { LargeScreenNote } from '../../components/LargeScreenNote.tsx';
 import { Button } from '../../../components/ui/button.tsx';
 import { useActivity, useSaveActivity } from '../../../teacher/activities.ts';
 import { countActivityOpened } from '../../../teacher/usage.ts';
@@ -108,6 +109,7 @@ function Board({ workspaceId, loaded, onCreated }: { workspaceId: string; loaded
         {t('activities.title')}
       </Link>
       <h1 className="text-2xl font-semibold tracking-tight">{t('activities.boards.drawing-board')}</h1>
+      <LargeScreenNote />
       <form onSubmit={submit} aria-label={t('boards.saveForm')} className="grid gap-3 sm:grid-cols-[2fr_1fr_auto] sm:items-end">
         <label className="flex flex-col gap-1 text-sm font-medium">
           {t('activities.titleField')}

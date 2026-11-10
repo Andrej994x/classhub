@@ -236,7 +236,7 @@ export function StudentTeacherPage() {
   return (
     <section className="flex flex-col gap-6">
       {(teachers.data?.length ?? 0) > 1 && (
-        <Link to="/student" className="inline-flex items-center gap-1 text-sm text-primary underline-offset-4 hover:underline">
+        <Link to="/student/" className="inline-flex items-center gap-1 text-sm text-primary underline-offset-4 hover:underline">
           <ArrowLeft className="h-4 w-4" aria-hidden />
           {t('studentPortal.allTeachers')}
         </Link>

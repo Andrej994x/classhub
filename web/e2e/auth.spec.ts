@@ -16,7 +16,7 @@ for (const language of ['mk', 'en'] as const) {
       expect(page.url()).not.toContain('token='); // the token is removed from the address bar
 
       await page.getByRole('link', { name: text(language, 'auth.verify.continue') }).click();
-      await expect(page).toHaveURL(/\/login\?returnTo=%2Fapp$/);
+      await expect(page).toHaveURL(/\/login\?returnTo=%2Fapp%2F$/);
       await signIn(page, language, email);
 
       await expect(page.getByRole('heading', { level: 1, name: workspaceName[language] })).toBeVisible();
