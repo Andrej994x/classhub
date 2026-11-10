@@ -94,7 +94,7 @@ Details and tests: [SECURITY.md](SECURITY.md#tenant-isolation-r0-p5).
 - **Safe expression parser** (`boards/geometry/expression.ts`): ClassHub's own tokenizer and recursive-descent parser.
   - Allowed: numbers (decimal point or comma), `x`, `pi`, `e`, `+ - * / ^` (right-associative, binds tighter than a leading minus), parentheses, implicit multiplication (`2x`, `3(x+1)`, `x sin(x)`), and `sin cos tan asin acos atan sqrt abs ln log exp`.
   - Limits: at most 200 characters, 100 levels of recursion (about 20 nested parentheses) and 200 nodes.
-  - Evaluation walks the tree; undefined points (`1/x` at 0, `sqrt(-1)`) are gaps.
+  - Evaluation walks the tree; undefined points (`1/x` at 0, `sqrt(-1)`) are gaps, and undefined stays undefined through everything built on it (`1/(1/x)` at 0, `sqrt(x)^0` for x < 0).
   - Never `eval`, `new Function` or JSXGraph's expression language: graphs are plain curves `(t, f(t))` across the visible x-range (JSXGraph's `functiongraph` would route the x-coordinate through its own expression engine).
 - **Construction format version 2:** adds `{ id, type: "function", term }` objects, named f, g, h, p, q, r, f1 … They are added from the "f(x) =" field below the board, listed with a remove button, and count toward the 2 000 objects. Version 1 documents open as version 2; the board saves version 2.
 - **The API checks terms** with the same grammar in C# (`GeometryTerms.IsValid`; never evaluated on the server). Function objects are accepted only in format version 2 (`ActivityRules.SupportedSchemaVersions`: geometry-board 1 and 2).

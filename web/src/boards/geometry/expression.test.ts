@@ -24,6 +24,16 @@ describe('safe expression parser', () => {
     expect(at('sqrt(x)', -1)).toBeNaN();
   });
 
+  it('keeps undefined subexpressions undefined, whatever is built on them', () => {
+    expect(at('1/(1/x)', 0)).toBeNaN(); // 1/0 inside: no value, not 0
+    expect(at('sqrt(x)^0', -4)).toBeNaN(); // NaN ** 0 would be 1
+    expect(at('0 * ln(x)', -1)).toBeNaN();
+    expect(at('abs(sqrt(x))', -1)).toBeNaN();
+    expect(at('exp(1/x) - exp(1/x)', 0)).toBeNaN();
+    expect(at('1/(1/x)', 2)).toBe(2); // defined points stay as they are
+    expect(at('sqrt(x)^0', 4)).toBe(1);
+  });
+
   it('refuses everything that is not a term of x', () => {
     for (const term of [
       'alert(1)',

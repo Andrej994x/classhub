@@ -190,9 +190,17 @@ export function parseTerm(term: string): ParseResult {
   }
 }
 
-/** The tree's value at x (NaN where it is not defined, e.g. sqrt(-1), 1/0 → ±Infinity is kept as NaN). */
+/**
+ * The tree's value at x, or NaN where it is not defined (sqrt(-1), 1/0, …). Undefined is undefined all the way up: every
+ * subexpression that is not finite makes everything built on it NaN, so 1/(1/x) has a gap at 0 and sqrt(x)^0 is not 1
+ * for negative x (in JavaScript NaN ** 0 is 1).
+ */
 export function evaluate(tree: Node, x: number): number {
   const value = (node: Node): number => {
+    const result = raw(node);
+    return Number.isFinite(result) ? result : Number.NaN;
+  };
+  const raw = (node: Node): number => {
     switch (node.kind) {
       case 'number':
         return node.value;
@@ -200,11 +208,14 @@ export function evaluate(tree: Node, x: number): number {
         return x;
       case 'negate':
         return -value(node.operand);
-      case 'call':
-        return IMPLEMENTATIONS[node.fn](value(node.argument));
+      case 'call': {
+        const argument = value(node.argument);
+        return Number.isNaN(argument) ? Number.NaN : IMPLEMENTATIONS[node.fn](argument);
+      }
       case 'binary': {
         const a = value(node.left);
         const b = value(node.right);
+        if (Number.isNaN(a) || Number.isNaN(b)) return Number.NaN;
         switch (node.op) {
           case '+':
             return a + b;
@@ -220,6 +231,5 @@ export function evaluate(tree: Node, x: number): number {
       }
     }
   };
-  const result = value(tree);
-  return Number.isFinite(result) ? result : Number.NaN;
+  return value(tree);
 }

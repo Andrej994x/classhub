@@ -46,7 +46,7 @@ On a machine with little free memory, many local workers can exhaust Chromium's 
 ## Function graph tests (R3-P5)
 
 - **Vitest:** `expression.test.ts` (the safe parser).
-  - The usual school terms: precedence, right-associative powers, implicit multiplication, decimal comma, functions and constants. Undefined points are gaps.
+  - The usual school terms: precedence, right-associative powers, implicit multiplication, decimal comma, functions and constants. Undefined points are gaps, and stay undefined through nested operations (fails without the propagation).
   - **Malicious and invalid input is refused:** `alert(1)`, `eval(x)`, `Function(...)`, `x.constructor`, `__proto__`, `this`, `window`, `;`, `=>`, `=`, template strings, HTML, unknown variables, missing parentheses, `^^`, `..`, indexing, commas.
   - Limits on length, nesting and size.
 - **Vitest:** `construction.test.ts`.
