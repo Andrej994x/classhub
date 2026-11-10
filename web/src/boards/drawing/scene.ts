@@ -41,3 +41,18 @@ export function fromDocument(document: unknown): DrawingDocument {
     },
   };
 }
+
+/**
+ * The scene without what a drawing may not contain (images, embedded pages, iframes, anything unknown), or null when
+ * it is fine. However such elements arrive (a paste from another board, a library item, a converted diagram), the
+ * board removes them at once instead of letting them vanish silently on save.
+ */
+export function withoutDisallowed<T extends SceneElement>(elements: readonly T[]): T[] | null {
+  return elements.some((e) => !e.isDeleted && !allowed.has(e.type)) ? elements.filter((e) => e.isDeleted || allowed.has(e.type)) : null;
+}
+
+/** Whether a paste may go in: structured content only with allowed elements and no files (images). */
+export function pasteAllowed(data: { elements?: readonly SceneElement[] | null; files?: Record<string, unknown> | null }): boolean {
+  if (data.files && Object.keys(data.files).length > 0) return false;
+  return !data.elements || data.elements.every((e) => allowed.has(e.type));
+}

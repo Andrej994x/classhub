@@ -52,6 +52,16 @@ async function drawSaveReopen(page: Page) {
   await page.mouse.move(box.x + box.width * 0.5, box.y + box.height * 0.5, { steps: 8 });
   await page.mouse.up();
 
+  // A paste from another board that carries an image is refused (D-42), with a message.
+  await page.mouse.move(box.x + box.width * 0.7, box.y + box.height * 0.7);
+  await page.evaluate(() => {
+    const image = { id: 'pasted-image', type: 'image', x: 0, y: 0, width: 10, height: 10, angle: 0, fileId: 'f1', status: 'saved', isDeleted: false, version: 1, versionNonce: 1, seed: 1, groupIds: [], frameId: null, boundElements: null, updated: 1, link: null, locked: false, strokeColor: '#000', backgroundColor: 'transparent', fillStyle: 'solid', strokeWidth: 1, strokeStyle: 'solid', roughness: 0, opacity: 100, roundness: null, scale: [1, 1], crop: null, index: 'a5' };
+    const data = new DataTransfer();
+    data.setData('text/plain', JSON.stringify({ type: 'excalidraw/clipboard', elements: [image], files: { f1: { id: 'f1', mimeType: 'image/png', dataURL: 'data:image/png;base64,iVBORw0KGgo=', created: 1 } } }));
+    document.dispatchEvent(new ClipboardEvent('paste', { clipboardData: data, bubbles: true, cancelable: true }));
+  });
+  await expect(page.getByText(text(language, 'boards.blocked'))).toBeVisible();
+
   // Save it into the library.
   await page.getByLabel(text(language, 'activities.titleField')).fill('Агли во триаголник');
   await page.getByRole('button', { name: text(language, 'boards.save') }).click();

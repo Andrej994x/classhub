@@ -99,6 +99,7 @@ Details and tests: [SECURITY.md](SECURITY.md#tenant-isolation-r0-p5).
 - **No images or embeds (D-42):**
   - the image tool is off, and every web embed is refused (`validateEmbeddable`);
   - loading scenes from files and exporting are off;
+  - pastes carrying images, embeds or files are refused (`onPaste`), and any such element that arrives another way (library items, converted diagrams) is removed from the scene at once, with a message (`withoutDisallowed` in `onChange`);
   - saving keeps only live elements of the allowed types (`scene.ts`).
 - **Document format v1:** `{ elements: [...], appState: { viewBackgroundColor, gridModeEnabled } }`.
   - The API (`ActivityRules.ContentProblem`) accepts only an `elements` array of at most 10 000 objects of the types rectangle, diamond, ellipse, arrow, line, freedraw, text and frame, with no `files`.

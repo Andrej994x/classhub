@@ -63,6 +63,7 @@ function Board({ workspaceId, loaded, onCreated }: { workspaceId: string; loaded
   const [id, setId] = useState<string | null>(loaded?.id ?? null);
   const [version, setVersion] = useState<number | null>(loaded ? Number(loaded.version) : null);
   const [saved, setSaved] = useState(false);
+  const [blocked, setBlocked] = useState(false);
   const en = i18n.resolvedLanguage === 'en';
 
   const submit = (event: FormEvent) => {
@@ -114,11 +115,12 @@ function Board({ workspaceId, loaded, onCreated }: { workspaceId: string; loaded
         </Button>
       </form>
       {save.isError && <Alert variant="error">{errorMessage(save.error, t)}</Alert>}
+      {blocked && <Alert variant="warning">{t('boards.blocked')}</Alert>}
       {saved && !save.isPending && <Alert variant="success">{t('boards.saved')}</Alert>}
       <p className="text-xs text-muted-foreground">{t('boards.drawingNote')}</p>
       <div className="h-[70vh] min-h-[420px] overflow-hidden rounded-lg border border-border">
         <Suspense fallback={<output className="block p-4">{t('common.loading')}</output>}>
-          <DrawingCanvas initial={initial} onReady={(ready) => (api.current = ready)} />
+          <DrawingCanvas initial={initial} onReady={(ready) => (api.current = ready)} onBlocked={() => setBlocked(true)} />
         </Suspense>
       </div>
     </section>

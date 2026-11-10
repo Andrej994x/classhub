@@ -1631,6 +1631,7 @@
     "saveForm": "Save the activity",
     "save": "Save to the library",
     "saved": "Saved to the Activity Library.",
-    "drawingNote": "The board's own menus are in English. Images and embedded web pages are not available; drawings are saved only in your Activity Library."
+    "drawingNote": "The board's own menus are in English. Images and embedded web pages are not available; drawings are saved only in your Activity Library.",
+    "blocked": "Images and embedded web pages cannot be added to this board; they were left out."
   }
 }
