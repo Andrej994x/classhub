@@ -49,7 +49,7 @@ internal sealed class ToolSubjectConfiguration : IEntityTypeConfiguration<ToolSu
 
 /// <summary>
 /// The first catalog (R3-P1): well-known free tools opened by their official links, and the two boards built into
-/// ClassHub (inactive until R3-P3 and R3-P4 ship them).
+/// ClassHub (the drawing board since R3-P3; the geometry board inactive until R3-P4 ships it).
 /// </summary>
 internal static class ToolboxSeed
 {
@@ -78,7 +78,7 @@ internal static class ToolboxSeed
             "Цртање и 3D приказ на молекули.",
             "Draw molecules and view them in 3D.",
             "Бесплатна веб-апликација; се отвора на molview.org.", "Free web application; opened on molview.org.", ["chemistry", "biology"]),
-        ("drawing-board", ToolKind.BuiltIn, ToolCategory.Drawing, null, "drawing-board", false, false,
+        ("drawing-board", ToolKind.BuiltIn, ToolCategory.Drawing, null, "drawing-board", true, true,
             "Табла за цртање", "Drawing board",
             "Слободно цртање, текст, форми, стрелки и дијаграми; зачувување и повторно отворање.",
             "Free drawing, text, shapes, arrows and diagrams; save and reopen.",

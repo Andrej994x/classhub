@@ -27,6 +27,24 @@ public sealed class ActivityRulesTests
         ActivityRules.Document(null, 100).ShouldBeNull();
     }
 
+    [Theory]
+    [InlineData("""{"elements":[{"type":"rectangle"},{"type":"text","text":"x"},{"type":"freedraw"}],"appState":{"gridModeEnabled":true}}""", true)]
+    [InlineData("""{"elements":[],"files":{}}""", true)]
+    [InlineData("""{"elements":{}}""", false)]
+    [InlineData("""{"appState":{}}""", false)]
+    [InlineData("""{"elements":[{"type":"image"}]}""", false)]
+    [InlineData("""{"elements":[{"type":"iframe"}]}""", false)]
+    [InlineData("""{"elements":[{"type":"embeddable"}]}""", false)]
+    [InlineData("""{"elements":[1]}""", false)]
+    [InlineData("""{"elements":[],"files":{"a":{}}}""", false)]
+    [InlineData("""{"elements":[],"appState":[]}""", false)]
+    public void Drawings_contain_only_allowed_elements_and_no_files(string json, bool valid) =>
+        (ActivityRules.ContentProblem("drawing-board", 1, JsonDocument.Parse(json).RootElement) is null).ShouldBe(valid);
+
+    [Fact]
+    public void The_geometry_board_content_is_checked_with_that_board() =>
+        ActivityRules.ContentProblem("geometry-board", 1, JsonDocument.Parse("""{"anything":true}""").RootElement).ShouldBeNull();
+
     [Fact]
     public void A_copy_title_always_fits()
     {

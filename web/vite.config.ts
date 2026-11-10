@@ -1,9 +1,10 @@
 /// <reference types="vitest/config" />
 import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
-import { readdirSync } from 'node:fs';
+import { cpSync, createReadStream, existsSync, readdirSync, statSync } from 'node:fs';
+import { extname, join, normalize } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { defineConfig } from 'vite';
+import { defineConfig, type Plugin } from 'vite';
 
 // The ASP.NET Core host (API + Razor public pages) listens on 5080 in development.
 const apiTarget = 'http://localhost:5080';
@@ -31,9 +32,33 @@ const islands = Object.fromEntries(
  */
 const publicPages = String.raw`^/(?:$|\?|en(?:$|\?)|sitemap\.xml|robots\.txt|dist/|(?!(?:app|student|admin|login|register|verify-email|forgot-password|reset-password|dev)(?:[/?#]|$))[a-z0-9][a-z0-9-]{1,38}[a-z0-9](?:/photo|/tests/[a-z0-9][a-z0-9-]{1,58}[a-z0-9])?(?:[?#]|$))`;
 
+/**
+ * The drawing board's fonts (R3-P3), self-hosted: Excalidraw loads them at runtime from `EXCALIDRAW_ASSET_PATH`
+ * (`<base>excalidraw-assets/fonts/...`) and would otherwise fall back to a CDN, which the CSP blocks anyway. The dev server
+ * serves them from the package; the build copies them next to the SPA.
+ */
+const excalidrawFonts = file('./node_modules/@excalidraw/excalidraw/dist/prod/fonts');
+const FONT_TYPES: Record<string, string> = { '.woff2': 'font/woff2', '.woff': 'font/woff', '.ttf': 'font/ttf' };
+function excalidrawAssets(): Plugin {
+  return {
+    name: 'classhub-excalidraw-assets',
+    configureServer(server) {
+      server.middlewares.use('/excalidraw-assets/fonts', (req, res, next) => {
+        const path = normalize(join(excalidrawFonts, decodeURIComponent((req.url ?? '').split('?')[0]!)));
+        if (!path.startsWith(excalidrawFonts) || !existsSync(path) || !statSync(path).isFile()) return next();
+        res.setHeader('Content-Type', FONT_TYPES[extname(path)] ?? 'application/octet-stream');
+        createReadStream(path).pipe(res);
+      });
+    },
+    writeBundle(options) {
+      cpSync(excalidrawFonts, join(options.dir ?? outDir, 'excalidraw-assets', 'fonts'), { recursive: true });
+    },
+  };
+}
+
 export default defineConfig(({ command }) => ({
   base: command === 'build' ? '/dist/' : '/',
-  plugins: [react(), tailwindcss()],
+  plugins: [react(), tailwindcss(), excalidrawAssets()],
   build: {
     outDir,
     emptyOutDir: true,

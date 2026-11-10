@@ -87,7 +87,7 @@ public static class ToolRules
     /// The boards that have shipped: only these may be active (a board's tool opens its page). Each board's phase adds
     /// its key here.
     /// </summary>
-    public static readonly IReadOnlyList<string> AvailableBuiltInKeys = [];
+    public static readonly IReadOnlyList<string> AvailableBuiltInKeys = ["drawing-board"];
 
     /// <summary>Whether a tool may be shown to teachers: external, or a board that has shipped.</summary>
     public static bool CanBeActive(ToolKind kind, string? builtInKey) =>

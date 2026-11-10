@@ -43,6 +43,17 @@ Flows (each in **mk and en**, on **desktop and mobile**): register → dev mailb
 
 On a machine with little free memory, many local workers can exhaust Chromium's blob storage: a request then fails in the browser (`net::ERR_BLOB_OUT_OF_MEMORY` in the trace's network log) and the app shows "no connection to the server", in any test. Run with fewer workers (`npx playwright test --workers=3`; CI uses 2) rather than retrying.
 
+## Drawing Board tests (R3-P3)
+
+- **Unit:** `ActivityRulesTests`: drawing content (allowed element types only; no images, iframes, embeds or files; `elements` required; `appState` an object).
+- **Integration:** `ActivityTests` refuses drawings without elements or with images, embeds, files or untyped elements. `ToolboxTests` sees the drawing board in the toolbox, and the geometry board still hidden.
+- **Vitest:**
+  - `scene.test.ts`: the scene round-trips unchanged; images, embeds and deleted elements are never saved; damaged content opens as an empty or partial drawing.
+  - `DrawingBoardPage.test.tsx` (Excalidraw replaced by a stand-in with the same contract): the first save creates the activity without images and the page becomes it, with no reload; later saves change it; a reopened activity saves with the loaded version.
+- **E2E:** `drawing.spec.ts`, **draw → save → reopen** on a desktop and on a tablet (iPad).
+  - Draw a rectangle, save it, open it again from the library and save again: the rectangle is still in the document.
+  - The board's font loads from ClassHub; no request to another host completes, and every foreign attempt was blocked by the CSP.
+
 ## Activity Library tests (R3-P2)
 
 - **Unit:** `ActivityRulesTests` (supported boards and format versions; documents are objects within the limit in UTF-8 bytes; copy titles always fit).

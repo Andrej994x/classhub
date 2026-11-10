@@ -30,7 +30,8 @@ public sealed class ToolboxTests(ClassHubApiFixture fixture)
         var all = await SearchAsync(teacher, "");
         all.Categories.ShouldBe(["Geometry", "Graphing", "Simulations", "Chemistry", "Drawing", "Other"]);
         all.Tools.Select(t => t.Code).ShouldContain("geogebra");
-        all.Tools.Select(t => t.Code).ShouldNotContain("drawing-board"); // built-in boards stay inactive until they ship
+        all.Tools.Single(t => t.Code == "drawing-board").BuiltInKey.ShouldBe("drawing-board"); // shipped in R3-P3
+        all.Tools.Select(t => t.Code).ShouldNotContain("geometry-board"); // a board stays hidden until it ships
         all.Tools.TakeWhile(t => t.IsFeatured).Count().ShouldBeGreaterThanOrEqualTo(3); // featured first
 
         var geogebra = (await SearchAsync(teacher, "?q=geogebra")).Tools.ShouldHaveSingleItem();

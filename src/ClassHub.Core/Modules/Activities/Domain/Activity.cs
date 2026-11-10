@@ -70,6 +70,58 @@ public static class ActivityRules
         return size <= maxBytes ? (json, size) : null;
     }
 
+    /// <summary>The element types a drawing may contain (format v1): never images, embedded web pages or iframes (D-42).</summary>
+    public static readonly IReadOnlySet<string> DrawingElementTypes = new HashSet<string>(StringComparer.Ordinal)
+    {
+        "rectangle", "diamond", "ellipse", "arrow", "line", "freedraw", "text", "frame",
+    };
+
+    public const int MaxDrawingElements = 10_000;
+
+    /// <summary>
+    /// What is wrong with the document's content for its board (null: nothing). The drawing board (v1): an
+    /// <c>elements</c> array of at most <see cref="MaxDrawingElements"/> objects of the allowed types, no files, an
+    /// optional <c>appState</c> object. The geometry board's checks come with that board (R3-P4).
+    /// </summary>
+    public static string? ContentProblem(string toolType, int schemaVersion, JsonElement document)
+    {
+        if (toolType != "drawing-board" || schemaVersion != 1)
+        {
+            return null;
+        }
+
+        if (!document.TryGetProperty("elements", out var elements) || elements.ValueKind != JsonValueKind.Array)
+        {
+            return "A drawing needs its list of elements.";
+        }
+
+        if (elements.GetArrayLength() > MaxDrawingElements)
+        {
+            return $"A drawing has at most {MaxDrawingElements} elements.";
+        }
+
+        foreach (var element in elements.EnumerateArray())
+        {
+            if (element.ValueKind != JsonValueKind.Object || !element.TryGetProperty("type", out var type) || type.ValueKind != JsonValueKind.String
+                || !DrawingElementTypes.Contains(type.GetString()!))
+            {
+                return "Drawings contain shapes, lines, arrows, text and frames only (no images or embedded pages).";
+            }
+        }
+
+        if (document.TryGetProperty("files", out var files) && !(files.ValueKind == JsonValueKind.Object && !files.EnumerateObject().Any()))
+        {
+            return "Drawings carry no files.";
+        }
+
+        if (document.TryGetProperty("appState", out var appState) && appState.ValueKind != JsonValueKind.Object)
+        {
+            return "The drawing's settings must be an object.";
+        }
+
+        return null;
+    }
+
     /// <summary>"Title (copy)", cut so it still fits.</summary>
     public static string CopyTitle(string title, string suffix)
     {

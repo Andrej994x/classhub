@@ -89,6 +89,25 @@ Details and tests: [SECURITY.md](SECURITY.md#tenant-isolation-r0-p5).
 - API access: `src/api/client.ts` wraps `openapi-fetch` with the generated types. It sends cookies, keeps the antiforgery request token in memory, fetches it from `GET /api/auth/antiforgery` before the first unsafe request, adopts tokens re-issued in the `X-XSRF-TOKEN` response header, retries once on `ANTIFORGERY_INVALID`, and turns ProblemDetails into `ApiError`. `errorMessage()` shows only translated messages for error codes, never server text. TanStack Query is provided in `src/app/Providers.tsx`.
 - Hosting: `npm run build` writes to `src/ClassHub.Api/wwwroot/dist` (git-ignored, base `/dist/`). `Platform/SpaHosting.cs` serves static files before routing (hashed `/dist/assets` immutable, everything else `no-cache`) and maps `dist/index.html` as the fallback for the SPA prefixes only (`/` is the Razor landing page since R1-P4; the SPA's `/` route hands over with a full page load). `/api`, health checks and unknown paths never get the SPA, and the deny-by-default policy still applies to them.
 
+## Drawing Board (R3-P3)
+
+- **Excalidraw** (`@excalidraw/excalidraw` 0.18.1, MIT) at `/app/w/{id}/toolbox/drawing-board[?activity=…]`.
+  - It is lazy-loaded: its chunk (and its CSS) loads only with the board.
+  - Its menus are in English (Excalidraw has no Macedonian); ClassHub's own controls are localized.
+  - The toolbox lists the board (`ToolRules.AvailableBuiltInKeys`, migration `ShipDrawingBoard`), and the Activity Library opens its activities there.
+- **Self-hosted fonts:** a Vite plugin serves `node_modules/@excalidraw/excalidraw/dist/prod/fonts` in development and copies it to `wwwroot/dist/excalidraw-assets/fonts` in the build. `EXCALIDRAW_ASSET_PATH` is set before the board's module loads, because Excalidraw registers its fonts at module load. Excalidraw still appends its CDN as a last fallback for each font; the CSP (`font-src 'self'`) blocks those attempts in the browser, so nothing is fetched from another host.
+- **No images or embeds (D-42):**
+  - the image tool is off, and every web embed is refused (`validateEmbeddable`);
+  - loading scenes from files and exporting are off;
+  - saving keeps only live elements of the allowed types (`scene.ts`).
+- **Document format v1:** `{ elements: [...], appState: { viewBackgroundColor, gridModeEnabled } }`.
+  - The API (`ActivityRules.ContentProblem`) accepts only an `elements` array of at most 10 000 objects of the types rectangle, diamond, ellipse, arrow, line, freedraw, text and frame, with no `files`.
+  - Opening is defensive: unknown content is dropped, not drawn.
+- **Saving:**
+  - The first save creates the activity, and the page becomes `?activity=…` on the same board (no reload).
+  - Later saves change it with the version the board holds; a change elsewhere is a 409.
+  - Reopening from the library loads the saved scene.
+
 ## Activity Library (R3-P2)
 
 - **Module:** `Modules/Activities`. An `Activity` (tenant-owned) has a title, an optional subject, the board (`drawing-board`, `geometry-board`), the version of that board's document format, the document (JSON), its size and a version. It is deleted softly through `ArchivedAtUtc` and the Archived filter.
