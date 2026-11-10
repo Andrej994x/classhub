@@ -4,6 +4,7 @@ import { AdminAuditPage } from './pages/admin/AdminAuditPage.tsx';
 import { AdminOverviewPage } from './pages/admin/AdminOverviewPage.tsx';
 import { AdminCatalogPage } from './pages/admin/AdminCatalogPage.tsx';
 import { AdminToolboxPage } from './pages/admin/AdminToolboxPage.tsx';
+import { AdminUsagePage } from './pages/admin/AdminUsagePage.tsx';
 import { AdminHiddenPage, AdminReportsPage } from './pages/admin/AdminModerationPages.tsx';
 import { AdminPlansPage } from './pages/admin/AdminPlansPage.tsx';
 import { AdminSecurityPage } from './pages/admin/AdminSecurityPage.tsx';
@@ -127,6 +128,7 @@ export const routes: RouteObject[] = [
       { path: 'moderation', element: <AdminHiddenPage /> },
       { path: 'catalog', element: <AdminCatalogPage /> },
       { path: 'toolbox', element: <AdminToolboxPage /> },
+      { path: 'usage', element: <AdminUsagePage /> },
       { path: 'security', element: <AdminSecurityPage /> },
       { path: '*', element: <NotFoundContent /> },
     ],

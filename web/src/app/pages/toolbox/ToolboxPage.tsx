@@ -6,6 +6,7 @@ import { errorMessage } from '../../../api/errors.ts';
 import { Alert } from '../../../components/ui/alert.tsx';
 import { useCatalog } from '../../../teacher/queries.ts';
 import { useToolbox, type Tool, type ToolboxFilter } from '../../../teacher/toolbox.ts';
+import { countToolOpened, useWorkspaceUsage } from '../../../teacher/usage.ts';
 
 const field = 'h-10 w-full rounded-md border border-input bg-background px-3 text-sm';
 
@@ -74,6 +75,7 @@ export function ToolboxPage() {
         </ul>
       )}
       <p className="text-xs text-muted-foreground">{t('toolbox.note')}</p>
+      <UsageCard workspaceId={workspaceId} tools={toolbox.data?.tools ?? []} en={en} />
     </section>
   );
 }
@@ -99,16 +101,54 @@ function ToolCard({ workspaceId, tool, en }: { workspaceId: string; tool: Tool; 
       <p className="flex-1 text-sm">{en ? tool.descriptionEn : tool.descriptionMk}</p>
       {(en ? tool.licenseNoteEn : tool.licenseNoteMk) && <p className="text-xs text-muted-foreground">{en ? tool.licenseNoteEn : tool.licenseNoteMk}</p>}
       {tool.kind === 'External' && tool.url ? (
-        <a href={tool.url} target="_blank" rel="noopener noreferrer" className={open}>
+        <a href={tool.url} target="_blank" rel="noopener noreferrer" className={open} onClick={() => countToolOpened(workspaceId, tool.code)}>
           {t('toolbox.open', { name })}
           <ExternalLink className="h-4 w-4" aria-hidden />
           <span className="sr-only">{t('toolbox.newTab')}</span>
         </a>
       ) : (
-        <Link to={`/app/w/${workspaceId}/toolbox/${tool.builtInKey}`} className={open}>
+        <Link to={`/app/w/${workspaceId}/toolbox/${tool.builtInKey}`} className={open} onClick={() => countToolOpened(workspaceId, tool.code)}>
           {t('toolbox.open', { name })}
         </Link>
       )}
     </article>
+  );
+}
+
+/** The workspace's own use of the toolbox in the last 30 days (R3-P6): counts only, nobody is recorded. */
+function UsageCard({ workspaceId, tools, en }: { workspaceId: string; tools: Tool[]; en: boolean }) {
+  const { t } = useTranslation();
+  const usage = useWorkspaceUsage(workspaceId);
+  if (!usage.data) return null;
+  const name = (code: string) => {
+    const tool = tools.find((x) => x.code === code);
+    return tool ? (en ? tool.nameEn : tool.nameMk) : code;
+  };
+  const empty = usage.data.tools.length === 0 && usage.data.boards.length === 0;
+  return (
+    <section aria-labelledby="toolbox-usage" className="flex flex-col gap-2 rounded-lg border border-border p-4">
+      <h2 id="toolbox-usage" className="font-semibold">
+        {t('toolbox.usage.title')}
+      </h2>
+      {empty ? (
+        <p className="text-sm text-muted-foreground">{t('toolbox.usage.none')}</p>
+      ) : (
+        <dl className="grid gap-x-6 gap-y-1 text-sm sm:grid-cols-2">
+          {usage.data.tools.slice(0, 6).map((tool) => (
+            <div key={tool.code} className="flex justify-between gap-3">
+              <dt>{name(tool.code)}</dt>
+              <dd className="tabular-nums text-muted-foreground">{t('toolbox.usage.opens', { count: Number(tool.opens) })}</dd>
+            </div>
+          ))}
+          {usage.data.boards.map((board) => (
+            <div key={board.board} className="flex justify-between gap-3">
+              <dt>{t(`activities.boards.${board.board}`)}</dt>
+              <dd className="tabular-nums text-muted-foreground">{t('toolbox.usage.activities', { created: Number(board.created), reused: Number(board.reused) })}</dd>
+            </div>
+          ))}
+        </dl>
+      )}
+      <p className="text-xs text-muted-foreground">{t('toolbox.usage.privacy')}</p>
+    </section>
   );
 }

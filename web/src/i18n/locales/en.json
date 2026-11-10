@@ -47,7 +47,8 @@
     "finance": "Finance",
     "toolbox": "Toolbox",
     "adminToolbox": "Toolbox",
-    "activities": "Activities"
+    "activities": "Activities",
+    "adminUsage": "Usage"
   },
   "layout": {
     "teacherArea": "Teacher workspace",
@@ -388,6 +389,23 @@
       "sortOrder": "Order",
       "active": "Active",
       "inactive": "Inactive"
+    },
+    "usage": {
+      "title": "Toolbox usage",
+      "lead": "Platform-wide totals per day (UTC). No single workspace's numbers and no people are shown.",
+      "workspaces_one": "{{count}} workspace used the toolbox",
+      "workspaces_other": "{{count}} workspaces used the toolbox",
+      "tools": "Tools opened",
+      "boards": "Activities",
+      "daily": "Per day",
+      "day": "Day",
+      "opens": "Opens",
+      "created": "Created",
+      "reused": "Reused",
+      "tool": "Tool",
+      "board": "Board",
+      "none": "Nothing in this period.",
+      "period": "Period"
     }
   },
   "notFound": {
@@ -1600,6 +1618,14 @@
       "Chemistry": "Chemistry",
       "Drawing": "Drawing",
       "Other": "Other"
+    },
+    "usage": {
+      "title": "Your use in the last 30 days",
+      "none": "Nothing yet: open a tool or save an activity.",
+      "opens_one": "opened {{count}} time",
+      "opens_other": "opened {{count}} times",
+      "activities": "{{created}} new, {{reused}} reused",
+      "privacy": "Counted per day for your workspace only; ClassHub does not record who opened what."
     }
   },
   "activities": {

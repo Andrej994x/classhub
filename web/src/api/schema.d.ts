@@ -55,6 +55,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/w/{workspaceId}/activities/{activityId}/open": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Counts that a saved activity was opened again on its board (usage analytics, R3-P6; no user is recorded). */
+        post: operations["CountActivityOpened"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/w/{workspaceId}/activities/{activityId}/delete": {
         parameters: {
             query?: never;
@@ -2407,6 +2424,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/w/{workspaceId}/toolbox/{code}/open": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Counts that the workspace opened an active tool (usage analytics, R3-P6; no user is recorded). */
+        post: operations["CountToolOpened"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/admin/toolbox": {
         parameters: {
             query?: never;
@@ -2434,6 +2468,40 @@ export interface paths {
         get?: never;
         /** Change, feature, activate or deactivate a tool (tools are never deleted). */
         put: operations["UpdateTool"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/w/{workspaceId}/usage": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** How often this workspace opened each tool and created or reused activities on each board in the last 7, 30 or 90 days. */
+        get: operations["GetWorkspaceUsage"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/usage": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Platform-wide totals per tool and board and per day, and how many workspaces used the toolbox (no workspace's own numbers). */
+        get: operations["GetPlatformUsage"];
+        put?: never;
         post?: never;
         delete?: never;
         options?: never;
@@ -2768,6 +2836,13 @@ export interface components {
             amountMinor: null | number | string;
             currency: null | string;
             reason: null | string;
+        };
+        BoardUsage: {
+            board: string;
+            /** Format: int32 */
+            created: number | string;
+            /** Format: int32 */
+            reused: number | string;
         };
         BookingDecisionRequest: {
             /** Format: int32 */
@@ -3658,6 +3733,19 @@ export interface components {
             /** Format: int32 */
             value: null | number | string;
         };
+        PlatformUsageResponse: {
+            /** Format: int32 */
+            days: number | string;
+            /** Format: date */
+            from: string;
+            /** Format: date */
+            to: string;
+            /** Format: int32 */
+            workspaces: number | string;
+            tools: components["schemas"]["ToolUsage"][];
+            boards: components["schemas"]["BoardUsage"][];
+            daily: components["schemas"]["UsageDay"][];
+        };
         PublicAttemptResult: {
             /** Format: uuid */
             attemptId: string;
@@ -4394,6 +4482,11 @@ export interface components {
             licenseNoteMk: null | string;
             licenseNoteEn: null | string;
         };
+        ToolUsage: {
+            code: string;
+            /** Format: int32 */
+            opens: number | string;
+        };
         TwoFactorLoginRequest: {
             code: null | string;
             recoveryCode: null | string;
@@ -4452,6 +4545,16 @@ export interface components {
             currency: null | string;
             locale: null | string;
         };
+        UsageDay: {
+            /** Format: date */
+            day: string;
+            /** Format: int32 */
+            toolOpens: number | string;
+            /** Format: int32 */
+            activitiesCreated: number | string;
+            /** Format: int32 */
+            activitiesReused: number | string;
+        };
         WorkingHoursItem: {
             dayOfWeek: components["schemas"]["DayOfWeek"];
             /** Format: time */
@@ -4469,6 +4572,16 @@ export interface components {
             role: string;
             /** Format: date-time */
             createdAtUtc: string;
+        };
+        WorkspaceUsageResponse: {
+            /** Format: int32 */
+            days: number | string;
+            /** Format: date */
+            from: string;
+            /** Format: date */
+            to: string;
+            tools: components["schemas"]["ToolUsage"][];
+            boards: components["schemas"]["BoardUsage"][];
         };
     };
     responses: never;
@@ -4621,6 +4734,27 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["ActivityResponse"];
                 };
+            };
+        };
+    };
+    CountActivityOpened: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                activityId: string;
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };
@@ -9380,6 +9514,27 @@ export interface operations {
             };
         };
     };
+    CountToolOpened: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                code: string;
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     ListAdminTools: {
         parameters: {
             query?: never;
@@ -9464,6 +9619,52 @@ export interface operations {
                 };
                 content: {
                     "application/problem+json": components["schemas"]["HttpValidationProblemDetails"];
+                };
+            };
+        };
+    };
+    GetWorkspaceUsage: {
+        parameters: {
+            query?: {
+                days?: number | string;
+            };
+            header?: never;
+            path: {
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorkspaceUsageResponse"];
+                };
+            };
+        };
+    };
+    GetPlatformUsage: {
+        parameters: {
+            query?: {
+                days?: number | string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlatformUsageResponse"];
                 };
             };
         };

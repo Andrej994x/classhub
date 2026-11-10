@@ -1,6 +1,6 @@
 import type { ExcalidrawImperativeAPI } from '@excalidraw/excalidraw/types';
 import { ArrowLeft } from 'lucide-react';
-import { lazy, Suspense, useRef, useState, type FormEvent } from 'react';
+import { lazy, Suspense, useEffect, useRef, useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router';
 import { ApiError, errorMessage } from '../../../api/errors.ts';
@@ -9,6 +9,7 @@ import { DRAWING_SCHEMA_VERSION, fromDocument, toDocument, type DrawingDocument 
 import { Alert } from '../../../components/ui/alert.tsx';
 import { Button } from '../../../components/ui/button.tsx';
 import { useActivity, useSaveActivity } from '../../../teacher/activities.ts';
+import { countActivityOpened } from '../../../teacher/usage.ts';
 import { useCatalog } from '../../../teacher/queries.ts';
 import { NotFoundContent } from '../Pages.tsx';
 
@@ -56,6 +57,14 @@ function Board({ workspaceId, loaded, onCreated }: { workspaceId: string; loaded
   const navigate = useNavigate();
   const catalog = useCatalog();
   const save = useSaveActivity(workspaceId);
+  // A saved activity opened again on its board is a reuse (counted once per opening; usage analytics, R3-P6).
+  const counted = useRef(false);
+  useEffect(() => {
+    if (loaded && !counted.current) {
+      counted.current = true;
+      countActivityOpened(workspaceId, loaded.id);
+    }
+  }, [loaded, workspaceId]);
   const api = useRef<ExcalidrawImperativeAPI | null>(null);
   const [initial] = useState(() => (loaded ? fromDocument(loaded.document) : EMPTY));
   const [title, setTitle] = useState(loaded?.title ?? '');

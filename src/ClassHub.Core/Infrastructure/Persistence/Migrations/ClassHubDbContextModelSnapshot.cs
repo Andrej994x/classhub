@@ -3791,6 +3791,39 @@ namespace ClassHub.Core.Infrastructure.Persistence.Migrations
                         });
                 });
 
+            modelBuilder.Entity("ClassHub.Core.Modules.Usage.Domain.UsageCounter", b =>
+                {
+                    b.Property<Guid>("WorkspaceId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateOnly>("Day")
+                        .HasColumnType("date");
+
+                    b.Property<byte>("Event")
+                        .HasColumnType("tinyint");
+
+                    b.Property<string>("Subject")
+                        .HasMaxLength(40)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(40)");
+
+                    b.Property<int>("Count")
+                        .HasColumnType("int");
+
+                    b.HasKey("WorkspaceId", "Day", "Event", "Subject");
+
+                    b.HasIndex("WorkspaceId");
+
+                    b.HasIndex("Day", "Event");
+
+                    b.ToTable("UsageCounters", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_UsageCounters_Count", "[Count] >= 0");
+
+                            t.HasCheckConstraint("CK_UsageCounters_Event", "[Event] BETWEEN 1 AND 3");
+                        });
+                });
+
             modelBuilder.Entity("ClassHub.Core.Modules.Workspaces.Domain.Workspace", b =>
                 {
                     b.Property<Guid>("Id")
@@ -4706,6 +4739,15 @@ namespace ClassHub.Core.Infrastructure.Persistence.Migrations
                     b.HasOne("ClassHub.Core.Modules.Toolbox.Domain.Tool", null)
                         .WithMany()
                         .HasForeignKey("ToolId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("ClassHub.Core.Modules.Usage.Domain.UsageCounter", b =>
+                {
+                    b.HasOne("ClassHub.Core.Modules.Workspaces.Domain.Workspace", null)
+                        .WithMany()
+                        .HasForeignKey("WorkspaceId")
                         .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
                 });

@@ -7,10 +7,10 @@ This is the live status of the autonomous implementation loop ([ROADMAP.md](ROAD
 | Field | Value |
 |---|---|
 | Release | R3 — Teaching Toolbox (R0, R1 and R2 complete) |
-| Current phase | R3-P5 — Geometry Board: functions & graphs |
-| Branch | `feature/r3-p5-geometry-functions` (from `main` @ `3051d65`) |
+| Current phase | R3-P6 — Usage analytics |
+| Branch | `feature/r3-p6-usage-analytics` (from `main` @ `ab34bfa`) |
 | Workflow step | 3 — implementation and local checks |
-| Next action | R3-P5 checks, Codex review and PR; then R3-P6 (usage analytics) |
+| Next action | R3-P6 checks, Codex review and PR; then R3-P7 (PWA & mobile) |
 | Open blockers | None. User actions (optional): direct-push probe (R0-P8); remove the now redundant required `pr-gate` check (see Decisions) |
 
 ## Phase status
@@ -59,8 +59,8 @@ Status values: `not started`, `in progress`, `in review` (PR open), `merged`, `b
 | R3-P2 | Activity Library | merged | `feature/r3-p2-activity-library` | [#39](https://github.com/Andrej994x/classhub/pull/39) | `c37747c` | 2 rounds: 1 × P2 fixed (deleting the last activity of a page); round 2 clean | green | Migration applied to local `ClassHubDb` |
 | R3-P3 | Drawing Board | merged | `feature/r3-p3-drawing-board` | [#40](https://github.com/Andrej994x/classhub/pull/40) | `9dfd7d7` | 5 rounds: 5 × P2 fixed (reopen after refresh/Back, reopen from the latest version, pasted images, stale saved confirmation, export made explicit); round 5 clean | green | Migration applied to local `ClassHubDb` |
 | R3-P4 | Geometry Board — constructions | merged | `feature/r3-p4-geometry-constructions` | [#41](https://github.com/Andrej994x/classhub/pull/41) | `3051d65` | 3 rounds: 2 × P2 fixed (dragged shapes saved with their points, object limit kept); round 3 clean | green | Migration applied to local `ClassHubDb` |
-| R3-P5 | Geometry Board — functions & graphs | in progress | `feature/r3-p5-geometry-functions` | | | | | Plan: safe expression parser (no eval) in the client and the same grammar in the API, function graphs in construction format v2 (multiple, removable), plotting via plain JS curves, tests with malicious input, E2E plot → save → reopen |
-| R3-P6 | Usage analytics | not started | | | | | | |
+| R3-P5 | Geometry Board — functions & graphs | merged | `feature/r3-p5-geometry-functions` | [#42](https://github.com/Andrej994x/classhub/pull/42) | `ab34bfa` | 5 rounds: 4 × P2 fixed (undefined values propagate, fixed curves, one term-length rule, malformed numbers refused); round 5 clean | green | No migration |
+| R3-P6 | Usage analytics | in progress | `feature/r3-p6-usage-analytics` | | | | | Plan: per-workspace daily counters (tools opened, activities created and reused) with atomic increments and no personal data; workspace view in the toolbox; staff view with platform totals only |
 | R3-P7 | PWA & mobile improvements | not started | | | | | | |
 | R3-P8 | Release 3 hardening | not started | | | | | | |
 | B-P1…B-P7 | MVP Beta | not started | | | | | | Needs the Beta blockers decided (ROADMAP J.4) |
