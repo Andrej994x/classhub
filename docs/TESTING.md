@@ -49,7 +49,7 @@ On a machine with little free memory, many local workers can exhaust Chromium's 
 - **Integration:** `ActivityTests` refuses drawings without elements or with images, embeds, files or untyped elements. `ToolboxTests` sees the drawing board in the toolbox, and the geometry board still hidden.
 - **Vitest:**
   - `scene.test.ts`: the scene round-trips unchanged; images, embeds and deleted elements are never saved; damaged content opens as an empty or partial drawing.
-  - `DrawingBoardPage.test.tsx` (Excalidraw replaced by a stand-in with the same contract): the first save creates the activity without images and the page becomes it, with no reload; later saves change it; a reopened activity saves with the loaded version.
+  - `DrawingBoardPage.test.tsx` (Excalidraw replaced by a stand-in with the same contract): the first save creates the activity without images and the page becomes it, with no reload; later saves change it; a reopened activity saves with the loaded version. After a refresh or Back (navigation state left over) the saved activity is loaded, never an empty board; a reopened board starts from the latest version, never a cached older one (both fail on the code before).
 - **E2E:** `drawing.spec.ts`, **draw → save → reopen** on a desktop and on a tablet (iPad).
   - Draw a rectangle, save it, open it again from the library and save again: the rectangle is still in the document.
   - The board's font loads from ClassHub; no request to another host completes, and every foreign attempt was blocked by the CSP.

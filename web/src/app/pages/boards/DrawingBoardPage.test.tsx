@@ -85,4 +85,51 @@ describe('drawing board', () => {
     expect(api.to(`${BASE}/a1`, 'PUT')[0]!.body).toMatchObject({ version: 4, document: { elements: [rectangle] } });
     expect(api.to(BASE, 'POST')).toHaveLength(0);
   });
+
+  it('loads the saved activity after a refresh or Back, also when navigation state is left over', async () => {
+    const api = fakeApi({
+      me: teacher(),
+      extra: [
+        (call: FakeCall) =>
+          call.path === `${BASE}/a1` && call.method === 'GET'
+            ? json(200, { id: 'a1', title: 'Агли', subjectId: null, toolType: 'drawing-board', schemaVersion: 1, document: { elements: [rectangle] }, version: 2, sizeBytes: 50, createdAtUtc: '', updatedAtUtc: '' })
+            : undefined,
+      ],
+    });
+    const { router } = await renderRoute(`/app/w/${WORKSPACE_ID}/activities`);
+    // A fresh page (as after a refresh) arriving with the state an earlier save left behind.
+    await router.navigate(`/app/w/${WORKSPACE_ID}/toolbox/drawing-board?activity=a1`, { state: { createdId: 'a1' } });
+
+    expect(await screen.findByText('board: 1 elements')).toBeInTheDocument();
+    expect(screen.getByLabelText('Наслов')).toHaveValue('Агли');
+    expect(api.to(`${BASE}/a1`, 'GET').length).toBeGreaterThan(0);
+  });
+
+  it('reopens with the latest version, not a cached older one', async () => {
+    const user = userEvent.setup();
+    let current = { title: 'Агли', version: 4 };
+    const api = fakeApi({
+      me: teacher(),
+      extra: [
+        (call: FakeCall) => {
+          if (call.path === `${BASE}/a1` && call.method === 'GET') return json(200, { id: 'a1', ...current, subjectId: null, toolType: 'drawing-board', schemaVersion: 1, document: { elements: [rectangle] }, sizeBytes: 50, createdAtUtc: '', updatedAtUtc: '' });
+          if (call.path === `${BASE}/a1` && call.method === 'PUT') return json(200, { id: 'a1', ...(call.body as object), version: current.version + 1, sizeBytes: 50, createdAtUtc: '', updatedAtUtc: '' });
+          return undefined;
+        },
+      ],
+    });
+    const { router } = await renderRoute(`/app/w/${WORKSPACE_ID}/toolbox/drawing-board?activity=a1`);
+    expect(await screen.findByLabelText('Наслов')).toHaveValue('Агли');
+
+    // Away to the library; meanwhile the activity is renamed elsewhere (version 5); then opened again.
+    await router.navigate(`/app/w/${WORKSPACE_ID}/activities`);
+    expect(await screen.findByRole('heading', { level: 1, name: 'Библиотека на активности' })).toBeInTheDocument();
+    current = { title: 'Агли — повторување', version: 5 };
+    await router.navigate(`/app/w/${WORKSPACE_ID}/toolbox/drawing-board?activity=a1`);
+
+    expect(await screen.findByDisplayValue('Агли — повторување')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Зачувај во библиотеката' }));
+    await expect.poll(() => api.to(`${BASE}/a1`, 'PUT').length).toBe(1);
+    expect(api.to(`${BASE}/a1`, 'PUT')[0]!.body).toMatchObject({ title: 'Агли — повторување', version: 5 });
+  });
 });

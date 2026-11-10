@@ -2,7 +2,7 @@ import type { ExcalidrawImperativeAPI } from '@excalidraw/excalidraw/types';
 import { ArrowLeft } from 'lucide-react';
 import { lazy, Suspense, useRef, useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router';
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router';
 import { ApiError, errorMessage } from '../../../api/errors.ts';
 import { selfHostExcalidrawAssets } from '../../../boards/drawing/assets.ts';
 import { DRAWING_SCHEMA_VERSION, fromDocument, toDocument, type DrawingDocument } from '../../../boards/drawing/scene.ts';
@@ -31,24 +31,27 @@ export function DrawingBoardPage() {
   const { t } = useTranslation();
   const { workspaceId = '' } = useParams();
   const [search] = useSearchParams();
-  const location = useLocation();
   const activityId = search.get('activity');
-  // Just saved for the first time on this board: the board already holds it (no reload, the same board stays).
-  const justCreated = activityId !== null && (location.state as { createdId?: string } | null)?.createdId === activityId;
+  // The activity this mounted page has just created: its board already holds it (no reload, the same board stays).
+  // Page state, never navigation state: after a refresh or Back the page loads the activity like any other.
+  const [createdHere, setCreatedHere] = useState<string | null>(null);
+  const justCreated = activityId !== null && activityId === createdHere;
   const activity = useActivity(workspaceId, justCreated ? null : activityId);
 
-  if (justCreated) return <Board key="new" workspaceId={workspaceId} loaded={null} />;
+  if (justCreated) return <Board key="new" workspaceId={workspaceId} loaded={null} onCreated={setCreatedHere} />;
   if (activityId && activity.isError) {
     return activity.error instanceof ApiError && activity.error.status === 404 ? <NotFoundContent /> : <Alert variant="error">{errorMessage(activity.error, t)}</Alert>;
   }
-  if (activityId && !activity.data) return <output className="block">{t('common.loading')}</output>;
+  // Opened from the library: wait for this opening's fetch (never a cached, possibly older version), so the board
+  // starts from the latest title, scene and version; later background updates do not reset the board.
+  if (activityId && !activity.isFetchedAfterMount) return <output className="block">{t('common.loading')}</output>;
   // A new key when another activity opens: the board starts from that activity's scene.
-  return <Board key={activityId ?? 'new'} workspaceId={workspaceId} loaded={activity.data ?? null} />;
+  return <Board key={activityId ?? 'new'} workspaceId={workspaceId} loaded={activity.data ?? null} onCreated={setCreatedHere} />;
 }
 
 type Loaded = NonNullable<ReturnType<typeof useActivity>['data']>;
 
-function Board({ workspaceId, loaded }: { workspaceId: string; loaded: Loaded | null }) {
+function Board({ workspaceId, loaded, onCreated }: { workspaceId: string; loaded: Loaded | null; onCreated: (id: string) => void }) {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const catalog = useCatalog();
@@ -75,7 +78,8 @@ function Board({ workspaceId, loaded }: { workspaceId: string; loaded: Loaded | 
           if (!id) {
             // A new activity: from now on this board is that activity (later saves change it; the link reopens it).
             setId(result.id);
-            navigate(`/app/w/${workspaceId}/toolbox/drawing-board?activity=${result.id}`, { replace: true, state: { createdId: result.id } });
+            onCreated(result.id);
+            navigate(`/app/w/${workspaceId}/toolbox/drawing-board?activity=${result.id}`, { replace: true });
           }
         },
       },

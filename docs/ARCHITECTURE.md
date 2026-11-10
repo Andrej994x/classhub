@@ -104,7 +104,8 @@ Details and tests: [SECURITY.md](SECURITY.md#tenant-isolation-r0-p5).
   - The API (`ActivityRules.ContentProblem`) accepts only an `elements` array of at most 10 000 objects of the types rectangle, diamond, ellipse, arrow, line, freedraw, text and frame, with no `files`.
   - Opening is defensive: unknown content is dropped, not drawn.
 - **Saving:**
-  - The first save creates the activity, and the page becomes `?activity=…` on the same board (no reload).
+  - The first save creates the activity, and the page becomes `?activity=…` on the same board (no reload). Only the mounted page remembers this; a refresh or Back loads the activity.
+  - Opening waits for that opening's fetch, so the board starts from the latest version, never a cached older one.
   - Later saves change it with the version the board holds; a change elsewhere is a 409.
   - Reopening from the library loads the saved scene.
 
