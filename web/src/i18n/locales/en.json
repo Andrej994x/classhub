@@ -1654,7 +1654,15 @@
       },
       "board_one": "Geometry board with {{count}} object",
       "board_other": "Geometry board with {{count}} objects",
-      "full": "A construction holds at most {{max}} objects. Undo some steps or save it and start a new activity."
+      "full": "A construction holds at most {{max}} objects. Undo some steps or save it and start a new activity.",
+      "functions": {
+        "title": "Function graphs",
+        "term": "{{name}}(x) =",
+        "add": "Draw the graph",
+        "invalid": "Enter a term of x, for example x^2 - 2x + 1, 2sin(x) or sqrt(x). Allowed: numbers, x, pi, e, + - * / ^, parentheses and sin, cos, tan, asin, acos, atan, sqrt, abs, ln, log, exp.",
+        "list": "Graphs",
+        "remove": "Remove {{name}}"
+      }
     }
   }
 }

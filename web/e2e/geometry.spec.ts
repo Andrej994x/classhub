@@ -3,7 +3,7 @@ import { signedInTeacher, text, uniqueEmail, useLanguage } from './support.ts';
 
 const language = 'mk' as const;
 
-type Activity = { document: { format: string; objects: { id: string; type: string; x?: number; y?: number }[] } };
+type Activity = { document: { format: string; version?: number; objects: { id: string; type: string; x?: number; y?: number; term?: string }[] } };
 
 /**
  * R3-P4 acceptance: triangle → save → reopen. A teacher opens the geometry board from the toolbox, builds a triangle from
@@ -32,6 +32,7 @@ async function triangleSaveReopen(page: Page) {
 
   // Three clicks with the triangle tool.
   await page.getByRole('toolbar', { name: text(language, 'boards.geometry.tools') }).getByRole('button', { name: text(language, 'boards.geometry.tool.triangle') }).click();
+  await boardArea.scrollIntoViewIfNeeded();
   const box = (await boardArea.boundingBox())!;
   for (const [fx, fy] of [[0.3, 0.7], [0.7, 0.7], [0.3, 0.3]] as const) {
     await page.mouse.click(box.x + box.width * fx, box.y + box.height * fy);
@@ -50,6 +51,7 @@ async function triangleSaveReopen(page: Page) {
   // Move the whole triangle by dragging its inside: all three points move, and that is what is saved.
   await page.getByRole('toolbar', { name: text(language, 'boards.geometry.tools') }).getByRole('button', { name: text(language, 'boards.geometry.tool.move') }).click();
   // The saved message above the board moved it: measure it again.
+  await boardArea.scrollIntoViewIfNeeded();
   const now = (await boardArea.boundingBox())!;
   const inside = { x: now.x + now.width * 0.43, y: now.y + now.height * 0.57 };
   await page.mouse.move(inside.x, inside.y);
@@ -93,4 +95,49 @@ test('triangle → save → reopen on a tablet', async ({ browser }, testInfo) =
   } finally {
     await tablet.close();
   }
+});
+
+/**
+ * R3-P5 acceptance: plot → save → reopen. A function typed as a term of x is plotted (by ClassHub's safe parser, no eval:
+ * no CSP violation), saved in format version 2, reopened from the library and saved again unchanged.
+ */
+test('plot → save → reopen a function graph', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name === 'mobile', 'The geometry board is for desktops and tablets.');
+  const problems: string[] = [];
+  page.on('console', (message) => {
+    if (message.type() === 'error' && /Content Security Policy|EvalError/i.test(message.text())) problems.push(message.text());
+  });
+  await useLanguage(page, language);
+  const { workspaceId } = await signedInTeacher(page, uniqueEmail('graphs'));
+  await page.goto(`/app/w/${workspaceId}/toolbox/geometry-board`);
+  await expect(page.getByRole('application')).toBeVisible({ timeout: 30_000 });
+
+  const graphs = page.getByRole('form', { name: text(language, 'boards.geometry.functions.title') });
+  await graphs.getByLabel('f(x) =').fill('alert(1)');
+  await graphs.getByRole('button', { name: text(language, 'boards.geometry.functions.add') }).click();
+  await expect(page.getByText(text(language, 'boards.geometry.functions.invalid'))).toBeVisible();
+  await graphs.getByLabel('f(x) =').fill('x^2 - 2');
+  await graphs.getByRole('button', { name: text(language, 'boards.geometry.functions.add') }).click();
+  await expect(page.getByRole('list', { name: text(language, 'boards.geometry.functions.list') })).toContainText('f(x) = x^2 - 2');
+  await expect(page.getByRole('application')).toHaveAccessibleName(text(language, 'boards.geometry.board_one', { count: 1 }));
+  // The graph is drawn on the board (an SVG path from JSXGraph).
+  await expect(page.locator('.jxgbox svg path[stroke="#7c3aed"]')).toBeVisible();
+
+  await page.getByLabel(text(language, 'activities.titleField')).fill('Парабола');
+  await page.getByRole('button', { name: text(language, 'boards.save') }).click();
+  await expect(page.getByText(text(language, 'boards.saved'))).toBeVisible();
+  const id = new URL(page.url()).searchParams.get('activity')!;
+  const saved = (await (await page.request.get(`/api/w/${workspaceId}/activities/${id}`)).json()) as Activity;
+  expect(saved.document.version).toBe(2);
+  expect(saved.document.objects).toEqual([{ id: 'f', type: 'function', term: 'x^2 - 2' }]);
+
+  await page.goto(`/app/w/${workspaceId}/activities`);
+  await page.getByRole('link', { name: text(language, 'activities.open', { title: 'Парабола' }) }).click();
+  await expect(page.getByRole('list', { name: text(language, 'boards.geometry.functions.list') })).toContainText('f(x) = x^2 - 2', { timeout: 30_000 });
+  await page.getByLabel(text(language, 'activities.titleField')).fill('Парабола — повторување');
+  await page.getByRole('button', { name: text(language, 'boards.save') }).click();
+  await expect(page.getByText(text(language, 'boards.saved'))).toBeVisible();
+  const again = (await (await page.request.get(`/api/w/${workspaceId}/activities/${id}`)).json()) as Activity;
+  expect(again.document.objects).toEqual([{ id: 'f', type: 'function', term: 'x^2 - 2' }]);
+  expect(problems).toEqual([]);
 });

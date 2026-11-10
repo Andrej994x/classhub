@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router';
 import { ApiError, errorMessage } from '../../../api/errors.ts';
 import {
+  addFunction,
   addObject,
   addPoint,
   emptyConstruction,
@@ -12,6 +13,8 @@ import {
   hasRoom,
   MAX_OBJECTS,
   movePoints,
+  nextFunctionName,
+  removeFunction,
   POINTS_NEEDED,
   type Construction,
   type GeometryTool,
@@ -230,6 +233,65 @@ function Board({ workspaceId, loaded, onCreated }: { workspaceId: string; loaded
           />
         </Suspense>
       </div>
+      <FunctionsPanel construction={construction} onChange={change} />
     </section>
+  );
+}
+
+/** Function graphs (R3-P5): a term of x, read by the safe parser; each graph can be removed again. */
+function FunctionsPanel({ construction, onChange }: { construction: Construction; onChange: (next: Construction) => void }) {
+  const { t } = useTranslation();
+  const [term, setTerm] = useState('');
+  const [invalid, setInvalid] = useState(false);
+  const functions = construction.objects.filter((o) => o.type === 'function');
+  const name = nextFunctionName(construction);
+
+  const add = (event: FormEvent) => {
+    event.preventDefault();
+    const next = addFunction(construction, term);
+    setInvalid(next === null);
+    if (next) {
+      onChange(next);
+      setTerm('');
+    }
+  };
+
+  return (
+    <div className="flex flex-col gap-2 rounded-lg border border-border p-3">
+      <form onSubmit={add} aria-label={t('boards.geometry.functions.title')} className="flex flex-wrap items-end gap-2">
+        <label className="flex min-w-[14rem] flex-1 flex-col gap-1 text-sm font-medium">
+          {t('boards.geometry.functions.term', { name })}
+          <input
+            className={field}
+            value={term}
+            maxLength={200}
+            spellCheck={false}
+            autoComplete="off"
+            aria-invalid={invalid}
+            placeholder="x^2 - 2x + 1"
+            onChange={(e) => {
+              setTerm(e.target.value);
+              setInvalid(false);
+            }}
+          />
+        </label>
+        <Button type="submit" variant="outline" disabled={!term.trim()}>
+          {t('boards.geometry.functions.add')}
+        </Button>
+      </form>
+      {invalid && <Alert variant="error">{t('boards.geometry.functions.invalid')}</Alert>}
+      {functions.length > 0 && (
+        <ul aria-label={t('boards.geometry.functions.list')} className="flex flex-col gap-1 text-sm">
+          {functions.map((f) => (
+            <li key={f.id} className="flex items-center justify-between gap-2">
+              <code>{`${f.id}(x) = ${f.term}`}</code>
+              <Button type="button" size="sm" variant="outline" onClick={() => onChange(removeFunction(construction, f.id))}>
+                {t('boards.geometry.functions.remove', { name: f.id })}
+              </Button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
   );
 }

@@ -43,6 +43,22 @@ Flows (each in **mk and en**, on **desktop and mobile**): register → dev mailb
 
 On a machine with little free memory, many local workers can exhaust Chromium's blob storage: a request then fails in the browser (`net::ERR_BLOB_OUT_OF_MEMORY` in the trace's network log) and the app shows "no connection to the server", in any test. Run with fewer workers (`npx playwright test --workers=3`; CI uses 2) rather than retrying.
 
+## Function graph tests (R3-P5)
+
+- **Vitest:** `expression.test.ts` (the safe parser).
+  - The usual school terms: precedence, right-associative powers, implicit multiplication, decimal comma, functions and constants. Undefined points are gaps.
+  - **Malicious and invalid input is refused:** `alert(1)`, `eval(x)`, `Function(...)`, `x.constructor`, `__proto__`, `this`, `window`, `;`, `=>`, `=`, template strings, HTML, unknown variables, missing parentheses, `^^`, `..`, indexing, commas.
+  - Limits on length, nesting and size.
+- **Vitest:** `construction.test.ts`.
+  - Functions named f, g, h …; invalid terms add nothing; remove; version 1 documents open as version 2.
+  - Graphs are drawn as curves of plain functions (never a string for JSXGraph to evaluate).
+- **Vitest:** `GeometryBoardPage.test.tsx`: an invalid term shows the hint and adds nothing; valid graphs are listed, removed and saved in version 2.
+- **Unit:** `ActivityRulesTests`.
+  - The C# grammar accepts and refuses the same cases, with limits.
+  - Function graphs are accepted only in format version 2, with valid terms.
+- **Integration:** `ActivityTests`: function objects are refused in version 1 and with malicious terms; a valid version 2 graph is kept as written.
+- **E2E:** `geometry.spec.ts`, **plot → save → reopen**. An invalid term shows the hint; `x^2 - 2` is drawn as a visible SVG path; it is saved in version 2, reopened from the library and saved again unchanged. No CSP or eval errors.
+
 ## Geometry Board tests (R3-P4)
 
 - **Unit:** `ActivityRulesTests`: constructions with known objects on distinct, earlier points and a valid view. Missing format, wrong coordinates, duplicate names, self-references, forward references, unknown types (a `function`), unsafe names and a malformed view are refused. `ToolRulesTests`: only shipped boards can be active.

@@ -89,6 +89,16 @@ Details and tests: [SECURITY.md](SECURITY.md#tenant-isolation-r0-p5).
 - API access: `src/api/client.ts` wraps `openapi-fetch` with the generated types. It sends cookies, keeps the antiforgery request token in memory, fetches it from `GET /api/auth/antiforgery` before the first unsafe request, adopts tokens re-issued in the `X-XSRF-TOKEN` response header, retries once on `ANTIFORGERY_INVALID`, and turns ProblemDetails into `ApiError`. `errorMessage()` shows only translated messages for error codes, never server text. TanStack Query is provided in `src/app/Providers.tsx`.
 - Hosting: `npm run build` writes to `src/ClassHub.Api/wwwroot/dist` (git-ignored, base `/dist/`). `Platform/SpaHosting.cs` serves static files before routing (hashed `/dist/assets` immutable, everything else `no-cache`) and maps `dist/index.html` as the fallback for the SPA prefixes only (`/` is the Razor landing page since R1-P4; the SPA's `/` route hands over with a full page load). `/api`, health checks and unknown paths never get the SPA, and the deny-by-default policy still applies to them.
 
+## Geometry Board: functions and graphs (R3-P5)
+
+- **Safe expression parser** (`boards/geometry/expression.ts`): ClassHub's own tokenizer and recursive-descent parser.
+  - Allowed: numbers (decimal point or comma), `x`, `pi`, `e`, `+ - * / ^` (right-associative, binds tighter than a leading minus), parentheses, implicit multiplication (`2x`, `3(x+1)`, `x sin(x)`), and `sin cos tan asin acos atan sqrt abs ln log exp`.
+  - Limits: at most 200 characters, 100 levels of recursion (about 20 nested parentheses) and 200 nodes.
+  - Evaluation walks the tree; undefined points (`1/x` at 0, `sqrt(-1)`) are gaps.
+  - Never `eval`, `new Function` or JSXGraph's expression language: graphs are plain curves `(t, f(t))` across the visible x-range (JSXGraph's `functiongraph` would route the x-coordinate through its own expression engine).
+- **Construction format version 2:** adds `{ id, type: "function", term }` objects, named f, g, h, p, q, r, f1 … They are added from the "f(x) =" field below the board, listed with a remove button, and count toward the 2 000 objects. Version 1 documents open as version 2; the board saves version 2.
+- **The API checks terms** with the same grammar in C# (`GeometryTerms.IsValid`; never evaluated on the server). Function objects are accepted only in format version 2 (`ActivityRules.SupportedSchemaVersions`: geometry-board 1 and 2).
+
 ## Geometry Board: constructions (R3-P4)
 
 - **JSXGraph** (`jsxgraph` 1.14.2, MIT or LGPL-3.0) at `/app/w/{id}/toolbox/geometry-board[?activity=…]`.

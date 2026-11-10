@@ -49,7 +49,7 @@ public static class ActivityRules
     public static readonly IReadOnlyDictionary<string, IReadOnlyList<int>> SupportedSchemaVersions = new Dictionary<string, IReadOnlyList<int>>(StringComparer.Ordinal)
     {
         ["drawing-board"] = [1],
-        ["geometry-board"] = [1],
+        ["geometry-board"] = [1, 2],
     };
 
     public static IEnumerable<string> ToolTypes => SupportedSchemaVersions.Keys;
@@ -90,7 +90,8 @@ public static class ActivityRules
         (toolType, schemaVersion) switch
         {
             ("drawing-board", 1) => DrawingProblem(document),
-            ("geometry-board", 1) => GeometryProblem(document),
+            ("geometry-board", 1) => GeometryProblem(document, functions: false),
+            ("geometry-board", 2) => GeometryProblem(document, functions: true),
             _ => null,
         };
 
@@ -133,8 +134,9 @@ public static class ActivityRules
     /// <c>objects</c> array of at most <see cref="MaxGeometryObjects"/>, each with a unique name and a known type: free
     /// points with finite coordinates, segments and lines on two points, circles on a center and a point, triangles and
     /// angles on three points, always distinct points named before; an optional <c>view</c> (visible area, axes, grid).
+    /// Version 2 (R3-P5) also allows function graphs whose <c>term</c> is a term of x (<see cref="GeometryTerms"/>).
     /// </summary>
-    private static string? GeometryProblem(JsonElement document)
+    private static string? GeometryProblem(JsonElement document, bool functions)
     {
         if (!document.TryGetProperty("format", out var format) || format.ValueKind != JsonValueKind.String || format.GetString() != "classhub.geometry")
         {
@@ -169,11 +171,14 @@ public static class ActivityRules
                 "circle" => IsReference(o, "center", points) && IsReference(o, "through", points)
                     && o.GetProperty("center").GetString() != o.GetProperty("through").GetString(),
                 "triangle" or "angle" => References(o, "points", 3, points),
+                "function" => functions && o.TryGetProperty("term", out var term) && term.ValueKind == JsonValueKind.String && GeometryTerms.IsValid(term.GetString()),
                 _ => false,
             };
             if (!valid)
             {
-                return "Objects are points, segments, lines, circles, triangles or angles built on distinct points named before them.";
+                return functions
+                    ? "Objects are points, shapes built on distinct points named before them, or graphs of valid terms of x."
+                    : "Objects are points, segments, lines, circles, triangles or angles built on distinct points named before them.";
             }
 
             if (type == "point")
