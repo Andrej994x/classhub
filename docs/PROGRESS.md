@@ -7,11 +7,11 @@ This is the live status of the autonomous implementation loop ([ROADMAP.md](ROAD
 | Field | Value |
 |---|---|
 | Release | R3 — Teaching Toolbox (R0, R1 and R2 complete) |
-| Current phase | R3-P7 — PWA & mobile improvements |
-| Branch | `feature/r3-p7-pwa` (from `main` @ `6d83bbb`) |
+| Current phase | R3-P8 — Release 3 hardening |
+| Branch | `chore/r3-p8-hardening` (from `main` @ `fb054c9`) |
 | Workflow step | 3 — implementation and local checks |
-| Next action | R3-P7 checks, Codex review and PR; then R3-P8 (Release 3 hardening) |
-| Open blockers | None. User actions (optional): direct-push probe (R0-P8); remove the now redundant required `pr-gate` check (see Decisions) |
+| Next action | R3-P8 checks, Codex review and PR. Then **stop**: MVP Beta needs the owner's decisions on the Beta blockers (ROADMAP J.4) |
+| Open blockers | Before Beta: D-18 consent wording, D-19 CAPTCHA, D-27 export/deletion, D-28 hosting, D-29 final plan limits, a Resend account. User actions (optional): direct-push probe (R0-P8); remove the now redundant required `pr-gate` check (see Decisions) |
 
 ## Phase status
 
@@ -61,11 +61,36 @@ Status values: `not started`, `in progress`, `in review` (PR open), `merged`, `b
 | R3-P4 | Geometry Board — constructions | merged | `feature/r3-p4-geometry-constructions` | [#41](https://github.com/Andrej994x/classhub/pull/41) | `3051d65` | 3 rounds: 2 × P2 fixed (dragged shapes saved with their points, object limit kept); round 3 clean | green | Migration applied to local `ClassHubDb` |
 | R3-P5 | Geometry Board — functions & graphs | merged | `feature/r3-p5-geometry-functions` | [#42](https://github.com/Andrej994x/classhub/pull/42) | `ab34bfa` | 5 rounds: 4 × P2 fixed (undefined values propagate, fixed curves, one term-length rule, malformed numbers refused); round 5 clean | green | No migration |
 | R3-P6 | Usage analytics | merged | `feature/r3-p6-usage-analytics` | [#43](https://github.com/Andrej994x/classhub/pull/43) | `6d83bbb` | 1 round, clean | green | Migration applied to local `ClassHubDb` |
-| R3-P7 | PWA & mobile improvements | in progress | `feature/r3-p7-pwa` | | | | | Plan: installable app (mk/en manifests, icons, install prompt); a hand-written service worker for `/app/` and `/student/` only that caches hashed static files and an offline page, never API data; "best on tablet or computer" note on the boards; phone audit of the newer pages |
-| R3-P8 | Release 3 hardening | not started | | | | | | |
+| R3-P7 | PWA & mobile improvements | merged | `feature/r3-p7-pwa` | [#44](https://github.com/Andrej994x/classhub/pull/44) | `fb054c9` | 3 rounds: 3 × P2 fixed (best-effort cache storage, offline page at `/app` and `/student`, install offer kept from the sign-in page); round 3 clean | green | No migration |
+| R3-P8 | Release 3 hardening | in progress | `chore/r3-p8-hardening` | | | | | Release 3 journey (`release3.spec.ts`), release-level Codex review of all R3 changes, isolation sweep asserts the R3 routes, docs |
 | B-P1…B-P7 | MVP Beta | not started | | | | | | Needs the Beta blockers decided (ROADMAP J.4) |
 
 Release 3 and Beta come from [ROADMAP.md](ROADMAP.md) section D.
+
+## Release 3 — complete (2026-11-10, R3-P8)
+
+Definition of Done (ROADMAP D, R3-P1…P8) demonstrated:
+- **The toolbox journey**, through the UI in Playwright (`release3.spec.ts`):
+  1. A teacher finds tools by subject and by name and opens GeoGebra on its official site, in a new tab without an opener.
+  2. They plot a graph on the geometry board and save it with a subject.
+  3. They draw on the drawing board and save the drawing.
+  4. In the Activity Library they filter by board, duplicate, rename, reopen (the graph comes back) and delete; search finds the drawing.
+  5. The toolbox shows the workspace's own usage: each tool opened once, one graph created and reused twice, one drawing created.
+
+  No eval or script CSP violation, and no request completes to another host.
+- **Staff manage the toolbox** (`release3.spec.ts`): the platform owner, with the authenticator, adds an external tool on an approved site. A teacher finds and opens it at once, the platform usage totals count the open by tool code only, and once deactivated teachers no longer see it.
+- The per-phase suites cover the rest: `toolbox`, `drawing` (draw → save → reopen, images refused, self-hosted fonts), `geometry` (constructions, graphs, unsafe terms refused), `pwa` (worker scope, offline page, no API caching, phone audit).
+- **Isolation:** the workspace sweep (`IsolationSweepTests`) covers the Activity Library, the toolbox counter and the workspace usage (another teacher gets 404, anonymous callers 401). The admin sweep covers toolbox management and the platform usage (teachers get 403). The sweep now asserts that it sees these routes.
+- **Concurrency:** activity plan limit under parallel saves (applock), version conflicts on activity edits, twelve parallel tool opens counted exactly 12, and 8 workspaces × 36 parallel opens all counted.
+- **Usage counts lost under load (found in R3-P8, fixed):** a full integration run occasionally failed `Parallel_opens_are_all_counted`. A stress test reproduced it: with many workspaces counting first uses at once, the serializable `MERGE … WITH (HOLDLOCK)` deadlocked on shared key ranges and the best-effort recorder dropped the victims' counts (2 of 12 kept). Now an UPDATE-then-INSERT batch with row locks only, plus a deadlock retry. Test: `UsageTests.Parallel_first_uses_in_many_workspaces_are_all_counted`, which fails on the old code. The page-view counter (`SitePageViews`, R1) uses the same MERGE but did not reproduce under 12 sites × 12 parallel views; it is unchanged.
+- **Release-level Codex review** over all Release 3 changes (`codex review --base 3881062`, 98 files) found one P2: the drawing board's own Excalidraw menus stay in English for Macedonian users. **Not fixed; known limitation.** Excalidraw 0.18.1 ships no Macedonian locale and takes no custom one without patching the vendor bundle. All ClassHub controls around the board are localized, and the board says, in both languages, that its own menus are in English (ARCHITECTURE "Drawing Board"). Options for the owner: contribute a Macedonian translation to Excalidraw upstream and switch `langCode` when it ships, or accept English menus. Every phase PR carried signed, commit-bound evidence of its final review.
+- **Remaining provisional items** (they block Beta, not Release 3):
+  - D-18 consent wording
+  - D-19 CAPTCHA
+  - D-27 export/deletion
+  - D-28 hosting
+  - D-29 final plan limits
+  - the Resend account
 
 ## Release 2 — complete (2026-11-09, PR #37, `3881062`)
 

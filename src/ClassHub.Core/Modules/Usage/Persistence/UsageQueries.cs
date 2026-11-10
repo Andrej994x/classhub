@@ -2,6 +2,7 @@ using ClassHub.Core.Infrastructure.Persistence;
 using ClassHub.Core.Modules.Usage.Contracts;
 using ClassHub.Core.Modules.Usage.Domain;
 using ClassHub.Core.Modules.Workspaces.Contracts;
+using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -13,17 +14,48 @@ namespace ClassHub.Core.Modules.Usage.Persistence;
 /// </summary>
 internal sealed class UsageQueries(ClassHubDbContext db)
 {
-    /// <summary>One more use on the day, atomically (parallel uses never lose a count or collide on the key).</summary>
-    public Task IncrementAsync(Guid workspaceId, DateOnly day, UsageEvent usage, string subject, CancellationToken cancellationToken) =>
-        db.Database.ExecuteSqlAsync(
-            $"""
-            MERGE [UsageCounters] WITH (HOLDLOCK) AS t
-            USING (SELECT {workspaceId} AS [WorkspaceId], {day} AS [Day], {(byte)usage} AS [Event], {subject} AS [Subject]) AS s
-            ON t.[WorkspaceId] = s.[WorkspaceId] AND t.[Day] = s.[Day] AND t.[Event] = s.[Event] AND t.[Subject] = s.[Subject]
-            WHEN MATCHED THEN UPDATE SET t.[Count] = t.[Count] + 1
-            WHEN NOT MATCHED THEN INSERT ([WorkspaceId], [Day], [Event], [Subject], [Count]) VALUES (s.[WorkspaceId], s.[Day], s.[Event], s.[Subject], 1);
-            """,
-            cancellationToken);
+    private const int DeadlockVictim = 1205;
+    private const int MaxAttempts = 3;
+
+    /// <summary>
+    /// One more use on the day, atomically: parallel uses never lose a count. An UPDATE increments an existing row under
+    /// its row lock; only the first use of a day inserts. When two first uses race, the loser's INSERT hits the primary
+    /// key and it increments the winner's row instead. Only row locks are taken: a serializable MERGE (HOLDLOCK) locked
+    /// key ranges shared with other workspaces and lost counts to deadlocks under load. A deadlock is still retried.
+    /// Never called inside a transaction (the callers commit first), so a retry repeats only this statement.
+    /// </summary>
+    public async Task IncrementAsync(Guid workspaceId, DateOnly day, UsageEvent usage, string subject, CancellationToken cancellationToken)
+    {
+        for (var attempt = 1; ; attempt++)
+        {
+            try
+            {
+                await db.Database.ExecuteSqlAsync(
+                    $"""
+                    UPDATE [UsageCounters] SET [Count] = [Count] + 1
+                    WHERE [WorkspaceId] = {workspaceId} AND [Day] = {day} AND [Event] = {(byte)usage} AND [Subject] = {subject};
+                    IF @@ROWCOUNT = 0
+                    BEGIN
+                        BEGIN TRY
+                            INSERT INTO [UsageCounters] ([WorkspaceId], [Day], [Event], [Subject], [Count])
+                            VALUES ({workspaceId}, {day}, {(byte)usage}, {subject}, 1);
+                        END TRY
+                        BEGIN CATCH
+                            IF ERROR_NUMBER() NOT IN (2601, 2627) THROW;
+                            UPDATE [UsageCounters] SET [Count] = [Count] + 1
+                            WHERE [WorkspaceId] = {workspaceId} AND [Day] = {day} AND [Event] = {(byte)usage} AND [Subject] = {subject};
+                        END CATCH
+                    END
+                    """,
+                    cancellationToken);
+                return;
+            }
+            catch (SqlException ex) when (ex.Number == DeadlockVictim && attempt < MaxAttempts && db.Database.CurrentTransaction is null)
+            {
+                // Chosen as a deadlock victim: nothing was written; count again.
+            }
+        }
+    }
 
     private IQueryable<UsageCounter> AllWorkspaces(DateOnly from, DateOnly to) =>
         db.Set<UsageCounter>().IgnoreQueryFilters().AsNoTracking().Where(c => c.Day >= from && c.Day <= to);
