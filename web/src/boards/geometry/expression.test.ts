@@ -59,6 +59,12 @@ describe('safe expression parser', () => {
       '1..2',
       'x[0]',
       'x, 1',
+      '1.2.3',
+      '1,2,3',
+      '2.5.',
+      '2 3',
+      'x2',
+      '(x+1)2',
     ]) {
       expect({ term, ok: parseTerm(term).ok }).toEqual({ term, ok: false });
     }

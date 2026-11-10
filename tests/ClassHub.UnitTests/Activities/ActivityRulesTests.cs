@@ -83,6 +83,12 @@ public sealed class ActivityRulesTests
     [InlineData("(x", false)]
     [InlineData("1..2", false)]
     [InlineData("x[0]", false)]
+    [InlineData("1.2.3", false)]
+    [InlineData("1,2,3", false)]
+    [InlineData("2.5.", false)]
+    [InlineData("2 3", false)]
+    [InlineData("x2", false)]
+    [InlineData("(x+1)2", false)]
     public void Function_terms_follow_the_safe_grammar(string term, bool valid) => GeometryTerms.IsValid(term).ShouldBe(valid);
 
     [Fact]

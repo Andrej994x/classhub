@@ -6,7 +6,7 @@
  *
  * Grammar: sum := product (('+' | '-') product)*; product := unary (('*' | '/' | implicit) unary)*;
  * unary := '-' unary | power; power := primary ('^' unary)?; primary := number | 'x' | constant | fn '(' sum ')' | '(' sum ')'.
- * Implicit multiplication: "2x", "3(x+1)", "x sin(x)". Decimal point or comma ("2.5" and "2,5").
+ * Implicit multiplication: "2x", "3(x+1)", "x sin(x)" (never before a number). Decimal point or comma ("2.5" and "2,5").
  */
 export const MAX_TERM_LENGTH = 200;
 export const MAX_DEPTH = 100;
@@ -50,8 +50,10 @@ function tokenize(term: string): Token[] | null {
     } else if (/[0-9.,]/.test(c)) {
       const match = /^(\d+([.,]\d+)?|[.,]\d+)/.exec(term.slice(i));
       if (!match) return null;
-      tokens.push({ type: 'number', value: Number(match[0].replace(',', '.')) });
       i += match[0].length;
+      // A second decimal separator ("1.2.3", "1,2,3") is a malformed number, never two numbers.
+      if (i < term.length && (term[i] === '.' || term[i] === ',')) return null;
+      tokens.push({ type: 'number', value: Number(match[0].replace(',', '.')) });
     } else if (/[a-zA-Z]/.test(c)) {
       const match = /^[a-zA-Z]+/.exec(term.slice(i))!;
       tokens.push({ type: 'name', value: match[0].toLowerCase() });
@@ -107,10 +109,13 @@ class Parser {
     return left;
   }
 
-  /** Whether the next token starts a factor that multiplies implicitly ("2x", "3(x+1)", "x sin(x)"). */
+  /**
+   * Whether the next token starts a factor that multiplies implicitly ("2x", "3(x+1)", "x sin(x)"). Never a number:
+   * "2 3" or "x2" is refused rather than guessed.
+   */
   private startsImplicitFactor(): boolean {
     const token = this.peek();
-    return token !== undefined && (token.type === 'name' || token.type === 'number' || (token.type === 'op' && token.value === '('));
+    return token !== undefined && (token.type === 'name' || (token.type === 'op' && token.value === '('));
   }
 
   private product(depth: number): Node {

@@ -92,7 +92,7 @@ Details and tests: [SECURITY.md](SECURITY.md#tenant-isolation-r0-p5).
 ## Geometry Board: functions and graphs (R3-P5)
 
 - **Safe expression parser** (`boards/geometry/expression.ts`): ClassHub's own tokenizer and recursive-descent parser.
-  - Allowed: numbers (decimal point or comma), `x`, `pi`, `e`, `+ - * / ^` (right-associative, binds tighter than a leading minus), parentheses, implicit multiplication (`2x`, `3(x+1)`, `x sin(x)`), and `sin cos tan asin acos atan sqrt abs ln log exp`.
+  - Allowed: numbers (decimal point or comma), `x`, `pi`, `e`, `+ - * / ^` (right-associative, binds tighter than a leading minus), parentheses, implicit multiplication (`2x`, `3(x+1)`, `x sin(x)`; never before a number, and a second decimal separator is an error, so `1.2.3`, `2 3` and `x2` are refused), and `sin cos tan asin acos atan sqrt abs ln log exp`.
   - Limits: at most 200 characters, 100 levels of recursion (about 20 nested parentheses) and 200 nodes.
   - Evaluation walks the tree; undefined points (`1/x` at 0, `sqrt(-1)`) are gaps, and undefined stays undefined through everything built on it (`1/(1/x)` at 0, `sqrt(x)^0` for x < 0).
   - Never `eval`, `new Function` or JSXGraph's expression language: graphs are plain, fixed curves `(t, f(t))` across the visible x-range (a graph cannot be dragged away from its term) (JSXGraph's `functiongraph` would route the x-coordinate through its own expression engine).

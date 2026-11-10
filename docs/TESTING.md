@@ -47,7 +47,7 @@ On a machine with little free memory, many local workers can exhaust Chromium's 
 
 - **Vitest:** `expression.test.ts` (the safe parser).
   - The usual school terms: precedence, right-associative powers, implicit multiplication, decimal comma, functions and constants. Undefined points are gaps, and stay undefined through nested operations (fails without the propagation).
-  - **Malicious and invalid input is refused:** `alert(1)`, `eval(x)`, `Function(...)`, `x.constructor`, `__proto__`, `this`, `window`, `;`, `=>`, `=`, template strings, HTML, unknown variables, missing parentheses, `^^`, `..`, indexing, commas.
+  - **Malicious and invalid input is refused:** `alert(1)`, `eval(x)`, `Function(...)`, `x.constructor`, `__proto__`, `this`, `window`, `;`, `=>`, `=`, template strings, HTML, unknown variables, missing parentheses, `^^`, `..`, indexing, commas, malformed numbers (`1.2.3`, `1,2,3`) and numbers side by side (`2 3`, `x2`), in both parsers.
   - Limits on length, nesting and size.
 - **Vitest:** `construction.test.ts`.
   - Functions named f, g, h …; invalid terms add nothing; remove; version 1 documents open as version 2.

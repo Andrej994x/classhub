@@ -85,7 +85,8 @@ public static class GeometryTerms
                     }
                 }
 
-                if (i == start)
+                // A second decimal separator ("1.2.3", "1,2,3") is a malformed number, never two numbers.
+                if (i == start || (i < text.Length && text[i] is '.' or ','))
                 {
                     return null;
                 }
@@ -156,7 +157,8 @@ public static class GeometryTerms
             }
         }
 
-        private bool StartsImplicitFactor() => Peek is { } t && (t.Kind is Kind.Name or Kind.Number || (t.Kind == Kind.Op && t.Value == "("));
+        // Implicit multiplication never before a number: "2 3" or "x2" is refused rather than guessed.
+        private bool StartsImplicitFactor() => Peek is { } t && (t.Kind == Kind.Name || (t.Kind == Kind.Op && t.Value == "("));
 
         private void Product(int depth)
         {
