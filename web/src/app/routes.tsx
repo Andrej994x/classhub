@@ -23,6 +23,7 @@ import { MaterialPage, MaterialsPage } from './pages/materials/MaterialsPages.ts
 import { ToolboxPage } from './pages/toolbox/ToolboxPage.tsx';
 import { ActivityLibraryPage } from './pages/activities/ActivityLibraryPage.tsx';
 import { DrawingBoardPage } from './pages/boards/DrawingBoardPage.tsx';
+import { GeometryBoardPage } from './pages/boards/GeometryBoardPage.tsx';
 import { HomeworkEditPage, HomeworkPage, StudentHomeworkPage } from './pages/homework/HomeworkPages.tsx';
 import { FinancePage } from './pages/finance/FinancePages.tsx';
 import { BookingPage } from './pages/booking/BookingPage.tsx';
@@ -90,6 +91,7 @@ export const routes: RouteObject[] = [
       { path: 'w/:workspaceId/toolbox', element: <ToolboxPage /> },
       { path: 'w/:workspaceId/activities', element: <ActivityLibraryPage /> },
       { path: 'w/:workspaceId/toolbox/drawing-board', element: <DrawingBoardPage /> },
+      { path: 'w/:workspaceId/toolbox/geometry-board', element: <GeometryBoardPage /> },
       { path: 'w/:workspaceId/offers', element: <OffersPage /> },
       { path: 'w/:workspaceId/offers/new', element: <OfferEditPage /> },
       { path: 'w/:workspaceId/offers/:offerId', element: <OfferEditPage /> },

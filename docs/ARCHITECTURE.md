@@ -89,6 +89,39 @@ Details and tests: [SECURITY.md](SECURITY.md#tenant-isolation-r0-p5).
 - API access: `src/api/client.ts` wraps `openapi-fetch` with the generated types. It sends cookies, keeps the antiforgery request token in memory, fetches it from `GET /api/auth/antiforgery` before the first unsafe request, adopts tokens re-issued in the `X-XSRF-TOKEN` response header, retries once on `ANTIFORGERY_INVALID`, and turns ProblemDetails into `ApiError`. `errorMessage()` shows only translated messages for error codes, never server text. TanStack Query is provided in `src/app/Providers.tsx`.
 - Hosting: `npm run build` writes to `src/ClassHub.Api/wwwroot/dist` (git-ignored, base `/dist/`). `Platform/SpaHosting.cs` serves static files before routing (hashed `/dist/assets` immutable, everything else `no-cache`) and maps `dist/index.html` as the fallback for the SPA prefixes only (`/` is the Razor landing page since R1-P4; the SPA's `/` route hands over with a full page load). `/api`, health checks and unknown paths never get the SPA, and the deny-by-default policy still applies to them.
 
+## Geometry Board: constructions (R3-P4)
+
+- **JSXGraph** (`jsxgraph` 1.14.2, MIT or LGPL-3.0) at `/app/w/{id}/toolbox/geometry-board[?activity=…]`.
+  - Lazy-loaded, with its own chunk; its stylesheet comes through a Vite alias, since it is not in the package exports.
+  - It runs under the existing CSP: no eval for these objects (E2E checks the console).
+  - The toolbox lists the board (migration `ShipGeometryBoard`).
+- **ClassHub's own construction format (D-33, version 1)** (`boards/geometry/construction.ts`):
+
+  ```json
+  { "format": "classhub.geometry", "version": 1,
+    "view": { "boundingBox": [-8, 6, 8, -6], "axis": true, "grid": true },
+    "objects": [ { "id": "A", "type": "point", "x": 0, "y": 0 }, …,
+                 { "id": "t1", "type": "triangle", "points": ["A", "B", "C"] } ] }
+  ```
+
+  - Types: point (free, x/y), segment and line (2 points), circle (center, through), triangle and angle (3 points; for an angle the vertex is in the middle).
+  - Points are named A … Z, A1 …; coordinates are rounded to thousandths.
+  - The construction is the source of truth: `render.ts` maps it to JSXGraph elements (triangle → polygon), and the board is redrawn when it changes.
+  - Panning and zooming are not changes; the visible area is saved with the construction.
+- **Tools:** move (drag free points), point, segment, line, circle, triangle and angle.
+  - A tool collects its points by clicks: an existing point, or a new one on an empty spot.
+  - Undo is a button or Ctrl+Z; one click is one step.
+  - Axes and grid can be switched on and off.
+- **The API checks the same rules (`ActivityRules.GeometryProblem`):**
+  - `format`, and at most 2 000 objects;
+  - unique names `[A-Za-z0-9_']{1,40}`;
+  - known types, with finite coordinates within ±1 000 000;
+  - references only to distinct points named before;
+  - a valid `view`.
+
+  Opening is defensive: malformed objects are dropped, with what was built on them.
+- **Saving and reopening** work like the drawing board: the first save stays on the same board, versions are checked, reopening waits for the fresh activity, and "Saved" is shown only while the board matches.
+
 ## Drawing Board (R3-P3)
 
 - **Excalidraw** (`@excalidraw/excalidraw` 0.18.1, MIT) at `/app/w/{id}/toolbox/drawing-board[?activity=…]`.

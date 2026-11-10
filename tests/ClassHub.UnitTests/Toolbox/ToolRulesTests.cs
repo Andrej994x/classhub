@@ -29,6 +29,15 @@ public sealed class ToolRulesTests
     [InlineData("data:text/html,hi")]
     public void Other_links_are_refused(string? url) => ToolRules.IsAllowedUrl(url, Allowed).ShouldBeFalse();
 
+    [Theory]
+    [InlineData(ToolKind.External, null, true)]
+    [InlineData(ToolKind.BuiltIn, "drawing-board", true)]
+    [InlineData(ToolKind.BuiltIn, "geometry-board", true)]
+    [InlineData(ToolKind.BuiltIn, "chess-board", false)]
+    [InlineData(ToolKind.BuiltIn, null, false)]
+    public void Only_shipped_boards_can_be_active(ToolKind kind, string? key, bool canBeActive) =>
+        ToolRules.CanBeActive(kind, key).ShouldBe(canBeActive);
+
     [Fact]
     public void Overlong_links_are_refused() =>
         ToolRules.IsAllowedUrl("https://www.geogebra.org/" + new string('a', Tool.UrlMaxLength), Allowed).ShouldBeFalse();

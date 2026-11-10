@@ -20,6 +20,8 @@ public sealed class ActivityTests(ClassHubApiFixture fixture)
 {
     private static readonly JsonElement Scene = JsonDocument.Parse("""{"elements":[{"type":"rectangle","x":10,"y":20,"label":"Триаголник"}],"appState":{"grid":true}}""").RootElement;
 
+    private static readonly JsonElement Construction = JsonDocument.Parse("""{"format":"classhub.geometry","version":1,"objects":[{"id":"A","type":"point","x":0,"y":0},{"id":"B","type":"point","x":2,"y":0},{"id":"c1","type":"circle","center":"A","through":"B"}]}""").RootElement;
+
     private static CancellationToken Ct => TestContext.Current.CancellationToken;
 
     private static string Path(TeacherSession t, string rest = "") => $"/api/w/{t.WorkspaceId}/activities{rest}";
@@ -33,7 +35,7 @@ public sealed class ActivityTests(ClassHubApiFixture fixture)
         var saved = await ReadAsync<ActivityResponse>(await teacher.Client.PostAsync(Path(teacher), Body("Агли во триаголник", math, Scene)));
         (saved.ToolType, saved.SchemaVersion, saved.Version, saved.SubjectId).ShouldBe(("drawing-board", 1, 1, math));
         saved.Document.GetRawText().ShouldBe(Scene.GetRawText()); // the document round-trips unchanged
-        await ReadAsync<ActivityResponse>(await teacher.Client.PostAsync(Path(teacher), Body("Кругови", null, Scene, tool: "geometry-board")));
+        await ReadAsync<ActivityResponse>(await teacher.Client.PostAsync(Path(teacher), Body("Кругови", null, Construction, tool: "geometry-board")));
 
         var found = await teacher.Client.GetJsonAsync<ActivityListResponse>(Path(teacher, "?q=триаголник"));
         found.Items.ShouldHaveSingleItem().Id.ShouldBe(saved.Id);
@@ -89,6 +91,11 @@ public sealed class ActivityTests(ClassHubApiFixture fixture)
         await ExpectInvalidAsync(teacher, Body("Вградено", null, JsonDocument.Parse("""{"elements":[{"type":"embeddable","link":"https://example.com"}]}""").RootElement), "document");
         await ExpectInvalidAsync(teacher, Body("Датотеки", null, JsonDocument.Parse("""{"elements":[],"files":{"f1":{"dataURL":"data:image/png;base64,AAAA"}}}""").RootElement), "document");
         await ExpectInvalidAsync(teacher, Body("Без тип", null, JsonDocument.Parse("""{"elements":[{"x":1}]}""").RootElement), "document");
+
+        // The geometry board's construction (R3-P4, D-33): known objects on distinct points named before them.
+        await ExpectInvalidAsync(teacher, Body("Без формат", null, JsonDocument.Parse("""{"objects":[]}""").RootElement, tool: "geometry-board"), "document");
+        await ExpectInvalidAsync(teacher, Body("Недостасува точка", null, JsonDocument.Parse("""{"format":"classhub.geometry","objects":[{"id":"s1","type":"segment","points":["A","B"]}]}""").RootElement, tool: "geometry-board"), "document");
+        await ExpectInvalidAsync(teacher, Body("Функција", null, JsonDocument.Parse("""{"format":"classhub.geometry","objects":[{"id":"f","type":"function","term":"alert(1)"}]}""").RootElement, tool: "geometry-board"), "document");
 
         // The size limit (lowered here to 100 bytes): a larger document is refused, a smaller one saved.
         using var small = fixture.Factory.WithWebHostBuilder(builder => builder.UseSetting("Activities:MaxDocumentBytes", "100"));

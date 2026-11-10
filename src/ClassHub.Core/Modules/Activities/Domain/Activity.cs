@@ -78,18 +78,24 @@ public static class ActivityRules
 
     public const int MaxDrawingElements = 10_000;
 
+    public const int MaxGeometryObjects = 2000;
+    public const double GeometryCoordinateLimit = 1_000_000;
+
     /// <summary>
     /// What is wrong with the document's content for its board (null: nothing). The drawing board (v1): an
     /// <c>elements</c> array of at most <see cref="MaxDrawingElements"/> objects of the allowed types, no files, an
-    /// optional <c>appState</c> object. The geometry board's checks come with that board (R3-P4).
+    /// optional <c>appState</c> object. The geometry board (v1, D-33): see <see cref="GeometryProblem"/>.
     /// </summary>
-    public static string? ContentProblem(string toolType, int schemaVersion, JsonElement document)
-    {
-        if (toolType != "drawing-board" || schemaVersion != 1)
+    public static string? ContentProblem(string toolType, int schemaVersion, JsonElement document) =>
+        (toolType, schemaVersion) switch
         {
-            return null;
-        }
+            ("drawing-board", 1) => DrawingProblem(document),
+            ("geometry-board", 1) => GeometryProblem(document),
+            _ => null,
+        };
 
+    private static string? DrawingProblem(JsonElement document)
+    {
         if (!document.TryGetProperty("elements", out var elements) || elements.ValueKind != JsonValueKind.Array)
         {
             return "A drawing needs its list of elements.";
@@ -120,6 +126,97 @@ public static class ActivityRules
         }
 
         return null;
+    }
+
+    /// <summary>
+    /// The geometry board's construction (v1, ClassHub's own format, D-33): <c>format</c> "classhub.geometry"; an
+    /// <c>objects</c> array of at most <see cref="MaxGeometryObjects"/>, each with a unique name and a known type: free
+    /// points with finite coordinates, segments and lines on two points, circles on a center and a point, triangles and
+    /// angles on three points, always distinct points named before; an optional <c>view</c> (visible area, axes, grid).
+    /// </summary>
+    private static string? GeometryProblem(JsonElement document)
+    {
+        if (!document.TryGetProperty("format", out var format) || format.ValueKind != JsonValueKind.String || format.GetString() != "classhub.geometry")
+        {
+            return "A construction names its format (classhub.geometry).";
+        }
+
+        if (!document.TryGetProperty("objects", out var objects) || objects.ValueKind != JsonValueKind.Array)
+        {
+            return "A construction needs its list of objects.";
+        }
+
+        if (objects.GetArrayLength() > MaxGeometryObjects)
+        {
+            return $"A construction has at most {MaxGeometryObjects} objects.";
+        }
+
+        var names = new HashSet<string>(StringComparer.Ordinal);
+        var points = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var o in objects.EnumerateArray())
+        {
+            if (o.ValueKind != JsonValueKind.Object || !o.TryGetProperty("id", out var idValue) || idValue.ValueKind != JsonValueKind.String
+                || !IsGeometryName(idValue.GetString()!) || !names.Add(idValue.GetString()!))
+            {
+                return "Every object has its own name (letters, digits, _ and ', up to 40).";
+            }
+
+            var type = o.TryGetProperty("type", out var typeValue) && typeValue.ValueKind == JsonValueKind.String ? typeValue.GetString() : null;
+            var valid = type switch
+            {
+                "point" => IsCoordinate(o, "x") && IsCoordinate(o, "y"),
+                "segment" or "line" => References(o, "points", 2, points),
+                "circle" => IsReference(o, "center", points) && IsReference(o, "through", points)
+                    && o.GetProperty("center").GetString() != o.GetProperty("through").GetString(),
+                "triangle" or "angle" => References(o, "points", 3, points),
+                _ => false,
+            };
+            if (!valid)
+            {
+                return "Objects are points, segments, lines, circles, triangles or angles built on distinct points named before them.";
+            }
+
+            if (type == "point")
+            {
+                points.Add(idValue.GetString()!);
+            }
+        }
+
+        if (document.TryGetProperty("view", out var view))
+        {
+            var box = view.ValueKind == JsonValueKind.Object && view.TryGetProperty("boundingBox", out var b) ? b : default;
+            if (view.ValueKind != JsonValueKind.Object
+                || (box.ValueKind != JsonValueKind.Undefined && (box.ValueKind != JsonValueKind.Array || box.GetArrayLength() != 4 || !box.EnumerateArray().All(IsFinite)))
+                || (view.TryGetProperty("axis", out var axis) && axis.ValueKind is not (JsonValueKind.True or JsonValueKind.False))
+                || (view.TryGetProperty("grid", out var grid) && grid.ValueKind is not (JsonValueKind.True or JsonValueKind.False)))
+            {
+                return "The view is a visible area of four numbers and the axes and grid switches.";
+            }
+        }
+
+        return null;
+    }
+
+    private static bool IsGeometryName(string name) =>
+        name.Length is >= 1 and <= 40 && name.All(c => char.IsAsciiLetterOrDigit(c) || c is '_' or '\'');
+
+    private static bool IsFinite(JsonElement value) =>
+        value.ValueKind == JsonValueKind.Number && value.TryGetDouble(out var d) && double.IsFinite(d) && Math.Abs(d) <= GeometryCoordinateLimit;
+
+    private static bool IsCoordinate(JsonElement o, string name) => o.TryGetProperty(name, out var value) && IsFinite(value);
+
+    private static bool IsReference(JsonElement o, string name, HashSet<string> points) =>
+        o.TryGetProperty(name, out var value) && value.ValueKind == JsonValueKind.String && points.Contains(value.GetString()!);
+
+    private static bool References(JsonElement o, string name, int count, HashSet<string> points)
+    {
+        if (!o.TryGetProperty(name, out var list) || list.ValueKind != JsonValueKind.Array || list.GetArrayLength() != count)
+        {
+            return false;
+        }
+
+        var ids = list.EnumerateArray().Select(v => v.ValueKind == JsonValueKind.String ? v.GetString() : null).ToList();
+        return ids.All(id => id is not null && points.Contains(id)) && ids.Distinct(StringComparer.Ordinal).Count() == count;
     }
 
     /// <summary>"Title (copy)", cut so it still fits.</summary>
