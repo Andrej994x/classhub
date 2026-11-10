@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { addObject, addPoint, emptyConstruction, fromDocument, movePoint, movePoints, nextPointName, type Construction } from './construction.ts';
+import { addObject, addPoint, emptyConstruction, fromDocument, hasRoom, MAX_OBJECTS, movePoint, movePoints, nextPointName, type Construction } from './construction.ts';
 import { boardElementType, renderConstruction } from './render.ts';
 
 function triangle(): Construction {
@@ -26,6 +26,12 @@ describe('geometry construction (format v1, D-33)', () => {
       { id: 'c1', type: 'circle', center: 'A', through: 'C' },
       { id: 'a1', type: 'angle', points: ['B', 'A', 'C'] },
     ]);
+  });
+
+  it('knows how much still fits', () => {
+    const full = { ...emptyConstruction(), objects: Array.from({ length: MAX_OBJECTS - 1 }, (_, i) => ({ id: `P${i}`, type: 'point' as const, x: 0, y: 0 })) };
+    expect(hasRoom(full, 1)).toBe(true);
+    expect(hasRoom(full, 2)).toBe(false);
   });
 
   it('builds nothing from repeated, missing or too few points', () => {

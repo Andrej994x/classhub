@@ -27,6 +27,9 @@ export const POINTS_NEEDED: Record<Exclude<GeometryTool, 'move'>, number> = { po
 const NAME = /^[A-Za-z0-9_']{1,40}$/;
 const finite = (n: unknown): n is number => typeof n === 'number' && Number.isFinite(n) && Math.abs(n) <= COORDINATE_LIMIT;
 
+/** Whether this many more objects fit (the API keeps constructions to {@link MAX_OBJECTS}). */
+export const hasRoom = (construction: Construction, adding: number) => construction.objects.length + adding <= MAX_OBJECTS;
+
 /** The next free point name: A … Z, then A1 … Z1, A2 … */
 export function nextPointName(construction: Construction): string {
   const used = new Set(construction.objects.map((o) => o.id));

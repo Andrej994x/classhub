@@ -73,4 +73,31 @@ describe('geometry board', () => {
     expect(body.document.view).toEqual({ boundingBox: [-8, 6, 8, -6], axis: true, grid: true });
     expect(await screen.findByText('Зачувано во Библиотеката на активности.')).toBeInTheDocument();
   });
+
+  it('stops at the object limit with a message instead of building an unsaveable construction', async () => {
+    const user = userEvent.setup();
+    // 1999 points: one more point fits, a point plus the shape it completes does not.
+    const objects = Array.from({ length: 1999 }, (_, i) => ({ id: `P${i}`, type: 'point', x: i % 50, y: Math.floor(i / 50) }));
+    fakeApi({
+      me: teacher(),
+      extra: [
+        (call: FakeCall) =>
+          call.path === `${BASE}/g1` && call.method === 'GET'
+            ? json(200, { id: 'g1', title: 'Голема', subjectId: null, toolType: 'geometry-board', schemaVersion: 1, document: { format: 'classhub.geometry', version: 1, objects }, version: 1, sizeBytes: 9, createdAtUtc: '', updatedAtUtc: '' })
+            : undefined,
+      ],
+    });
+    await renderRoute(`/app/w/${WORKSPACE_ID}/toolbox/geometry-board?activity=g1`);
+    expect(await screen.findByText('board: 1999 objects')).toBeInTheDocument();
+
+    const tools = screen.getByRole('toolbar', { name: 'Алатки за конструкција' });
+    await user.click(within(tools).getByRole('button', { name: 'Отсечка' }));
+    board.click({ pointId: 'P0' });
+    board.click({ x: 3, y: 3 }); // a new point and the segment: two more, one too many
+    expect(await screen.findByText(/Конструкцијата може да има најмногу 2000 објекти/)).toBeInTheDocument();
+    expect(screen.getByText('board: 1999 objects')).toBeInTheDocument();
+    board.click({ pointId: 'P1' }); // the segment alone fits
+    expect(await screen.findByText('board: 2000 objects')).toBeInTheDocument();
+    expect(screen.queryByText(/Конструкцијата може да има најмногу/)).not.toBeInTheDocument();
+  });
 });

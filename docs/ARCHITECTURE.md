@@ -111,6 +111,7 @@ Details and tests: [SECURITY.md](SECURITY.md#tenant-isolation-r0-p5).
 - **Tools:** move, point, segment, line, circle, triangle and angle. Move drags free points, or a shape (a triangle by its inside) with its points; when a drag ends, every point whose position changed is written to the construction at once, as one undo step.
   - A tool collects its points by clicks: an existing point, or a new one on an empty spot.
   - Undo is a button or Ctrl+Z; one click is one step.
+  - A click that would take the construction past the API's 2 000 objects (its new point and the shape it completes) changes nothing and says why, so a construction always stays saveable.
   - Axes and grid can be switched on and off.
 - **The API checks the same rules (`ActivityRules.GeometryProblem`):**
   - `format`, and at most 2 000 objects;

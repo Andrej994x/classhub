@@ -9,6 +9,8 @@ import {
   emptyConstruction,
   fromDocument,
   GEOMETRY_SCHEMA_VERSION,
+  hasRoom,
+  MAX_OBJECTS,
   movePoints,
   POINTS_NEEDED,
   type Construction,
@@ -69,6 +71,7 @@ function Board({ workspaceId, loaded, onCreated }: { workspaceId: string; loaded
   const [id, setId] = useState<string | null>(loaded?.id ?? null);
   const [version, setVersion] = useState<number | null>(loaded ? Number(loaded.version) : null);
   const [savedAs, setSavedAs] = useState<string | null>(null);
+  const [full, setFull] = useState(false);
   const en = i18n.resolvedLanguage === 'en';
   const current = JSON.stringify([construction.objects, construction.view.axis, construction.view.grid, title.trim(), subjectId]);
   const selected = useMemo(() => (picked.length ? new Set(picked) : NO_SELECTION), [picked]);
@@ -81,6 +84,7 @@ function Board({ workspaceId, loaded, onCreated }: { workspaceId: string; loaded
 
   const undo = useCallback(() => {
     setPicked([]);
+    setFull(false);
     if (history.length === 0) return;
     setConstruction(history[history.length - 1]!);
     setHistory(history.slice(0, -1));
@@ -99,6 +103,13 @@ function Board({ workspaceId, loaded, onCreated }: { workspaceId: string; loaded
 
   const onTarget = (target: BoardTarget) => {
     if (tool === 'move') return;
+    // The click's new point (on an empty spot) and the object it completes must still fit, or nothing changes.
+    const completes = tool !== 'point' && (picked.length + ('pointId' in target && picked.includes(target.pointId) ? 0 : 1)) >= POINTS_NEEDED[tool];
+    if (!hasRoom(construction, ('pointId' in target ? 0 : 1) + (completes ? 1 : 0))) {
+      setFull(true);
+      return;
+    }
+    setFull(false);
     let next = construction;
     let pointId: string;
     if ('pointId' in target) {
@@ -177,6 +188,7 @@ function Board({ workspaceId, loaded, onCreated }: { workspaceId: string; loaded
       </form>
       {save.isError && <Alert variant="error">{errorMessage(save.error, t)}</Alert>}
       {savedAs === current && !save.isPending && <Alert variant="success">{t('boards.saved')}</Alert>}
+      {full && <Alert variant="warning">{t('boards.geometry.full', { max: MAX_OBJECTS })}</Alert>}
 
       <div role="toolbar" aria-label={t('boards.geometry.tools')} className="flex flex-wrap items-center gap-2">
         {TOOLS.map((name) => (

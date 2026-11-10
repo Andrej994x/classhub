@@ -1653,7 +1653,8 @@
         "pick_other": "Click points or empty spots ({{picked}} of {{count}}). For an angle: first point, the vertex, then the other point."
       },
       "board_one": "Geometry board with {{count}} object",
-      "board_other": "Geometry board with {{count}} objects"
+      "board_other": "Geometry board with {{count}} objects",
+      "full": "A construction holds at most {{max}} objects. Undo some steps or save it and start a new activity."
     }
   }
 }
