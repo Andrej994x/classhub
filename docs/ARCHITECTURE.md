@@ -108,7 +108,7 @@ Details and tests: [SECURITY.md](SECURITY.md#tenant-isolation-r0-p5).
   - `ActivityCreated`, per board;
   - `ActivityReused`, per board: a saved activity opened again or duplicated.
 
-  No user, student, visitor or time of day is stored. The increment is one atomic `MERGE … WITH (HOLDLOCK)` (`UsageQueries`), so parallel uses never lose a count.
+  No user, student, visitor or time of day is stored. The increment is one atomic batch with row locks only (`UsageQueries`): an UPDATE, and on a day's first use an INSERT whose primary-key race falls back to the UPDATE; a deadlock is retried. Parallel uses never lose a count. (Until R3-P8 it was a serializable `MERGE … WITH (HOLDLOCK)`, whose key-range locks deadlocked across workspaces under load and lost counts.)
 - **Recording** (`IUsageRecorder`, best effort: a failed count is logged and never fails what the teacher did):
   - `POST /api/w/{id}/toolbox/{code}/open` counts only tools teachers can see (active; a board only once shipped), otherwise 404. The toolbox cards call it when a tool is opened.
   - Activities count a creation when saved and a reuse when duplicated or opened again on a board (`POST /api/w/{id}/activities/{activityId}/open`, called once per opening).

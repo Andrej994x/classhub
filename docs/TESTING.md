@@ -43,6 +43,21 @@ Flows (each in **mk and en**, on **desktop and mobile**): register → dev mailb
 
 On a machine with little free memory, many local workers can exhaust Chromium's blob storage: a request then fails in the browser (`net::ERR_BLOB_OUT_OF_MEMORY` in the trace's network log) and the app shows "no connection to the server", in any test. Run with fewer workers (`npx playwright test --workers=3`; CI uses 2) rather than retrying.
 
+## Release 3 hardening (R3-P8)
+
+- **Release journey, E2E `release3.spec.ts`** (desktop; the boards are for desktops and tablets, and the phone audit is in `pwa.spec.ts`):
+  1. Toolbox: filter by subject (general tools stay listed) and search by name; GeoGebra opens on its official site in a new tab.
+  2. Geometry board: a graph of `sin(x)`, saved with a subject.
+  3. Drawing board: a rectangle, saved.
+  4. Activity Library: filter by board, duplicate, rename, reopen (the graph comes back), delete, search.
+  5. The usage card shows exactly the workspace's opens, creations and reuses.
+
+  No eval or script CSP violation; no request completes to another host.
+- **Staff journey** (same file): the platform owner enrolls the authenticator, adds an external tool on an approved site for mathematics. A teacher finds and opens it; the platform usage table counts it by code; once deactivated, teachers no longer find it.
+- **Usage under load:** `UsageTests.Parallel_first_uses_in_many_workspaces_are_all_counted`. Eight workspaces each open two tools 12 times in parallel, three rounds; every count arrives. It failed on the serializable MERGE (deadlocks dropped counts).
+- **Isolation sweep:** `IsolationSweepTests` now asserts that it sees the R3 routes: activities, duplicate, open, the toolbox counter and usage for workspaces, and toolbox management and usage for staff.
+- **Release-level Codex review** over all Release 3 changes (`codex review --base 3881062`): one P2, the drawing board's own menus in English. Recorded as a known limitation in PROGRESS (Excalidraw has no Macedonian locale).
+
 ## PWA tests (R3-P7)
 
 - **Integration:** `SpaHostingTests`. `/dist/sw.js` has `Service-Worker-Allowed: /` and `no-cache`; the manifest is `application/manifest+json`; other files never get the worker header.

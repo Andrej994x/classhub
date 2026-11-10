@@ -53,6 +53,11 @@ public sealed partial class IsolationSweepTests(ClassHubApiFixture fixture)
         using var anonymous = await ApiClient.CreateAsync(fixture);
         var routes = Routes("/api/w/{workspaceId");
         routes.Count.ShouldBeGreaterThan(30, "the sweep must see the R1 workspace endpoints");
+        // Release 3: the Activity Library, the toolbox count and the workspace usage are swept too.
+        foreach (var r3 in new[] { "/activities", "/activities/{activityId:guid}/duplicate", "/activities/{activityId:guid}/open", "/toolbox/{code}/open", "/usage" })
+        {
+            routes.ShouldContain(r => r.Pattern.TrimEnd('/').EndsWith(r3, StringComparison.Ordinal), $"the sweep must see {r3}");
+        }
 
         var leaks = new List<string>();
         foreach (var route in routes)
@@ -87,6 +92,8 @@ public sealed partial class IsolationSweepTests(ClassHubApiFixture fixture)
         using var anonymous = await ApiClient.CreateAsync(fixture);
         var routes = Routes("/api/admin");
         routes.Count.ShouldBeGreaterThan(15, "the sweep must see the R1 admin endpoints");
+        routes.ShouldContain(r => r.Pattern.TrimEnd('/') == "/api/admin/toolbox", "the sweep must see the R3 toolbox management");
+        routes.ShouldContain(r => r.Pattern.TrimEnd('/') == "/api/admin/usage", "the sweep must see the R3 platform usage");
 
         var leaks = new List<string>();
         foreach (var route in routes)

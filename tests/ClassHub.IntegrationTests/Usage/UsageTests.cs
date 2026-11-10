@@ -71,6 +71,45 @@ public sealed class UsageTests(ClassHubApiFixture fixture)
         (await Usage(teacher)).Tools.ShouldBe([new ToolUsage("phet", 12)]);
     }
 
+    /// <summary>
+    /// R3-P8 (release review): many workspaces counting their first uses at the same time. With a serializable MERGE the
+    /// key-range locks spanned neighbouring workspaces' keys, deadlocked, and the best-effort recorder dropped the
+    /// victims' counts (for example 2 of 12).
+    /// </summary>
+    [Fact]
+    public async Task Parallel_first_uses_in_many_workspaces_are_all_counted()
+    {
+        var teachers = new List<TeacherSession>();
+        for (var i = 0; i < 8; i++)
+        {
+            teachers.Add(await fixture.CreateTeacherAsync());
+        }
+
+        try
+        {
+            foreach (var code in new[] { "phet", "geogebra", "phet" })
+            {
+                await Task.WhenAll(teachers.SelectMany(teacher => Enumerable.Range(0, 12).Select(async _ =>
+                {
+                    using var response = await teacher.Client.PostAsync($"/api/w/{teacher.WorkspaceId}/toolbox/{code}/open", new { });
+                    response.StatusCode.ShouldBe(HttpStatusCode.NoContent);
+                })));
+            }
+
+            foreach (var teacher in teachers)
+            {
+                (await Usage(teacher)).Tools.OrderBy(t => t.Code, StringComparer.Ordinal).ShouldBe([new ToolUsage("geogebra", 12), new ToolUsage("phet", 24)]);
+            }
+        }
+        finally
+        {
+            foreach (var teacher in teachers)
+            {
+                teacher.Dispose();
+            }
+        }
+    }
+
     [Fact]
     public async Task Staff_see_platform_totals_only_and_teachers_cannot()
     {
