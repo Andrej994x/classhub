@@ -46,7 +46,12 @@ On a machine with little free memory, many local workers can exhaust Chromium's 
 ## PWA tests (R3-P7)
 
 - **Integration:** `SpaHostingTests`. `/dist/sw.js` has `Service-Worker-Allowed: /` and `no-cache`; the manifest is `application/manifest+json`; other files never get the worker header.
+- **Vitest:** `sw.test.ts` runs `public/sw.js` against stand-in worker globals.
+  - Assets come from the cache once fetched; **a failed cache write, open or read never costs the response** (quota exceeded).
+  - API requests, other methods and other origins are never answered by the worker.
+  - Pages come from the network; only without a connection the offline page.
 - **Vitest:** `pwa.test.tsx`.
+  - `/app` and `/student` are replaced by `/app/` and `/student/` (query and hash kept); `/apple-…`, `/students` and `/admin` are untouched.
   - The worker is registered only for `/app/` and `/student/`, only in production, and a refusal does not break the app.
   - The manifest link follows the UI language.
   - The install prompt appears only when the browser offers it, installs on request, disappears once installed, is not offered again after it is declined, and works without storage.

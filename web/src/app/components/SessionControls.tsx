@@ -22,7 +22,7 @@ export function AccountMenu() {
     <div className="flex items-center gap-2">
       {isPlatformStaff(me.data.platformRoles) &&
         (location.pathname.startsWith('/admin') ? (
-          <Link to="/app" className="inline-flex items-center gap-1 text-sm font-medium text-primary underline-offset-4 hover:underline">
+          <Link to="/app/" className="inline-flex items-center gap-1 text-sm font-medium text-primary underline-offset-4 hover:underline">
             <School className="h-4 w-4" aria-hidden />
             <span className="sr-only sm:not-sr-only">{t('layout.teacherArea')}</span>
           </Link>

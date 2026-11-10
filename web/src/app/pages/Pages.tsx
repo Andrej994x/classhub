@@ -30,7 +30,7 @@ export function TeacherHomePage() {
   if (workspaces.isError) return <Alert variant="error">{errorMessage(workspaces.error, t)}</Alert>;
   const first = workspaces.data[0];
   // A student account (R2-P3) has no workspace: its home is the student portal.
-  return first ? <Navigate to={`/app/w/${first.id}`} replace /> : <Navigate to="/student" replace />;
+  return first ? <Navigate to={`/app/w/${first.id}`} replace /> : <Navigate to="/student/" replace />;
 }
 
 /** `/app/w/:workspaceId`: the workspace dashboard. Other teachers' workspaces answer 404 ("not found"). */

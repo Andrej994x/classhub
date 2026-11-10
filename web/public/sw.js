@@ -36,14 +36,19 @@ async function trim(cache) {
   await Promise.all(assets.slice(0, Math.max(0, assets.length - MAX_ASSETS)).map((request) => cache.delete(request)));
 }
 
+// The cache is best effort: when storage fails (full, evicted, blocked), the asset still comes from the network.
 async function fromCacheOrNetwork(request) {
-  const cache = await caches.open(CACHE);
-  const cached = await cache.match(request);
+  const cache = await caches.open(CACHE).catch(() => null);
+  const cached = cache ? await cache.match(request).catch(() => undefined) : undefined;
   if (cached) return cached;
   const response = await fetch(request);
-  if (response.ok && response.type === 'basic') {
-    await cache.put(request, response.clone());
-    await trim(cache);
+  if (cache && response.ok && response.type === 'basic') {
+    try {
+      await cache.put(request, response.clone());
+      await trim(cache);
+    } catch {
+      // Not kept this time (for example QuotaExceededError); the response itself is fine.
+    }
   }
   return response;
 }
@@ -52,7 +57,7 @@ async function pageOrOffline(request) {
   try {
     return await fetch(request);
   } catch {
-    const offline = await caches.match(OFFLINE);
+    const offline = await caches.match(OFFLINE).catch(() => undefined);
     return offline ?? Response.error();
   }
 }

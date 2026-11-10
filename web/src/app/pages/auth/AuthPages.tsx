@@ -236,7 +236,7 @@ export function RegisterPage() {
       }),
   });
 
-  if (me.data) return <Navigate to="/app" replace />;
+  if (me.data) return <Navigate to="/app/" replace />;
 
   if (sentTo) {
     return (
@@ -321,7 +321,7 @@ export function VerifyEmailPage() {
       {alreadyConfirmed && <Alert variant="info">{t('errors.codes.EMAIL_ALREADY_CONFIRMED')}</Alert>}
       {confirm.isError && !alreadyConfirmed && <Alert variant="error">{errorMessage(confirm.error, t)}</Alert>}
       {(done || confirm.isError) && (
-        <Link className={buttonVariants()} to="/app">
+        <Link className={buttonVariants()} to="/app/">
           {t('auth.verify.continue')}
         </Link>
       )}

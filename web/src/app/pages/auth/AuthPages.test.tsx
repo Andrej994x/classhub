@@ -41,7 +41,7 @@ describe('sign in', () => {
     await user.click(screen.getByRole('button', { name: 'Најави се' }));
 
     expect(await screen.findByRole('heading', { level: 1, name: 'Мои часови' })).toBeInTheDocument();
-    expect(router.state.location.pathname).toBe('/student');
+    expect(router.state.location.pathname).toBe('/student/');
     expect(api.to('/api/auth/login')[0]).toMatchObject({ body: { email: 'ana@example.com', password: PASSWORD, rememberMe: false }, xsrf: 'xsrf' });
   });
 
@@ -230,7 +230,7 @@ describe('session controls', () => {
     await user.click(await screen.findByRole('button', { name: 'Одјава' }));
 
     expect(await screen.findByRole('alert')).toHaveTextContent('Одјавата не успеа');
-    expect(router.state.location.pathname).toBe('/student');
+    expect(router.state.location.pathname).toBe('/student/');
     expect(screen.getByRole('heading', { level: 1, name: 'Мои часови' })).toBeInTheDocument();
     expect(api.to('/api/auth/logout')).toHaveLength(1);
   });

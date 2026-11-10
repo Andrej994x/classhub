@@ -1,10 +1,29 @@
 import { useEffect, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router';
 
 /**
  * Progressive web app (R3-P7). The service worker (public/sw.js) is registered only for the SPA areas, never for the
  * public pages, and only in the production build (the API serves it with Service-Worker-Allowed: /).
  */
 export const PWA_SCOPES = ['/app/', '/student/'] as const;
+
+/**
+ * The area roots without the trailing slash ("/app", "/student") lie outside the worker's scopes, so they are replaced
+ * by "/app/" and "/student/" (same page) to keep the offline page working there too. Scopes without the slash would
+ * be plain string prefixes and also catch public teacher sites such as "/apple-…".
+ */
+export function withAreaSlash(pathname: string): string | null {
+  return pathname === '/app' || pathname === '/student' ? `${pathname}/` : null;
+}
+
+export function useAreaRootSlash() {
+  const { pathname, search, hash } = useLocation();
+  const navigate = useNavigate();
+  const target = withAreaSlash(pathname);
+  useEffect(() => {
+    if (target) void navigate({ pathname: target, search, hash }, { replace: true });
+  }, [target, search, hash, navigate]);
+}
 
 type ServiceWorkers = Pick<ServiceWorkerContainer, 'register'>;
 

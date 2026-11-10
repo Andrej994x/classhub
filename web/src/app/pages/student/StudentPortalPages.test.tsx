@@ -128,7 +128,7 @@ describe('student portal', () => {
     expect(await screen.findByRole('heading', { name: 'Математика со Ана' })).toBeInTheDocument();
     expect(screen.getByText('Вие сте Марко Стојанов')).toBeInTheDocument();
     expect(await screen.findByText('Математика')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Сите наставници' })).toHaveAttribute('href', '/student');
+    expect(screen.getByRole('link', { name: 'Сите наставници' })).toHaveAttribute('href', '/student/');
   });
 
   it('opens the only teacher directly, and another workspace is not found', async () => {

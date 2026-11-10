@@ -1,9 +1,11 @@
-import { act, render, screen } from '@testing-library/react';
+import { act, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { InstallApp } from '../app/components/InstallApp.tsx';
 import { i18n } from '../i18n/index.ts';
-import { manifestFor, PWA_SCOPES, registerServiceWorker } from './pwa.ts';
+import { fakeApi, teacher } from '../test/fakeApi.ts';
+import { renderRoute } from '../test/render.tsx';
+import { manifestFor, PWA_SCOPES, registerServiceWorker, withAreaSlash } from './pwa.ts';
 
 type Register = ServiceWorkerContainer['register'];
 
@@ -35,6 +37,33 @@ describe('service worker registration', () => {
     expect(() => registerServiceWorker(true, '/dist/', { register })).not.toThrow();
     await Promise.resolve();
     expect(register).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe('area roots inside the worker scopes', () => {
+  it('adds the slash only to the bare area roots', () => {
+    expect(withAreaSlash('/app')).toBe('/app/');
+    expect(withAreaSlash('/student')).toBe('/student/');
+    for (const path of ['/app/', '/app/w/1', '/student/', '/student/settings', '/apple-teacher', '/students', '/admin', '/']) {
+      expect(withAreaSlash(path)).toBeNull();
+    }
+  });
+
+  it('replaces /student with /student/ (the same page), keeping the query and hash', async () => {
+    fakeApi({ me: teacher() });
+    const { router } = await renderRoute('/student?from=menu#top');
+
+    expect(await screen.findByRole('heading', { level: 1, name: 'Мои часови' })).toBeInTheDocument();
+    await waitFor(() => expect(router.state.location).toMatchObject({ pathname: '/student/', search: '?from=menu', hash: '#top' }));
+    expect(router.state.historyAction).toBe('REPLACE');
+  });
+
+  it('replaces /app with /app/', async () => {
+    fakeApi({ me: teacher() });
+    const { router } = await renderRoute('/app');
+
+    await waitFor(() => expect(router.state.location.pathname).not.toBe('/app'));
+    expect(router.state.location.pathname.startsWith('/app/')).toBe(true);
   });
 });
 
