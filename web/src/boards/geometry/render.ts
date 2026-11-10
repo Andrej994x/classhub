@@ -61,6 +61,8 @@ export function renderConstruction(board: BoardLike, construction: Construction,
         const tree = parsed.tree;
         const edge = (index: 0 | 2) => () => (board.getBoundingBox?.() ?? [-10, 10, 10, -10])[index];
         element = board.create('curve', [(t: number) => t, (t: number) => evaluate(tree, t), edge(0), edge(2)], {
+          // The graph is its term: it cannot be dragged away from it (only points move).
+          fixed: true,
           name: `${object.id}(x)`,
           withLabel: true,
           strokeColor: '#7c3aed',

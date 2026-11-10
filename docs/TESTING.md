@@ -51,7 +51,7 @@ On a machine with little free memory, many local workers can exhaust Chromium's 
   - Limits on length, nesting and size.
 - **Vitest:** `construction.test.ts`.
   - Functions named f, g, h …; invalid terms add nothing; remove; version 1 documents open as version 2.
-  - Graphs are drawn as curves of plain functions (never a string for JSXGraph to evaluate).
+  - Graphs are drawn as fixed curves of plain functions (never a string for JSXGraph to evaluate, never draggable away from the term).
 - **Vitest:** `GeometryBoardPage.test.tsx`: an invalid term shows the hint and adds nothing; valid graphs are listed, removed and saved in version 2.
 - **Unit:** `ActivityRulesTests`.
   - The C# grammar accepts and refuses the same cases, with limits.

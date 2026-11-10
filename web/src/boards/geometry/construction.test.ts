@@ -110,9 +110,9 @@ describe('construction ↔ board mapping', () => {
   });
 
   it('plots functions through the safe evaluator, never a string for JSXGraph to evaluate', () => {
-    const calls: { type: string; parents: unknown[] }[] = [];
+    const calls: { type: string; parents: unknown[]; attributes?: Record<string, unknown> }[] = [];
     const board = {
-      create: (type: string, parents: unknown[]) => (calls.push({ type, parents }), {}),
+      create: (type: string, parents: unknown[], attributes?: Record<string, unknown>) => (calls.push({ type, parents, attributes }), {}),
       getBoundingBox: (): [number, number, number, number] => [-5, 4, 7, -4],
     };
     renderConstruction(board, addFunction(emptyConstruction(), 'x^2 - 1')!, { draggable: false, selected: new Set() });
@@ -124,5 +124,6 @@ describe('construction ↔ board mapping', () => {
     expect(y(3)).toBe(8);
     expect([from(), to()]).toEqual([-5, 7]);
     expect(calls[0]!.parents.every((p) => typeof p === 'function')).toBe(true);
+    expect(calls[0]!.attributes?.fixed).toBe(true); // a graph cannot be dragged away from its term
   });
 });
