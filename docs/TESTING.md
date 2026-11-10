@@ -43,6 +43,19 @@ Flows (each in **mk and en**, on **desktop and mobile**): register → dev mailb
 
 On a machine with little free memory, many local workers can exhaust Chromium's blob storage: a request then fails in the browser (`net::ERR_BLOB_OUT_OF_MEMORY` in the trace's network log) and the app shows "no connection to the server", in any test. Run with fewer workers (`npx playwright test --workers=3`; CI uses 2) rather than retrying.
 
+## Usage analytics tests (R3-P6)
+
+- **Integration:** `UsageTests`.
+  - **Opens, creations and reuses are counted for the workspace only.** Two GeoGebra opens and one drawing board open; a created drawing, duplicated and reopened.
+  - Unknown tools and other workspaces' activities give 404; an invalid period gives 400.
+  - Another workspace sees nothing and gets the cross-tenant 404.
+  - **Twelve parallel opens give exactly 12.**
+  - **Staff see platform totals only:** the response holds no workspace id; there are 7 days with today last, and teachers get 403.
+- **Vitest:** `Usage.test.tsx`.
+  - Opening a tool sends the count; the usage card shows the workspace's numbers.
+  - A saved activity opened on its board is counted once, a new drawing not at all.
+  - The staff page shows totals per tool, board and day (days without use left out) and switches the period.
+
 ## Function graph tests (R3-P5)
 
 - **Vitest:** `expression.test.ts` (the safe parser).

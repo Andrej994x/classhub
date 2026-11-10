@@ -89,6 +89,21 @@ Details and tests: [SECURITY.md](SECURITY.md#tenant-isolation-r0-p5).
 - API access: `src/api/client.ts` wraps `openapi-fetch` with the generated types. It sends cookies, keeps the antiforgery request token in memory, fetches it from `GET /api/auth/antiforgery` before the first unsafe request, adopts tokens re-issued in the `X-XSRF-TOKEN` response header, retries once on `ANTIFORGERY_INVALID`, and turns ProblemDetails into `ApiError`. `errorMessage()` shows only translated messages for error codes, never server text. TanStack Query is provided in `src/app/Providers.tsx`.
 - Hosting: `npm run build` writes to `src/ClassHub.Api/wwwroot/dist` (git-ignored, base `/dist/`). `Platform/SpaHosting.cs` serves static files before routing (hashed `/dist/assets` immutable, everything else `no-cache`) and maps `dist/index.html` as the fallback for the SPA prefixes only (`/` is the Razor landing page since R1-P4; the SPA's `/` route hands over with a full page load). `/api`, health checks and unknown paths never get the SPA, and the deny-by-default policy still applies to them.
 
+## Usage analytics (R3-P6)
+
+- **Module:** `Modules/Usage`. A `UsageCounter` is the number of times a workspace did one thing on one UTC day:
+  - `ToolOpened`, per tool code;
+  - `ActivityCreated`, per board;
+  - `ActivityReused`, per board: a saved activity opened again or duplicated.
+
+  No user, student, visitor or time of day is stored. The increment is one atomic `MERGE … WITH (HOLDLOCK)` (`UsageQueries`), so parallel uses never lose a count.
+- **Recording** (`IUsageRecorder`, best effort: a failed count is logged and never fails what the teacher did):
+  - `POST /api/w/{id}/toolbox/{code}/open` counts only tools teachers can see (active; a board only once shipped), otherwise 404. The toolbox cards call it when a tool is opened.
+  - Activities count a creation when saved and a reuse when duplicated or opened again on a board (`POST /api/w/{id}/activities/{activityId}/open`, called once per opening).
+- **Reading:**
+  - `GET /api/w/{id}/usage?days=7|30|90`: the workspace's own numbers through the tenant filter. The toolbox page shows them as "your use in the last 30 days".
+  - `GET /api/admin/usage?days=…` (staff): platform totals per tool and board, per day, and how many workspaces used the toolbox, never a workspace's own numbers or identity. Shown at `/admin/usage`.
+
 ## Geometry Board: functions and graphs (R3-P5)
 
 - **Safe expression parser** (`boards/geometry/expression.ts`): ClassHub's own tokenizer and recursive-descent parser.

@@ -88,6 +88,12 @@ ASP.NET Core Identity with cookie sessions. See [ARCHITECTURE.md](ARCHITECTURE.m
 - Names, phones and guardian contacts are redacted in logs.
 - No duplicates by email within a workspace (unique index) and no limit overrun under parallel requests (intake lock; tested).
 
+## Usage analytics (R3-P6)
+
+- **No personal data:** only per-workspace daily counts of tool openings and activity creations and reuses. No user, student, visitor, IP address or time of day is stored, and nothing about who opened what.
+- A workspace reads only its own counters (tenant filter; another workspace gets the cross-tenant 404). Staff see platform-wide totals and the number of active workspaces, never a workspace's id or numbers.
+- Counting is restricted: only tools teachers can see, and only the workspace's own activities, can be counted.
+
 ## Function terms (R3-P5)
 
 - **Terms are parsed, never executed as code.** The client's own parser builds a small syntax tree from an allow-list grammar (numbers, x, pi, e, operators, parentheses, eleven math functions); anything else is refused (`alert(1)`, `x.constructor`, `__proto__`, `${x}`, `x => x`, unknown names, unbalanced input).

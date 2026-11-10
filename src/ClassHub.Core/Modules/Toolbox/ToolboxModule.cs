@@ -5,6 +5,7 @@ using ClassHub.Core.Infrastructure.Web;
 using ClassHub.Core.Modules.Catalog.Contracts;
 using ClassHub.Core.Modules.Toolbox.Contracts;
 using ClassHub.Core.Modules.Toolbox.Domain;
+using ClassHub.Core.Modules.Usage.Contracts;
 using ClassHub.Core.Modules.Workspaces;
 using ClassHub.Core.SharedKernel.Errors;
 using ClassHub.Core.SharedKernel.Security;
@@ -48,6 +49,16 @@ public sealed class ToolboxModule : IModule
             .WithName("SearchToolbox")
             .WithSummary("Active tools matching a search (names and descriptions in both languages), a subject and a category; featured first.");
 
+        endpoints.MapGroup(WorkspacesModule.WorkspaceRoute).WithTags("Toolbox").RequireAntiforgeryHeader()
+            .MapPost("/toolbox/{code}/open", async (string code, ToolboxService service, CancellationToken ct) =>
+            {
+                await service.OpenedAsync(code, ct);
+                return TypedResults.NoContent();
+            })
+            .RequireAuthorization(WorkspacePolicies.Read)
+            .WithName("CountToolOpened")
+            .WithSummary("Counts that the workspace opened an active tool (usage analytics, R3-P6; no user is recorded).");
+
         var admin = endpoints.MapGroup("/admin/toolbox").WithTags("Admin").RequireAntiforgeryHeader().RequireAuthorization(ClassHubPolicies.PlatformStaff);
         admin.MapGet("", async (ToolboxService service, CancellationToken ct) => TypedResults.Ok(await service.ListAllAsync(ct)))
             .WithName("ListAdminTools");
@@ -64,8 +75,20 @@ public sealed class ToolboxModule : IModule
     }
 }
 
-internal sealed class ToolboxService(ClassHubDbContext db, ICatalogLookup catalog, IAuditLog audit, IOptions<ToolboxOptions> options, TimeProvider clock)
+internal sealed class ToolboxService(ClassHubDbContext db, ICatalogLookup catalog, IAuditLog audit, IOptions<ToolboxOptions> options, IUsageRecorder usage, TimeProvider clock)
 {
+    /// <summary>Counts an opened tool: only one teachers can see (active; a board only once it shipped).</summary>
+    public async Task OpenedAsync(string code, CancellationToken cancellationToken)
+    {
+        var tool = await db.Set<Tool>().AsNoTracking().Where(t => t.Code == code && t.IsActive).Select(t => new { t.Code, t.Kind, t.BuiltInKey }).SingleOrDefaultAsync(cancellationToken);
+        if (tool is null || !ToolRules.CanBeActive(tool.Kind, tool.BuiltInKey))
+        {
+            throw new NotFoundException();
+        }
+
+        await usage.RecordAsync(UsageEvent.ToolOpened, tool.Code, cancellationToken);
+    }
+
     public const int SearchMaxLength = 100;
 
     public async Task<ToolboxResponse> SearchAsync(string? q, Guid? subjectId, string? category, CancellationToken cancellationToken)

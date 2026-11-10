@@ -5,6 +5,7 @@ using ClassHub.Core.Modules.Activities.Domain;
 using ClassHub.Core.Modules.Catalog.Contracts;
 using ClassHub.Core.Modules.Identity.Contracts;
 using ClassHub.Core.Modules.Subscriptions.Contracts;
+using ClassHub.Core.Modules.Usage.Contracts;
 using ClassHub.Core.Modules.Workspaces;
 using ClassHub.Core.Modules.Workspaces.Contracts;
 using ClassHub.Core.SharedKernel.Errors;
@@ -77,6 +78,14 @@ public sealed class ActivitiesModule : IModule
             .RequireAuthorization(manage)
             .WithName("DuplicateActivity")
             .WithSummary("A copy of the activity (counts toward the plan's activities).");
+        activities.MapPost("/{activityId:guid}/open", async (Guid activityId, ActivityService service, CancellationToken ct) =>
+            {
+                await service.OpenedAsync(activityId, ct);
+                return TypedResults.NoContent();
+            })
+            .RequireAuthorization(read)
+            .WithName("CountActivityOpened")
+            .WithSummary("Counts that a saved activity was opened again on its board (usage analytics, R3-P6; no user is recorded).");
         activities.MapPost("/{activityId:guid}/delete", async (Guid activityId, ActivityVersionRequest request, ActivityService service, CancellationToken ct) =>
             {
                 await service.DeleteAsync(activityId, request, ct);
@@ -95,8 +104,17 @@ internal sealed class ActivityService(
     ICatalogLookup catalog,
     IWorkspaceSettings workspace,
     IOptions<ActivityOptions> options,
+    IUsageRecorder usage,
     TimeProvider clock)
 {
+    /// <summary>Counts a saved activity opened again on its board (a reuse).</summary>
+    public async Task OpenedAsync(Guid activityId, CancellationToken cancellationToken)
+    {
+        var toolType = await db.Set<Activity>().AsNoTracking().Where(a => a.Id == activityId).Select(a => a.ToolType).SingleOrDefaultAsync(cancellationToken)
+            ?? throw new NotFoundException();
+        await usage.RecordAsync(UsageEvent.ActivityReused, toolType, cancellationToken);
+    }
+
     public async Task<ActivityListResponse> ListAsync(string? q, Guid? subjectId, string? toolType, int page, int pageSize, CancellationToken cancellationToken)
     {
         if (page is < 1 or > 10_000 || pageSize is < 1 or > 100)
@@ -160,6 +178,7 @@ internal sealed class ActivityService(
             Version = 1,
         };
         await AddWithinLimitAsync(activity, cancellationToken);
+        await usage.RecordAsync(UsageEvent.ActivityCreated, activity.ToolType, cancellationToken);
         return ToResponse(activity);
     }
 
@@ -204,6 +223,7 @@ internal sealed class ActivityService(
             Version = 1,
         };
         await AddWithinLimitAsync(copy, cancellationToken);
+        await usage.RecordAsync(UsageEvent.ActivityReused, copy.ToolType, cancellationToken);
         return ToResponse(copy);
     }
 

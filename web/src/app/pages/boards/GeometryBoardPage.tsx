@@ -24,6 +24,7 @@ import type { BoardTarget } from '../../../boards/geometry/GeometryCanvas.tsx';
 import { Alert } from '../../../components/ui/alert.tsx';
 import { Button } from '../../../components/ui/button.tsx';
 import { useActivity, useSaveActivity } from '../../../teacher/activities.ts';
+import { countActivityOpened } from '../../../teacher/usage.ts';
 import { useCatalog } from '../../../teacher/queries.ts';
 import { NotFoundContent } from '../Pages.tsx';
 
@@ -64,6 +65,14 @@ function Board({ workspaceId, loaded, onCreated }: { workspaceId: string; loaded
   const navigate = useNavigate();
   const catalog = useCatalog();
   const save = useSaveActivity(workspaceId);
+  // A saved activity opened again on its board is a reuse (counted once per opening; usage analytics, R3-P6).
+  const counted = useRef(false);
+  useEffect(() => {
+    if (loaded && !counted.current) {
+      counted.current = true;
+      countActivityOpened(workspaceId, loaded.id);
+    }
+  }, [loaded, workspaceId]);
   const [construction, setConstruction] = useState<Construction>(() => (loaded ? fromDocument(loaded.document) : emptyConstruction()));
   const [history, setHistory] = useState<Construction[]>([]);
   const [tool, setTool] = useState<GeometryTool>('point');
